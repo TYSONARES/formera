@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11130f" />
+  <title>Formera — Stüdyo Yönetimi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Formera ana sayfa">
+        <span class="brand-mark">F</span>
+        <span>formera</span>
+      </a>
+
+      <nav class="nav" aria-label="Ana menü">
+        <p class="nav-label">Çalışma alanı</p>
+        <button class="nav-item active" data-page="dashboard"><span>⌂</span> Genel bakış</button>
+        <button class="nav-item" data-page="members"><span>♙</span> Üyeler <b>48</b></button>
+        <button class="nav-item" data-page="programs"><span>▤</span> Programlar</button>
+        <button class="nav-item" data-page="calendar"><span>□</span> Takvim</button>
+        <p class="nav-label">İşletme</p>
+        <button class="nav-item" data-page="finance"><span>◒</span> Finans</button>
+        <button class="nav-item" data-page="reports"><span>↗</span> Raporlar</button>
+        <button class="nav-item" data-page="team"><span>♧</span> Ekip</button>
+      </nav>
+
+      <div class="studio-card">
+        <span class="studio-avatar">NF</span>
+        <div><strong>NorthFit Studio</strong><small>Kadıköy · İstanbul</small></div>
+        <button aria-label="Stüdyo menüsü">•••</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="mobile-menu" aria-label="Menüyü aç">☰</button>
+        <label class="search"><span>⌕</span><input placeholder="Üye, program veya işlem ara..." /></label>
+        <div class="top-actions">
+          <button class="icon-button" aria-label="Bildirimler">♢<i></i></button>
+          <button class="role-switch" id="roleSwitch"><span>İşletmeci</span><small>Üye görünümü</small></button>
+          <span class="user-avatar">OY</span>
+        </div>
+      </header>
+
+      <section class="content" id="appContent"></section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <dialog class="modal" id="memberModal">
+    <form method="dialog" id="memberForm">
+      <div class="modal-head"><div><span class="eyebrow">YENİ KAYIT</span><h2>Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
+      <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
+      <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeyi kaydet</button></div>
+    </form>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+</html>
