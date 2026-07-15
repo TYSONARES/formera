@@ -62,6 +62,16 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeyi kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="financeModal">
+    <form method="dialog" id="financeForm">
+      <div class="modal-head"><div><span class="eyebrow">FİNANS</span><h2>Gelir / gider ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>İşlem adı<input name="title" required placeholder="Örn. 12 seans paket satışı"></label>
+      <div class="form-grid"><label>Tip<select name="type"><option value="income">Gelir</option><option value="expense">Gider</option></select></label><label>Tutar<input name="amount" required inputmode="numeric" placeholder="9600"></label></div>
+      <div class="form-grid"><label>Kategori<input name="category" placeholder="Paket satışı"></label><label>Tarih<input name="date" type="date"></label></div>
+      <label>Durum<select name="status"><option value="paid">Ödendi</option><option value="pending">Bekliyor</option></select></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İşlemi kaydet</button></div>
+    </form>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>

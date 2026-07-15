@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'formera_members';
+const FINANCE_STORAGE_KEY = 'formera_finance_entries';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -8,16 +9,32 @@ const starterMembers = [
   {name:'Can Aydın', initials:'CA', trainer:'Ece', last:'Dün', sessions:'5 / 8', status:'Aktif', type:'good', phone:'0532 000 00 05'}
 ];
 
+const starterFinance = [
+  {id:'f_1', type:'income', title:'Selin Aksoy · 12 seans paket', category:'Paket satışı', amount:9600, date:'2026-07-04', status:'paid'},
+  {id:'f_2', type:'income', title:'Deniz Erdem · 8 seans paket', category:'Paket satışı', amount:6800, date:'2026-07-03', status:'paid'},
+  {id:'f_3', type:'income', title:'Buse Kılıç · yenileme kaporası', category:'Tahsilat', amount:2500, date:'2026-07-02', status:'pending'},
+  {id:'f_4', type:'expense', title:'Antrenör prim ödemesi', category:'Ekip', amount:7200, date:'2026-07-02', status:'paid'},
+  {id:'f_5', type:'expense', title:'Kira ve stüdyo gideri', category:'Sabit gider', amount:12500, date:'2026-07-01', status:'paid'},
+  {id:'f_6', type:'expense', title:'Ekipman bakım', category:'Operasyon', amount:1850, date:'2026-06-30', status:'paid'}
+];
+
 const state = {
   role: 'owner',
   page: 'dashboard',
-  members: starterMembers.map(normalizeMember)
+  members: starterMembers.map(normalizeMember),
+  finance: starterFinance.map(normalizeFinanceEntry)
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
 if(savedMembers){
   try{ state.members = JSON.parse(savedMembers).map(normalizeMember); }
   catch(e){ console.warn('Kayıtlı üyeler okunamadı.'); }
+}
+
+const savedFinance = localStorage.getItem(FINANCE_STORAGE_KEY);
+if(savedFinance){
+  try{ state.finance = JSON.parse(savedFinance).map(normalizeFinanceEntry); }
+  catch(e){ console.warn('Kayıtlı finans hareketleri okunamadı.'); }
 }
 
 const money = new Intl.NumberFormat('tr-TR');
@@ -27,6 +44,8 @@ const memberModal = document.querySelector('#memberModal');
 const memberForm = document.querySelector('#memberForm');
 const memberModalTitle = document.querySelector('#memberModalTitle');
 const memberModalEyebrow = document.querySelector('#memberModalEyebrow');
+const financeModal = document.querySelector('#financeModal');
+const financeForm = document.querySelector('#financeForm');
 
 function makeId(){
   return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -74,6 +93,47 @@ function saveMembers(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.members));
 }
 
+function normalizeFinanceEntry(entry){
+  return {
+    id: entry.id || makeId(),
+    type: entry.type === 'expense' ? 'expense' : 'income',
+    title: entry.title || 'İsimsiz işlem',
+    category: entry.category || (entry.type === 'expense' ? 'Gider' : 'Gelir'),
+    amount: Number(entry.amount) || 0,
+    date: entry.date || new Date().toISOString().slice(0,10),
+    status: entry.status === 'pending' ? 'pending' : 'paid'
+  };
+}
+
+function saveFinance(){
+  localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
+}
+
+function formatCurrency(value){
+  return `₺${money.format(Math.round(value || 0))}`;
+}
+
+function financeSummary(){
+  const income = state.finance.filter(x=>x.type === 'income').reduce((sum,x)=>sum + x.amount, 0);
+  const expense = state.finance.filter(x=>x.type === 'expense').reduce((sum,x)=>sum + x.amount, 0);
+  const pending = state.finance.filter(x=>x.type === 'income' && x.status === 'pending').reduce((sum,x)=>sum + x.amount, 0);
+  const paidIncome = income - pending;
+  const collectionRate = income ? Math.round((paidIncome / income) * 100) : 0;
+  return {income, expense, net: income - expense, pending, paidIncome, collectionRate};
+}
+
+function weeklyChartData(){
+  const base = [
+    ['H23', 28000, 14200],
+    ['H24', 33500, 16600],
+    ['H25', 30200, 15100],
+    ['H26', 41000, 19200],
+    ['H27', 38600, 17400]
+  ];
+  const current = financeSummary();
+  return [...base, ['H28', current.income, current.expense]];
+}
+
 function metric(title, value, delta, icon, down=false){
   return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
 }
@@ -98,20 +158,23 @@ function memberRows(items=state.members){
 
 function dashboard(){
   const riskyCount = state.members.filter(m=>m.type !== 'good').length;
+  const finance = financeSummary();
+  const chartRows = weeklyChartData();
+  const maxChartValue = Math.max(...chartRows.flatMap(row=>[row[1], row[2]]), 1);
   return `<div class="welcome"><div><span class="eyebrow">4–10 Temmuz · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>Stüdyon bu hafta iyi ilerliyor. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
   <section class="metrics">
     ${metric('Aktif üye',String(state.members.length),'↑ canlı veri','♙')}
-    ${metric('Haftalık gelir','₺42.850','↑ %12','₺')}
+    ${metric('Haftalık gelir',formatCurrency(finance.income),'canlı kayıt','₺')}
     ${metric('Tamamlanan seans','126','↑ %8','✓')}
     ${metric('Yenileme riski',String(riskyCount),'takip listesi','! ',true)}
   </section>
   <section class="dashboard-grid">
-    <article class="card"><div class="card-title"><div><h2>Gelir ve gider</h2><p>Son 6 haftanın nakit hareketi</p></div><span class="badge">Net +₺27.600</span></div><div class="chart">
-      ${[['H23',51,30],['H24',64,38],['H25',57,34],['H26',74,43],['H27',69,40],['H28',86,36]].map(x=>`<div class="bar-group"><i class="bar" style="height:${x[1]}%"></i><i class="bar expense" style="height:${x[2]}%"></i><small class="bar-label">${x[0]}</small></div>`).join('')}
+    <article class="card"><div class="card-title"><div><h2>Gelir ve gider</h2><p>Son 6 haftanın nakit hareketi</p></div><span class="badge">Net ${formatCurrency(finance.net)}</span></div><div class="chart">
+      ${chartRows.map(x=>`<div class="bar-group"><i class="bar" style="height:${Math.max(8,Math.round((x[1]/maxChartValue)*92))}%"></i><i class="bar expense" style="height:${Math.max(8,Math.round((x[2]/maxChartValue)*92))}%"></i><small class="bar-label">${x[0]}</small></div>`).join('')}
     </div><div class="chart-legend"><span><i class="dot"></i>Gelir</span><span><i class="dot gray"></i>Gider</span></div></article>
-    <article class="card ai-card"><span class="ai-label">✦ FORMA AI · HAFTALIK ÖZET</span><h2>Bu hafta büyüme var, ancak ${riskyCount || 1} üye dikkat istiyor.</h2><p>Gelirin %12 arttı. Seans katılımı güçlü; fakat riskli ve yenilemeye yaklaşan üyeler için bugün takip aksiyonu öneriyorum.</p>
-      <div class="insight"><span>↗</span><div><strong>${Math.min(3, riskyCount || 3)} üyeye bugün ulaş</strong><small>Yenileme ihtimali yüksek · ₺9.600 potansiyel</small></div></div>
-      <div class="insight"><span>◷</span><div><strong>Salı 18:00 yoğunluğu</strong><small>Bir ek PT saati planlamayı düşün</small></div></div>
+    <article class="card ai-card"><span class="ai-label">✦ FORMA AI · HAFTALIK ÖZET</span><h2>${finance.net >= 0 ? 'Kârlı gidiyorsun' : 'Gider baskısı var'}, ${riskyCount || 1} üye dikkat istiyor.</h2><p>Bu haftanın neti ${formatCurrency(finance.net)}. Tahsilat oranı %${finance.collectionRate}; riskli ve yenilemeye yaklaşan üyeler için bugün takip aksiyonu öneriyorum.</p>
+      <div class="insight"><span>↗</span><div><strong>${Math.min(3, riskyCount || 3)} üyeye bugün ulaş</strong><small>Bekleyen tahsilat: ${formatCurrency(finance.pending)}</small></div></div>
+      <div class="insight"><span>◷</span><div><strong>Giderleri takip et</strong><small>Haftalık gider: ${formatCurrency(finance.expense)}</small></div></div>
       <button class="primary ai-action" data-action="ai-plan">Hafta planını hazırla →</button>
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
@@ -136,6 +199,54 @@ function memberPage(){
   </article>`;
 }
 
+function financeRows(items=state.finance){
+  return items
+    .slice()
+    .sort((a,b)=>b.date.localeCompare(a.date))
+    .map(entry=>`<div class="finance-row">
+      <div><strong>${entry.title}</strong><small>${entry.category} · ${new Date(entry.date).toLocaleDateString('tr-TR')}</small></div>
+      <span class="status ${entry.status === 'pending' ? 'warn' : 'good'}">${entry.status === 'pending' ? 'Bekliyor' : 'Ödendi'}</span>
+      <strong class="${entry.type === 'expense' ? 'money-out' : 'money-in'}">${entry.type === 'expense' ? '−' : '+'}${formatCurrency(entry.amount)}</strong>
+      <button class="mini-button danger" data-action="delete-finance" data-finance-id="${entry.id}">Sil</button>
+    </div>`).join('');
+}
+
+function aiPlanItems(){
+  const finance = financeSummary();
+  const risky = state.members.filter(m=>m.type !== 'good').slice(0,3);
+  const topExpense = state.finance.filter(x=>x.type === 'expense').sort((a,b)=>b.amount-a.amount)[0];
+  const items = [];
+  if(finance.pending > 0) items.push(`Bekleyen ${formatCurrency(finance.pending)} tahsilat için bugün ödeme hatırlatma mesajı gönder.`);
+  if(risky.length) items.push(`${risky.map(m=>m.name).join(', ')} için yenileme/geri kazanım araması planla.`);
+  if(topExpense) items.push(`${topExpense.category} giderini kontrol et; bu hafta en büyük gider kalemi ${formatCurrency(topExpense.amount)}.`);
+  items.push('Yoğun saatlerde PT kapasitesini 1 ek blokla test et.');
+  items.push('Hafta sonunda üye yedeğini indir ve pilot salon notlarını tek dosyada topla.');
+  return items;
+}
+
+function financePage(){
+  const finance = financeSummary();
+  return `<div class="welcome"><div><span class="eyebrow">FİNANS</span><h1>Gelir & gider</h1><p>Tahsilatları, giderleri ve haftalık net kârı hızlıca takip et.</p></div><button class="primary" data-action="add-finance">+ İşlem ekle</button></div>
+  <section class="metrics">
+    ${metric('Toplam gelir',formatCurrency(finance.income),`%${finance.collectionRate} tahsil edildi`,'₺')}
+    ${metric('Toplam gider',formatCurrency(finance.expense),'haftalık toplam','◒',true)}
+    ${metric('Net kâr',formatCurrency(finance.net),finance.net >= 0 ? 'pozitif' : 'eksiye düştü','↗',finance.net < 0)}
+    ${metric('Bekleyen tahsilat',formatCurrency(finance.pending),'takip gerekli','! ',finance.pending > 0)}
+  </section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>Finans hareketleri</h2><p>Gelir, gider ve bekleyen tahsilatlar</p></div><button class="secondary" data-action="add-finance">Yeni işlem</button></div>
+      <div class="finance-list">${financeRows()}</div>
+    </article>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · KÂRLILIK PLANI</span>
+      <h2>Bu hafta için 5 aksiyon</h2>
+      <p>Üye riski, bekleyen tahsilat ve gider dağılımına göre kısa uygulanabilir plan.</p>
+      ${aiPlanItems().map((item,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${item}</strong><small>Bugünkü operasyon listesine ekle</small></div></div>`).join('')}
+    </article>
+  </section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
@@ -150,7 +261,7 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -220,6 +331,27 @@ function importMembers(file){
   reader.readAsText(file);
 }
 
+function openFinanceModal(){
+  financeForm.reset();
+  financeForm.elements.date.value = new Date().toISOString().slice(0,10);
+  financeModal.showModal();
+}
+
+function deleteFinanceEntry(id){
+  const entry = state.finance.find(x=>x.id === id);
+  if(!entry) return;
+  if(!confirm(`${entry.title} işlemini silmek istiyor musun?`)) return;
+  state.finance = state.finance.filter(x=>x.id !== id);
+  saveFinance();
+  render();
+  showToast('Finans işlemi silindi.');
+}
+
+function showAiPlan(){
+  showToast(`Forma AI planı hazır: ${aiPlanItems()[0]}`);
+  if(state.page !== 'finance') navigate('finance');
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -229,8 +361,10 @@ function bind(){
     if(action==='checkin-member') return checkInMember(b.dataset.memberId);
     if(action==='export-members') return exportMembers();
     if(action==='import-members') return document.querySelector('#memberImport')?.click();
+    if(action==='add-finance') return openFinanceModal();
+    if(action==='delete-finance') return deleteFinanceEntry(b.dataset.financeId);
+    if(action==='ai-plan') return showAiPlan();
     showToast({
-      'ai-plan':'Forma AI, 5 maddelik hafta planını hazırladı.',
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
     }[action]);
@@ -284,6 +418,27 @@ memberForm.onsubmit=e=>{
   e.currentTarget.dataset.editingId = '';
   render();
   showToast(`${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
+};
+
+financeForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const amount = Number(String(data.get('amount')).replaceAll('.','').replace(',','.'));
+  const entry = normalizeFinanceEntry({
+    id: makeId(),
+    title: data.get('title').trim(),
+    type: data.get('type'),
+    amount,
+    category: data.get('category').trim() || (data.get('type') === 'expense' ? 'Gider' : 'Gelir'),
+    date: data.get('date') || new Date().toISOString().slice(0,10),
+    status: data.get('status')
+  });
+  state.finance.unshift(entry);
+  saveFinance();
+  financeModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${entry.type === 'expense' ? 'Gider' : 'Gelir'} kaydedildi: ${formatCurrency(entry.amount)}`);
 };
 
 render();
