@@ -82,6 +82,15 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Programı kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="sessionModal">
+    <form method="dialog" id="sessionForm">
+      <div class="modal-head"><div><span class="eyebrow">TAKVİM</span><h2>Seans ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="form-grid"><label>Tarih<input name="date" type="date" required></label><label>Saat<input name="time" type="time" required></label></div>
+      <div class="form-grid"><label>Üye<input name="member" required placeholder="Selin Aksoy"></label><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label></div>
+      <div class="form-grid"><label>Program<input name="program" placeholder="Alt vücut güç"></label><label>Salon<select name="room"><option>Salon A</option><option>Salon B</option><option>Online</option></select></label></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Seansı kaydet</button></div>
+    </form>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>

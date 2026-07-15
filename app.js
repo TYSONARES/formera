@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'formera_members';
 const FINANCE_STORAGE_KEY = 'formera_finance_entries';
 const PROGRAM_STORAGE_KEY = 'formera_programs';
+const SESSION_STORAGE_KEY = 'formera_sessions';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -25,12 +26,22 @@ const starterPrograms = [
   {id:'p_3', title:'Mobilite + core', goal:'Duruş ve sakatlık önleme', level:'Herkes', duration:35, assigned:'Deniz Erdem', exercises:['Dead bug · 3 × 12','Side plank · 3 × 30 sn','World greatest stretch · 2 tur','Pallof press · 3 × 10']}
 ];
 
+const starterSessions = [
+  {id:'s_1', date:'2026-07-15', time:'09:30', member:'Selin Aksoy', trainer:'Ece', program:'Alt vücut güç', room:'Salon A', status:'scheduled'},
+  {id:'s_2', date:'2026-07-15', time:'10:30', member:'Can Aydın', trainer:'Ece', program:'Fonksiyonel full body', room:'Salon B', status:'scheduled'},
+  {id:'s_3', date:'2026-07-15', time:'11:00', member:'Buse Kılıç', trainer:'Kerem', program:'Full body yenileme', room:'Salon A', status:'scheduled'},
+  {id:'s_4', date:'2026-07-15', time:'18:00', member:'Mert Özkan', trainer:'Kerem', program:'Mobilite + core', room:'Salon B', status:'scheduled'},
+  {id:'s_5', date:'2026-07-14', time:'18:00', member:'Deniz Erdem', trainer:'Ece', program:'Mobilite + core', room:'Salon A', status:'done'}
+];
+
 const state = {
   role: 'owner',
   page: 'dashboard',
+  calendarDate: todayISO(),
   members: starterMembers.map(normalizeMember),
   finance: starterFinance.map(normalizeFinanceEntry),
-  programs: starterPrograms.map(normalizeProgram)
+  programs: starterPrograms.map(normalizeProgram),
+  sessions: starterSessions.map(normalizeSession)
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -51,6 +62,12 @@ if(savedPrograms){
   catch(e){ console.warn('Kayıtlı programlar okunamadı.'); }
 }
 
+const savedSessions = localStorage.getItem(SESSION_STORAGE_KEY);
+if(savedSessions){
+  try{ state.sessions = JSON.parse(savedSessions).map(normalizeSession); }
+  catch(e){ console.warn('Kayıtlı seanslar okunamadı.'); }
+}
+
 const money = new Intl.NumberFormat('tr-TR');
 const app = document.querySelector('#appContent');
 const toast = document.querySelector('#toast');
@@ -62,6 +79,8 @@ const financeModal = document.querySelector('#financeModal');
 const financeForm = document.querySelector('#financeForm');
 const programModal = document.querySelector('#programModal');
 const programForm = document.querySelector('#programForm');
+const sessionModal = document.querySelector('#sessionModal');
+const sessionForm = document.querySelector('#sessionForm');
 
 function makeId(){
   return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -169,6 +188,51 @@ function savePrograms(){
   localStorage.setItem(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
 }
 
+function todayISO(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function normalizeSession(session){
+  return {
+    id: session.id || makeId(),
+    date: session.date || todayISO(),
+    time: session.time || '09:00',
+    member: session.member || state?.members?.[0]?.name || 'Üye seçilmedi',
+    trainer: session.trainer || 'Ece',
+    program: session.program || state?.programs?.[0]?.title || 'Genel PT',
+    room: session.room || 'Salon A',
+    status: ['scheduled','done','cancelled'].includes(session.status) ? session.status : 'scheduled'
+  };
+}
+
+function saveSessions(){
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
+}
+
+function formatDateTR(date){
+  return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', {day:'numeric', month:'long', weekday:'long'});
+}
+
+function sessionsForDate(date=todayISO()){
+  return state.sessions
+    .filter(session=>session.date === date)
+    .sort((a,b)=>a.time.localeCompare(b.time));
+}
+
+function sessionSummary(date=todayISO()){
+  const all = sessionsForDate(date);
+  const done = all.filter(x=>x.status === 'done').length;
+  const cancelled = all.filter(x=>x.status === 'cancelled').length;
+  const scheduled = all.filter(x=>x.status === 'scheduled').length;
+  const peakHour = all.reduce((acc,session)=>{
+    const hour = session.time.slice(0,2);
+    acc[hour] = (acc[hour] || 0) + 1;
+    return acc;
+  }, {});
+  const busiest = Object.entries(peakHour).sort((a,b)=>b[1]-a[1])[0];
+  return {total: all.length, done, cancelled, scheduled, busiest};
+}
+
 function metric(title, value, delta, icon, down=false){
   return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
 }
@@ -191,16 +255,32 @@ function memberRows(items=state.members){
   </div>`).join('');
 }
 
+function sessionStatusLabel(status){
+  return {scheduled:'Planlı', done:'Tamamlandı', cancelled:'İptal'}[status] || 'Planlı';
+}
+
+function sessionStatusClass(status){
+  return {scheduled:'warn', done:'good', cancelled:'risk'}[status] || 'warn';
+}
+
+function compactSessionRows(items=sessionsForDate()){
+  return items.slice(0,4).map(session=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
+    <span>${session.time}</span>
+    <div><strong>${session.member} · ${session.program}</strong><small>${session.trainer} ile · ${session.room} · ${sessionStatusLabel(session.status)}</small></div>
+  </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
+}
+
 function dashboard(){
   const riskyCount = state.members.filter(m=>m.type !== 'good').length;
   const finance = financeSummary();
   const chartRows = weeklyChartData();
   const maxChartValue = Math.max(...chartRows.flatMap(row=>[row[1], row[2]]), 1);
+  const sessions = sessionSummary();
   return `<div class="welcome"><div><span class="eyebrow">4–10 Temmuz · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>Stüdyon bu hafta iyi ilerliyor. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
   <section class="metrics">
     ${metric('Aktif üye',String(state.members.length),'↑ canlı veri','♙')}
     ${metric('Haftalık gelir',formatCurrency(finance.income),'canlı kayıt','₺')}
-    ${metric('Tamamlanan seans','126','↑ %8','✓')}
+    ${metric('Bugünkü seans',String(sessions.total),`${sessions.done} tamamlandı`,'✓')}
     ${metric('Yenileme riski',String(riskyCount),'takip listesi','! ',true)}
   </section>
   <section class="dashboard-grid">
@@ -209,15 +289,11 @@ function dashboard(){
     </div><div class="chart-legend"><span><i class="dot"></i>Gelir</span><span><i class="dot gray"></i>Gider</span></div></article>
     <article class="card ai-card"><span class="ai-label">✦ FORMA AI · HAFTALIK ÖZET</span><h2>${finance.net >= 0 ? 'Kârlı gidiyorsun' : 'Gider baskısı var'}, ${riskyCount || 1} üye dikkat istiyor.</h2><p>Bu haftanın neti ${formatCurrency(finance.net)}. Tahsilat oranı %${finance.collectionRate}; riskli ve yenilemeye yaklaşan üyeler için bugün takip aksiyonu öneriyorum.</p>
       <div class="insight"><span>↗</span><div><strong>${Math.min(3, riskyCount || 3)} üyeye bugün ulaş</strong><small>Bekleyen tahsilat: ${formatCurrency(finance.pending)}</small></div></div>
-      <div class="insight"><span>◷</span><div><strong>Giderleri takip et</strong><small>Haftalık gider: ${formatCurrency(finance.expense)}</small></div></div>
+      <div class="insight"><span>◷</span><div><strong>${sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu` : 'Kapasite uygun'}</strong><small>${sessions.busiest ? `${sessions.busiest[1]} seans aynı saate yakın` : 'Bugün rahat plan görünüyor'}</small></div></div>
       <button class="primary ai-action" data-action="ai-plan">Hafta planını hazırla →</button>
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
-    <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>4 Temmuz, Cumartesi</p></div><span class="badge">18 seans</span></div>
-      <div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>09:30</span><div><strong>Selin Aksoy · Alt vücut</strong><small>Ece ile · Salon A</small></div></div>
-      <div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>10:30</span><div><strong>Can Aydın · Fonksiyonel</strong><small>Ece ile · Salon B</small></div></div>
-      <div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>11:00</span><div><strong>Buse Kılıç · Full body</strong><small>Kerem ile · Salon A</small></div></div>
-    </article>
+    <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
   </section>`;
 }
 
@@ -298,6 +374,53 @@ function programsPage(){
   <section class="program-grid">${programCards()}</section>`;
 }
 
+function sessionRows(items=sessionsForDate()){
+  return items.map(session=>`<div class="session-row">
+    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
+    <div><strong>${session.member}</strong><small>${session.program} · PT ${session.trainer}</small></div>
+    <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
+    <div class="row-actions">
+      <button class="mini-button" data-action="complete-session" data-session-id="${session.id}">Tamamla</button>
+      <button class="mini-button" data-action="cancel-session" data-session-id="${session.id}">İptal</button>
+      <button class="mini-button danger" data-action="delete-session" data-session-id="${session.id}">Sil</button>
+    </div>
+  </div>`).join('') || `<div class="empty-illustration"><div><b>□</b><h2>Bu güne seans eklenmemiş</h2><p>Yeni seans oluşturarak takvimi doldur.</p></div></div>`;
+}
+
+function calendarAiNotes(date=todayISO()){
+  const summary = sessionSummary(date);
+  const notes = [];
+  if(summary.busiest && summary.busiest[1] >= 2) notes.push(`${summary.busiest[0]}:00 çevresinde yoğunluk var; salon/ekipman çakışmasını kontrol et.`);
+  if(summary.cancelled > 0) notes.push(`${summary.cancelled} iptal var; boşalan saatlere riskli üyelerden birini çağır.`);
+  if(summary.scheduled > 3) notes.push('Bugün 3+ planlı seans var; PT aralarına 10 dk tampon bırak.');
+  notes.push('Gün sonunda tamamlanan seansları işaretleyip üye paketlerini güncel tut.');
+  return notes;
+}
+
+function calendarPage(){
+  const selectedDate = state.calendarDate || todayISO();
+  const summary = sessionSummary(selectedDate);
+  return `<div class="welcome"><div><span class="eyebrow">TAKVİM</span><h1>Seans planlama</h1><p>Üye, PT, program ve salon eşleşmesini tek ekrandan yönet.</p></div><button class="primary" data-action="add-session">+ Seans ekle</button></div>
+  <section class="metrics">
+    ${metric('Toplam seans',String(summary.total),'seçili gün','□')}
+    ${metric('Planlı',String(summary.scheduled),'bekleyen','◷')}
+    ${metric('Tamamlanan',String(summary.done),'pakete işler','✓')}
+    ${metric('İptal',String(summary.cancelled),'geri kazan','! ',summary.cancelled > 0)}
+  </section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>${formatDateTR(selectedDate)}</h2><p>Günlük akış ve durumlar</p></div><input class="date-input" id="calendarDate" type="date" value="${selectedDate}"></div>
+      <div class="session-list">${sessionRows(sessionsForDate(selectedDate))}</div>
+    </article>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · KAPASİTE KOÇU</span>
+      <h2>Günün operasyon notları</h2>
+      <p>Seans yoğunluğu, iptal ve tamamlanma durumuna göre kısa aksiyon listesi.</p>
+      ${calendarAiNotes(selectedDate).map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Takvim aksiyonu</small></div></div>`).join('')}
+    </article>
+  </section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
@@ -314,7 +437,7 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -426,6 +549,53 @@ function assignProgram(id){
   showToast(`${program.title}, ${program.assigned} üye ekranına gönderildi.`);
 }
 
+function openSessionModal(){
+  sessionForm.reset();
+  sessionForm.elements.date.value = state.calendarDate || todayISO();
+  sessionForm.elements.time.value = '09:00';
+  sessionForm.elements.member.value = state.members[0]?.name || '';
+  sessionForm.elements.program.value = state.programs[0]?.title || '';
+  sessionModal.showModal();
+}
+
+function completeSession(id){
+  const session = state.sessions.find(x=>x.id === id);
+  if(!session) return;
+  if(session.status !== 'done'){
+    session.status = 'done';
+    const member = state.members.find(m=>m.name === session.member);
+    if(member){
+      const {used,total} = parseSessions(member.sessions);
+      member.sessions = `${Math.min(used + 1, total)} / ${total}`;
+      member.last = 'Bugün';
+      Object.assign(member, statusFor(member));
+      saveMembers();
+    }
+  }
+  saveSessions();
+  render();
+  showToast(`${session.member} seansı tamamlandı.`);
+}
+
+function cancelSession(id){
+  const session = state.sessions.find(x=>x.id === id);
+  if(!session) return;
+  session.status = 'cancelled';
+  saveSessions();
+  render();
+  showToast(`${session.member} seansı iptal edildi.`);
+}
+
+function deleteSession(id){
+  const session = state.sessions.find(x=>x.id === id);
+  if(!session) return;
+  if(!confirm(`${session.member} ${session.time} seansını silmek istiyor musun?`)) return;
+  state.sessions = state.sessions.filter(x=>x.id !== id);
+  saveSessions();
+  render();
+  showToast('Seans silindi.');
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -441,6 +611,10 @@ function bind(){
     if(action==='add-program') return openProgramModal();
     if(action==='delete-program') return deleteProgram(b.dataset.programId);
     if(action==='assign-program') return assignProgram(b.dataset.programId);
+    if(action==='add-session') return openSessionModal();
+    if(action==='complete-session') return completeSession(b.dataset.sessionId);
+    if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
+    if(action==='delete-session') return deleteSession(b.dataset.sessionId);
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
@@ -455,6 +629,8 @@ function bind(){
   };
   const importer = document.querySelector('#memberImport');
   if(importer) importer.onchange=e=>importMembers(e.target.files[0]);
+  const calendarDate = document.querySelector('#calendarDate');
+  if(calendarDate) calendarDate.onchange=e=>{state.calendarDate = e.target.value; render();};
 }
 
 function navigate(page){state.page=page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));render()}
@@ -536,6 +712,28 @@ programForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${program.title} programı oluşturuldu.`);
+};
+
+sessionForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const session = normalizeSession({
+    id: makeId(),
+    date: data.get('date'),
+    time: data.get('time'),
+    member: data.get('member').trim(),
+    trainer: data.get('trainer'),
+    program: data.get('program').trim() || 'Genel PT',
+    room: data.get('room'),
+    status: 'scheduled'
+  });
+  state.sessions.push(session);
+  state.calendarDate = session.date;
+  saveSessions();
+  sessionModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${session.member} için ${session.time} seansı eklendi.`);
 };
 
 render();
