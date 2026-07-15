@@ -151,6 +151,7 @@ const studioBrandForm = document.querySelector('#studioBrandForm');
 const supabaseModal = document.querySelector('#supabaseModal');
 const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
+const accountSummary = document.querySelector('#accountSummary');
 let signaturePadReady = false;
 let signatureDrawing = false;
 
@@ -753,9 +754,10 @@ function updateBackendShell(){
   button.classList.toggle('connected', state.backend.connected);
   button.classList.toggle('warning', state.backend.configured && !state.backend.connected);
   if(state.backend.loading) button.textContent = 'Bağlanıyor...';
-  else if(state.backend.connected) button.textContent = 'Canlı veri';
+  else if(state.backend.connected) button.textContent = roleLabel(state.backend.profile?.role || state.role);
   else if(state.backend.configured) button.textContent = 'Giriş gerekli';
   else button.textContent = 'Demo mod';
+  updateAccountSummary();
 }
 
 function openSupabaseModal(){
@@ -764,6 +766,11 @@ function openSupabaseModal(){
     supabaseConfigForm.elements.url.value = config.url || '';
     supabaseConfigForm.elements.anonKey.value = config.anonKey || '';
   }
+  if(state.backend.user?.email && supabaseAuthForm){
+    supabaseAuthForm.elements.email.value = state.backend.user.email;
+    supabaseAuthForm.elements.password.value = '';
+  }
+  updateAccountSummary();
   supabaseModal?.showModal();
 }
 
@@ -824,8 +831,18 @@ async function signOutSupabase(){
   state.backend.profile = null;
   state.backend.studioId = null;
   state.backend.accountsReady = false;
+  state.role = 'owner';
+  state.page = 'dashboard';
+  if(supabaseAuthForm) supabaseAuthForm.reset();
   updateBackendShell();
+  render();
   showToast('Canlı veri oturumu kapatıldı.');
+}
+
+async function switchSupabaseAccount(){
+  await signOutSupabase();
+  openSupabaseModal();
+  showToast('Yeni hesapla giriş yapabilirsin.');
 }
 
 async function syncRemote(table, rows){
@@ -1024,6 +1041,40 @@ function roleMeta(){
   }
   const studio = activeStudio();
   return {label:'İşletmeci', next:'Antrenör görünümü', avatar:studio.initials || 'OY', avatarImage:studio.logoDataUrl || ''};
+}
+
+function roleLabel(role=state.role){
+  return {owner:'İşletmeci', trainer:'Antrenör', member:'Üye'}[role] || 'Kullanıcı';
+}
+
+function accountMeta(){
+  const profile = state.backend.profile;
+  const email = state.backend.user?.email || profile?.email || '';
+  if(state.backend.connected && profile){
+    const image = profile.role === 'trainer'
+      ? trainerByName(profile.full_name)?.avatarDataUrl
+      : profile.role === 'member'
+        ? currentMember()?.avatarDataUrl
+        : activeStudio().logoDataUrl;
+    return {
+      title: profile.full_name || email || 'Canlı kullanıcı',
+      detail: `${roleLabel(profile.role)}${email ? ` · ${email}` : ''}`,
+      initials: initialsFromName(profile.full_name || email || 'Kullanıcı'),
+      image: image || ''
+    };
+  }
+  return {
+    title: state.backend.configured ? 'Giriş bekleniyor' : 'Demo mod',
+    detail: state.backend.configured ? 'İşletmeci, antrenör veya üye hesabıyla giriş yap.' : 'Canlı veri bağlantısı henüz ayarlanmadı.',
+    initials: '?',
+    image: ''
+  };
+}
+
+function updateAccountSummary(){
+  if(!accountSummary) return;
+  const meta = accountMeta();
+  accountSummary.innerHTML = `${avatarMarkup(meta.initials, meta.image)}<div><strong>${escapeAttr(meta.title)}</strong><small>${escapeAttr(meta.detail)}</small></div>`;
 }
 
 function updateRoleShell(){
@@ -1598,6 +1649,7 @@ function render(){
   updateStudioShell();
   updateRoleShell();
   updateBackendShell();
+  updateAccountSummary();
   if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
@@ -2240,6 +2292,7 @@ document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async 
   showToast('Supabase bağlantı ayarı temizlendi.');
 });
 document.querySelector('#logoutSupabase')?.addEventListener('click', signOutSupabase);
+document.querySelector('#switchSupabaseAccount')?.addEventListener('click', switchSupabaseAccount);
 document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm) return;
   const data = new FormData(supabaseAuthForm);
