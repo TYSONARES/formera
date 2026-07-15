@@ -1866,6 +1866,17 @@ signatureForm.onsubmit=e=>{
 
 document.querySelector('#backendStatus')?.addEventListener('click', openSupabaseModal);
 document.querySelector('#closeSupabaseModal')?.addEventListener('click', ()=>supabaseModal?.close());
+document.querySelectorAll('.modal').forEach(modal=>{
+  modal.addEventListener('click', event=>{
+    if(event.target === modal) modal.close();
+  });
+  modal.querySelectorAll('.modal-close, button[value="cancel"]').forEach(button=>{
+    button.addEventListener('click', event=>{
+      event.preventDefault();
+      modal.close();
+    });
+  });
+});
 document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async ()=>{
   localStorage.removeItem(SUPABASE_CONFIG_STORAGE_KEY);
   await signOutSupabase();
