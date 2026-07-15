@@ -153,6 +153,8 @@ const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
 const accountSummary = document.querySelector('#accountSummary');
 const accountAlert = document.querySelector('#accountAlert');
+const signupSupabaseButton = document.querySelector('#signupSupabase');
+const togglePasswordButton = document.querySelector('#togglePassword');
 let signaturePadReady = false;
 let signatureDrawing = false;
 
@@ -560,6 +562,22 @@ function notify(message, type='info'){
   showToast(message);
 }
 
+function readableAuthError(error, fallback){
+  const message = String(error?.message || '').trim();
+  if(!message) return fallback;
+  if(message.toLowerCase().includes('already registered') || message.toLowerCase().includes('already been registered')) return 'Bu e-posta ile zaten hesap var. Hesap oluşturmak yerine Giriş yap seçeneğini kullan.';
+  if(message.toLowerCase().includes('password')) return 'Şifre kabul edilmedi. En az 6 karakterli daha güçlü bir şifre dene.';
+  if(message.toLowerCase().includes('email')) return 'E-posta adresini kontrol et.';
+  return `${fallback} (${message})`;
+}
+
+function setAccountBusy(isBusy, message=''){
+  [signupSupabaseButton, supabaseAuthForm?.querySelector('button[type="submit"]')].forEach(button=>{
+    if(button) button.disabled = isBusy;
+  });
+  if(isBusy && message) showAccountMessage(message, 'info');
+}
+
 function mapRemoteStudio(studio){
   return normalizeStudio({
     id: studio.id,
@@ -810,16 +828,20 @@ async function signInSupabase(email, password){
     return;
   }
   state.backend.loading = true;
+  setAccountBusy(true, 'Giriş kontrol ediliyor...');
   updateBackendShell();
   const {data, error} = await state.backend.client.auth.signInWithPassword({email, password});
   if(error){
     state.backend.loading = false;
-    remoteError(error, 'Giriş başarısız.');
-    notify('Giriş başarısız. Email/şifreyi kontrol et.', 'error');
+    setAccountBusy(false);
+    const message = readableAuthError(error, 'Giriş başarısız. Email/şifreyi kontrol et.');
+    remoteError(error, message);
+    notify(message, 'error');
     return;
   }
   state.backend.user = data.user;
   await loadRemoteData();
+  setAccountBusy(false);
   supabaseModal?.close();
 }
 
@@ -832,21 +854,26 @@ async function signUpSupabase(email, password){
     return;
   }
   state.backend.loading = true;
+  setAccountBusy(true, 'Hesap oluşturuluyor...');
   updateBackendShell();
   const {data, error} = await state.backend.client.auth.signUp({email, password});
   state.backend.loading = false;
   if(error){
-    remoteError(error, 'Hesap oluşturulamadı.');
-    notify('Hesap oluşturulamadı. Email/şifreyi kontrol et.', 'error');
+    setAccountBusy(false);
+    const message = readableAuthError(error, 'Hesap oluşturulamadı. Email/şifreyi kontrol et.');
+    remoteError(error, message);
+    notify(message, 'error');
     return;
   }
   if(data.session?.user){
     state.backend.user = data.session.user;
     await loadRemoteData();
+    setAccountBusy(false);
     supabaseModal?.close();
     notify('Hesap oluşturuldu ve giriş yapıldı.', 'success');
     return;
   }
+  setAccountBusy(false);
   updateBackendShell();
   notify('Hesap oluşturuldu. Email doğrulaması gerekiyorsa gelen kutunu kontrol et.', 'success');
 }
@@ -2347,8 +2374,18 @@ document.querySelector('#switchSupabaseAccount')?.addEventListener('click', even
   event.preventDefault();
   switchSupabaseAccount();
 });
+togglePasswordButton?.addEventListener('click', event=>{
+  event.preventDefault();
+  const input = supabaseAuthForm?.elements.password;
+  if(!input) return;
+  const visible = input.type === 'text';
+  input.type = visible ? 'password' : 'text';
+  togglePasswordButton.textContent = visible ? '👁' : '🙈';
+  togglePasswordButton.setAttribute('aria-label', visible ? 'Şifreyi göster' : 'Şifreyi gizle');
+});
 document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm) return;
+  if(!supabaseAuthForm.reportValidity()) return;
   const data = new FormData(supabaseAuthForm);
   await signUpSupabase(data.get('email'), data.get('password'));
 });

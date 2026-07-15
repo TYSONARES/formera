@@ -150,7 +150,7 @@
       <div class="account-alert" id="accountAlert" role="status" aria-live="polite"></div>
       <form id="supabaseAuthForm">
         <label>Email<input name="email" type="email" required placeholder="owner@email.com"></label>
-        <label>Şifre<input name="password" type="password" required placeholder="Supabase Auth şifresi"></label>
+        <label>Şifre<span class="password-field"><input name="password" type="password" required placeholder="Supabase Auth şifresi"><button type="button" id="togglePassword" aria-label="Şifreyi göster">👁</button></span></label>
         <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="button" class="secondary" id="switchSupabaseAccount">Başka hesapla giriş yap</button><button type="button" class="secondary" id="signupSupabase">Hesap oluştur</button><button type="submit" class="primary">Giriş yap</button></div>
       </form>
     </div>

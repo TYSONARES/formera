@@ -56,6 +56,10 @@
 @media(max-width:1050px){.pilot-actions{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.pilot-actions{grid-template-columns:1fr}}
 @media(max-width:760px){.studio-public-info{grid-template-columns:1fr}.studio-public-head{align-items:flex-start}.studio-public-logo{width:50px;height:50px}}
+.password-field{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;background:#fafbf8;margin-top:6px;padding:0 7px}
+.modal .password-field input{border:0!important;background:transparent!important;margin:0!important;box-shadow:none!important;padding:12px 7px!important}
+.password-field button{border:0;background:#eef0e8;border-radius:8px;width:36px;height:34px;cursor:pointer}
+.modal-actions button:disabled{opacity:.55;cursor:wait}
 
 .sidebar,.app-shell,main{transition:.25s ease}
 .sidebar-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:1px solid #30342a;background:#22251e;color:#fff;border-radius:9px;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
