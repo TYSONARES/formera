@@ -325,6 +325,55 @@ function saveActiveStudio(){
   localStorage.setItem(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
 }
 
+function persistAllData(){
+  saveMembers();
+  saveFinance();
+  savePrograms();
+  saveSessions();
+  saveTeam();
+  saveStudios();
+  saveActiveStudio();
+}
+
+function backupPayload(){
+  return {
+    app:'Formera',
+    version:1,
+    exportedAt:new Date().toISOString(),
+    activeStudioId:state.activeStudioId,
+    members:state.members,
+    finance:state.finance,
+    programs:state.programs,
+    sessions:state.sessions,
+    team:state.team,
+    studios:state.studios
+  };
+}
+
+function applyBackupPayload(payload){
+  if(!payload || payload.app !== 'Formera') throw new Error('Geçersiz Formera yedeği');
+  state.members = (payload.members || []).map(normalizeMember);
+  state.finance = (payload.finance || []).map(normalizeFinanceEntry);
+  state.programs = (payload.programs || []).map(normalizeProgram);
+  state.sessions = (payload.sessions || []).map(normalizeSession);
+  state.team = (payload.team || []).map(normalizeTrainer);
+  state.studios = (payload.studios || []).map(normalizeStudio);
+  state.activeStudioId = payload.activeStudioId || state.studios[0]?.id || 'studio_1';
+  persistAllData();
+}
+
+function resetDemoData(){
+  state.members = starterMembers.map(normalizeMember);
+  state.finance = starterFinance.map(normalizeFinanceEntry);
+  state.programs = starterPrograms.map(normalizeProgram);
+  state.sessions = starterSessions.map(normalizeSession);
+  state.team = starterTeam.map(normalizeTrainer);
+  state.studios = starterStudios.map(normalizeStudio);
+  state.activeStudioId = 'studio_1';
+  state.calendarDate = todayISO();
+  persistAllData();
+}
+
 function updateStudioShell(){
   const studio = activeStudio();
   const avatar = document.querySelector('#studioAvatar');
@@ -625,6 +674,47 @@ function teamPage(){
   </section>`;
 }
 
+function pilotChecklist(){
+  return [
+    {title:'Her pilot öncesi yedek al', note:'Salon denemesinden önce tek JSON dosyasını indir.'},
+    {title:'Deneme sonunda raporu kopyala', note:'Raporlar ekranındaki haftalık özeti salon sahibiyle paylaş.'},
+    {title:'Veri bozulursa geri yükle', note:'Önceki JSON yedeğini yükleyerek aynı duruma dön.'},
+    {title:'Demo verisini sıfırla', note:'Yeni salon demosuna temiz örnek veriyle başla.'}
+  ].map((item,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${item.title}</strong><small>${item.note}</small></div></div>`).join('');
+}
+
+function pilotPage(){
+  const payload = backupPayload();
+  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><button class="primary" data-action="export-full-backup">Tüm veriyi yedekle</button></div>
+  <section class="metrics">
+    ${metric('Üye',String(payload.members.length),'yedekte','♙')}
+    ${metric('Seans',String(payload.sessions.length),'takvim','□')}
+    ${metric('Finans kaydı',String(payload.finance.length),'gelir/gider','₺')}
+    ${metric('Stüdyo',String(payload.studios.length),'pilot alanı','⚑')}
+  </section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>Veri işlemleri</h2><p>Ücretsiz pilot için tarayıcı verisini güvenceye al</p></div><span class="badge">JSON</span></div>
+      <div class="pilot-actions">
+        <button class="primary" data-action="export-full-backup">Tüm veriyi indir</button>
+        <button class="secondary" data-action="import-full-backup">Yedeği geri yükle</button>
+        <button class="secondary danger-action" data-action="reset-demo-data">Demo verisini sıfırla</button>
+      </div>
+      <div class="report-list">
+        <div><span>Son yedek zamanı</span><strong>${new Date(payload.exportedAt).toLocaleString('tr-TR')}</strong></div>
+        <div><span>Aktif stüdyo</span><strong>${activeStudio().name}</strong></div>
+        <div><span>Yedek formatı</span><strong>Formera v${payload.version}</strong></div>
+      </div>
+    </article>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · PİLOT GÜVENLİĞİ</span>
+      <h2>Denemeye çıkmadan önce</h2>
+      <p>Bu paneli her salon demosundan önce ve sonra kullan. Veri kaybı riskini minimumda tutar.</p>
+      ${pilotChecklist()}
+    </article>
+  </section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
@@ -635,14 +725,14 @@ function memberDashboard(){
   ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article></section>`}
 
-const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧']};
+const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
 function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   updateStudioShell();
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -691,6 +781,16 @@ function exportMembers(){
   a.click();
   URL.revokeObjectURL(url);
   showToast('Üye yedeği indirildi.');
+}
+
+function downloadJson(payload, filename){
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function importMembers(file){
@@ -834,6 +934,33 @@ function deleteTrainer(id){
   showToast(`${trainer.name} ekipten kaldırıldı.`);
 }
 
+function exportFullBackup(){
+  downloadJson(backupPayload(), `formera-tam-yedek-${new Date().toISOString().slice(0,10)}.json`);
+  showToast('Tüm Formera verisi indirildi.');
+}
+
+function importFullBackup(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      applyBackupPayload(JSON.parse(reader.result));
+      render();
+      showToast('Formera yedeği başarıyla geri yüklendi.');
+    }catch(e){
+      showToast('Yedek dosyası geçersiz veya okunamadı.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmResetDemoData(){
+  if(!confirm('Demo verisine sıfırlamak mevcut tarayıcı verisini değiştirecek. Önce yedek aldıysan devam edelim mi?')) return;
+  resetDemoData();
+  render();
+  showToast('Demo verisi sıfırlandı.');
+}
+
 function selectStudio(id){
   state.activeStudioId = id;
   saveActiveStudio();
@@ -872,6 +999,9 @@ function bind(){
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='cycle-studio') return cycleStudio();
+    if(action==='export-full-backup') return exportFullBackup();
+    if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
+    if(action==='reset-demo-data') return confirmResetDemoData();
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
@@ -888,6 +1018,8 @@ function bind(){
   if(importer) importer.onchange=e=>importMembers(e.target.files[0]);
   const calendarDate = document.querySelector('#calendarDate');
   if(calendarDate) calendarDate.onchange=e=>{state.calendarDate = e.target.value; render();};
+  const fullBackupImport = document.querySelector('#fullBackupImport');
+  if(fullBackupImport) fullBackupImport.onchange=e=>importFullBackup(e.target.files[0]);
 }
 
 function navigate(page){state.page=page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));render()}
