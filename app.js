@@ -51,6 +51,7 @@ const starterStudios = [
 
 const state = {
   role: 'owner',
+  trainerName: 'Ece',
   page: 'dashboard',
   calendarDate: todayISO(),
   members: starterMembers.map(normalizeMember),
@@ -384,6 +385,27 @@ function updateStudioShell(){
   if(location) location.textContent = studio.location;
 }
 
+function roleMeta(){
+  if(state.role === 'trainer') return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName)};
+  if(state.role === 'member') return {label:'Üye', next:'İşletmeci görünümü', avatar:'SA'};
+  return {label:'İşletmeci', next:'Antrenör görünümü', avatar:'OY'};
+}
+
+function updateRoleShell(){
+  const meta = roleMeta();
+  const roleButton = document.querySelector('#roleSwitch');
+  const avatar = document.querySelector('.user-avatar');
+  if(roleButton){
+    roleButton.querySelector('span').textContent = meta.label;
+    roleButton.querySelector('small').textContent = meta.next;
+  }
+  if(avatar) avatar.textContent = meta.avatar;
+  const sidebar = document.querySelector('.sidebar');
+  const main = document.querySelector('main');
+  if(sidebar) sidebar.style.display = state.role === 'owner' ? '' : 'none';
+  if(main) main.style.gridColumn = state.role === 'owner' ? '' : '1 / -1';
+}
+
 function metric(title, value, delta, icon, down=false){
   return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
 }
@@ -674,6 +696,68 @@ function teamPage(){
   </section>`;
 }
 
+function trainerSessionRows(){
+  const sessions = sessionsForDate().filter(session=>session.trainer === state.trainerName);
+  return sessions.map(session=>`<div class="session-row">
+    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
+    <div><strong>${session.member}</strong><small>${session.program} · ${sessionStatusLabel(session.status)}</small></div>
+    <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
+    <div class="row-actions">
+      <button class="mini-button" data-action="complete-session" data-session-id="${session.id}">Tamamla</button>
+      <button class="mini-button" data-action="cancel-session" data-session-id="${session.id}">İptal</button>
+    </div>
+  </div>`).join('') || `<div class="empty-mini">Bugün sana atanmış seans yok.</div>`;
+}
+
+function trainerClientRows(){
+  const clients = state.members.filter(member=>member.trainer === state.trainerName);
+  return clients.map(member=>`<div class="member-row">
+    <div class="member"><span class="avatar">${member.initials}</span><div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
+    <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
+    <span><small class="cell-label">Seans</small><br>${member.sessions}</span>
+    <span class="status ${member.type}">${member.status}</span>
+    <div class="row-actions"><button class="mini-button" data-action="checkin-member" data-member-id="${member.id}">Geldi</button></div>
+  </div>`).join('') || `<div class="empty-mini">Henüz atanmış danışan yok.</div>`;
+}
+
+function trainerProgramRows(){
+  const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && member.trainer === state.trainerName));
+  return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
+    <span>▤</span><div><strong>${program.title}</strong><small>${program.assigned} · ${program.duration} dk · ${program.level}</small></div>
+  </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
+}
+
+function trainerDashboard(){
+  const trainer = state.team.find(item=>item.name === state.trainerName) || state.team[0] || normalizeTrainer({name:'Ece'});
+  state.trainerName = trainer.name;
+  const stats = trainerStats(trainer.name);
+  const clients = state.members.filter(member=>member.trainer === trainer.name);
+  const riskyClients = clients.filter(member=>member.type !== 'good');
+  return `<div class="welcome"><div><span class="eyebrow">ANTRENÖR ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve seanslarını buradan takip et.</p></div><button class="primary" data-action="add-session">+ Seans planla</button></div>
+  <section class="metrics">
+    ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
+    ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
+    ${metric('Danışan',String(clients.length),'aktif','♙')}
+    ${metric('Riskli danışan',String(riskyClients.length),'takip et','! ',riskyClients.length > 0)}
+  </section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>Bugünkü seanslarım</h2><p>${formatDateTR(todayISO())}</p></div><span class="badge">${trainer.role}</span></div>
+      <div class="session-list">${trainerSessionRows()}</div>
+    </article>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · ANTRENÖR KOÇU</span>
+      <h2>${riskyClients.length ? 'Takip isteyen danışan var' : 'Akış sakin ve kontrollü'}</h2>
+      <p>Seans, danışan riski ve program durumuna göre bugün için kısa antrenör notları.</p>
+      <div class="insight"><span>1</span><div><strong>${stats.scheduled} planlı seansı gün sonunda tamamlandı işaretle.</strong><small>Paket ve raporlar otomatik güncellenir</small></div></div>
+      <div class="insight"><span>2</span><div><strong>${riskyClients[0]?.name || 'Aktif danışanlar'} için kısa motivasyon mesajı gönder.</strong><small>Katılım ve yenileme riskini azaltır</small></div></div>
+      <div class="insight"><span>3</span><div><strong>Program sonrası notları üye kartında güncelle.</strong><small>Pilot geri bildirimi için değerli</small></div></div>
+    </article>
+    <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenörüne atanmış üyeler</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
+    <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Danışanlara atanmış şablonlar</p></div><button class="secondary" data-action="add-program">Program oluştur</button></div>${trainerProgramRows()}</article>
+  </section>`;
+}
+
 function pilotChecklist(){
   return [
     {title:'Her pilot öncesi yedek al', note:'Salon denemesinden önce tek JSON dosyasını indir.'},
@@ -731,6 +815,8 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   updateStudioShell();
+  updateRoleShell();
+  if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
 }
@@ -1026,7 +1112,10 @@ function navigate(page){state.page=page;document.querySelectorAll('.nav-item').f
 function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)}
 
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
-document.querySelector('#roleSwitch').onclick=()=>{state.role=state.role==='owner'?'member':'owner';document.querySelector('#roleSwitch span').textContent=state.role==='owner'?'İşletmeci':'Üye';document.querySelector('#roleSwitch small').textContent=state.role==='owner'?'Üye görünümü':'İşletmeci görünümü';document.querySelector('.sidebar').style.display=state.role==='member'?'none':'';document.querySelector('main').style.gridColumn=state.role==='member'?'1 / -1':'';render()};
+document.querySelector('#roleSwitch').onclick=()=>{
+  state.role = state.role === 'owner' ? 'trainer' : state.role === 'trainer' ? 'member' : 'owner';
+  render();
+};
 document.querySelector('.mobile-menu').onclick=()=>document.querySelector('.sidebar').classList.toggle('open');
 
 memberForm.onsubmit=e=>{
