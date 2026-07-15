@@ -40,5 +40,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 
 1. Supabase projesi aç
 2. `supabase/schema.sql` dosyasını SQL Editor’da çalıştır
-3. Auth ve RLS politikalarını ekle
-4. localStorage verisini Supabase’e taşı
+3. `supabase/policies.sql` dosyasını SQL Editor’da çalıştır
+4. Supabase Auth içinde owner kullanıcısını oluştur
+5. `supabase/seed.sql` içindeki email’i değiştirip örnek veriyi çalıştır
+6. localStorage verisini Supabase’e taşı
