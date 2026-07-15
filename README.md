@@ -47,6 +47,6 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 7. Supabase Project URL ve anon public key değerlerini gir
 8. Owner email/şifre ile giriş yapıp canlı veriyi yükle
 
-Logo, marka rengi ve üye/antrenör avatarlarını canlı veride saklamak için mevcut projede ayrıca `supabase/branding.sql` dosyasını SQL Editor’da bir kez çalıştırın.
+Logo, marka rengi, işletme iletişim bilgileri ve üye/antrenör avatarlarını canlı veride saklamak için mevcut projede ayrıca `supabase/branding.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
 Supabase bilgileri GitHub’a yazılmaz; tarayıcıda saklanır. Anon key public kullanıma uygundur, veri güvenliği RLS politikalarıyla sağlanır.

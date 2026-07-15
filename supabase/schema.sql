@@ -12,6 +12,12 @@ create table if not exists public.studios (
   status text default 'Demo',
   logo_data_url text,
   accent_color text default '#d9ff64',
+  address text,
+  phone text,
+  whatsapp text,
+  instagram text,
+  website text,
+  map_url text,
   created_at timestamptz not null default now()
 );
 

@@ -366,7 +366,13 @@ function normalizeStudio(studio){
     location: studio.location || 'Konum eklenmedi',
     status: studio.status || 'Demo',
     logoDataUrl: studio.logoDataUrl || studio.logo_data_url || '',
-    accentColor: studio.accentColor || studio.accent_color || '#d9ff64'
+    accentColor: studio.accentColor || studio.accent_color || '#d9ff64',
+    address: studio.address || '',
+    phone: studio.phone || '',
+    whatsapp: studio.whatsapp || '',
+    instagram: studio.instagram || '',
+    website: studio.website || '',
+    mapUrl: studio.mapUrl || studio.map_url || ''
   };
 }
 
@@ -531,7 +537,13 @@ function mapRemoteStudio(studio){
     location: studio.location,
     status: studio.status,
     logoDataUrl: studio.logo_data_url,
-    accentColor: studio.accent_color
+    accentColor: studio.accent_color,
+    address: studio.address,
+    phone: studio.phone,
+    whatsapp: studio.whatsapp,
+    instagram: studio.instagram,
+    website: studio.website,
+    mapUrl: studio.map_url
   });
 }
 
@@ -821,6 +833,12 @@ function syncStudiosToSupabase(){
       if(state.backend.brandingReady){
         row.logo_data_url = studio.logoDataUrl || null;
         row.accent_color = studio.accentColor || '#d9ff64';
+        row.address = studio.address || null;
+        row.phone = studio.phone || null;
+        row.whatsapp = studio.whatsapp || null;
+        row.instagram = studio.instagram || null;
+        row.website = studio.website || null;
+        row.map_url = studio.mapUrl || null;
       }
       return row;
     });
@@ -1390,6 +1408,20 @@ function pilotChecklist(){
   ].map((item,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${item.title}</strong><small>${item.note}</small></div></div>`).join('');
 }
 
+function studioContactRows(){
+  const studio = activeStudio();
+  const instagram = studio.instagram ? (studio.instagram.startsWith('@') ? studio.instagram : `@${studio.instagram}`) : '';
+  const items = [
+    ['Telefon', studio.phone || 'Eklenmedi'],
+    ['WhatsApp', studio.whatsapp || 'Eklenmedi'],
+    ['Adres', studio.address || 'Eklenmedi'],
+    ['Instagram', instagram || 'Eklenmedi'],
+    ['Web sitesi', studio.website || 'Eklenmedi'],
+    ['Konum linki', studio.mapUrl ? 'Harita linki hazır' : 'Eklenmedi']
+  ];
+  return items.map(([label,value])=>`<div><span>${label}</span><strong>${escapeAttr(value)}</strong></div>`).join('');
+}
+
 function pilotPage(){
   const payload = backupPayload();
   return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div>
@@ -1427,6 +1459,10 @@ function pilotPage(){
         <div><span>Kurulum notu</span><strong>supabase/README.md</strong></div>
         <div><span>Bağlantı örneği</span><strong>config.example.js</strong></div>
       </div>
+    </article>
+    <article class="card">
+      <div class="card-title"><div><h2>İşletme iletişim bilgileri</h2><p>Adres, telefon ve sosyal medya görünümü</p></div><button class="secondary" data-action="customize-studio">Düzenle</button></div>
+      <div class="report-list">${studioContactRows()}</div>
     </article>
   </section>`;
 }
@@ -1696,6 +1732,12 @@ function openStudioBrandModal(){
   studioBrandForm.reset();
   studioBrandForm.elements.name.value = studio.name;
   studioBrandForm.elements.location.value = studio.location;
+  studioBrandForm.elements.address.value = studio.address || '';
+  studioBrandForm.elements.phone.value = studio.phone || '';
+  studioBrandForm.elements.whatsapp.value = studio.whatsapp || '';
+  studioBrandForm.elements.instagram.value = studio.instagram || '';
+  studioBrandForm.elements.website.value = studio.website || '';
+  studioBrandForm.elements.mapUrl.value = studio.mapUrl || '';
   studioBrandForm.elements.initials.value = studio.initials;
   studioBrandForm.elements.accentColor.value = studio.accentColor || '#d9ff64';
   studioBrandModal.showModal();
@@ -2036,6 +2078,12 @@ studioBrandForm.onsubmit=async e=>{
     ...studio,
     name,
     location: data.get('location').trim() || 'Konum eklenmedi',
+    address: data.get('address').trim(),
+    phone: data.get('phone').trim(),
+    whatsapp: data.get('whatsapp').trim(),
+    instagram: data.get('instagram').trim(),
+    website: data.get('website').trim(),
+    mapUrl: data.get('mapUrl').trim(),
     initials: data.get('initials').trim().toLocaleUpperCase('tr') || initialsFromName(name),
     accentColor: data.get('accentColor') || '#d9ff64',
     logoDataUrl
