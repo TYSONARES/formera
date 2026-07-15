@@ -3,6 +3,8 @@ const FINANCE_STORAGE_KEY = 'formera_finance_entries';
 const PROGRAM_STORAGE_KEY = 'formera_programs';
 const SESSION_STORAGE_KEY = 'formera_sessions';
 const TEAM_STORAGE_KEY = 'formera_team';
+const STUDIO_STORAGE_KEY = 'formera_studios';
+const ACTIVE_STUDIO_STORAGE_KEY = 'formera_active_studio';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -40,6 +42,13 @@ const starterTeam = [
   {id:'t_2', name:'Kerem', role:'PT Coach', specialty:'Fonksiyonel · kilo kontrol', phone:'0532 200 20 20', commission:16}
 ];
 
+const starterStudios = [
+  {id:'studio_1', name:'NorthFit Studio', initials:'NF', location:'Kadıköy · İstanbul', status:'Pilot aktif'},
+  {id:'studio_2', name:'CoreLab PT', initials:'CL', location:'Ataşehir · İstanbul', status:'Kurulum'},
+  {id:'studio_3', name:'Pulse Studio', initials:'PS', location:'Beşiktaş · İstanbul', status:'Demo'},
+  {id:'studio_4', name:'Forma PT', initials:'FP', location:'Bakırköy · İstanbul', status:'Pilot aktif'}
+];
+
 const state = {
   role: 'owner',
   page: 'dashboard',
@@ -48,7 +57,9 @@ const state = {
   finance: starterFinance.map(normalizeFinanceEntry),
   programs: starterPrograms.map(normalizeProgram),
   sessions: starterSessions.map(normalizeSession),
-  team: starterTeam.map(normalizeTrainer)
+  team: starterTeam.map(normalizeTrainer),
+  studios: starterStudios.map(normalizeStudio),
+  activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1'
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -79,6 +90,12 @@ const savedTeam = localStorage.getItem(TEAM_STORAGE_KEY);
 if(savedTeam){
   try{ state.team = JSON.parse(savedTeam).map(normalizeTrainer); }
   catch(e){ console.warn('Kayıtlı ekip okunamadı.'); }
+}
+
+const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
+if(savedStudios){
+  try{ state.studios = JSON.parse(savedStudios).map(normalizeStudio); }
+  catch(e){ console.warn('Kayıtlı stüdyolar okunamadı.'); }
 }
 
 const money = new Intl.NumberFormat('tr-TR');
@@ -286,6 +303,38 @@ function teamSummary(){
   };
 }
 
+function normalizeStudio(studio){
+  return {
+    id: studio.id || makeId(),
+    name: studio.name || 'Yeni stüdyo',
+    initials: studio.initials || initialsFromName(studio.name || 'Yeni stüdyo'),
+    location: studio.location || 'Konum eklenmedi',
+    status: studio.status || 'Demo'
+  };
+}
+
+function activeStudio(){
+  return state.studios.find(studio=>studio.id === state.activeStudioId) || state.studios[0] || normalizeStudio({});
+}
+
+function saveStudios(){
+  localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
+}
+
+function saveActiveStudio(){
+  localStorage.setItem(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
+}
+
+function updateStudioShell(){
+  const studio = activeStudio();
+  const avatar = document.querySelector('#studioAvatar');
+  const name = document.querySelector('#studioName');
+  const location = document.querySelector('#studioLocation');
+  if(avatar) avatar.textContent = studio.initials;
+  if(name) name.textContent = studio.name;
+  if(location) location.textContent = studio.location;
+}
+
 function metric(title, value, delta, icon, down=false){
   return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
 }
@@ -323,13 +372,20 @@ function compactSessionRows(items=sessionsForDate()){
   </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
 }
 
+function studioPilotRows(){
+  return state.studios.map(studio=>`<button class="studio-pilot ${studio.id === state.activeStudioId ? 'active' : ''}" data-action="select-studio" data-studio-id="${studio.id}">
+    <span class="studio-avatar">${studio.initials}</span>
+    <div><strong>${studio.name}</strong><small>${studio.location} · ${studio.status}</small></div>
+  </button>`).join('');
+}
+
 function dashboard(){
   const riskyCount = state.members.filter(m=>m.type !== 'good').length;
   const finance = financeSummary();
   const chartRows = weeklyChartData();
   const maxChartValue = Math.max(...chartRows.flatMap(row=>[row[1], row[2]]), 1);
   const sessions = sessionSummary();
-  return `<div class="welcome"><div><span class="eyebrow">4–10 Temmuz · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>Stüdyon bu hafta iyi ilerliyor. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
+  return `<div class="welcome"><div><span class="eyebrow">${activeStudio().name} · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>${activeStudio().location} pilot alanı iyi ilerliyor. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
   <section class="metrics">
     ${metric('Aktif üye',String(state.members.length),'↑ canlı veri','♙')}
     ${metric('Haftalık gelir',formatCurrency(finance.income),'canlı kayıt','₺')}
@@ -347,6 +403,7 @@ function dashboard(){
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
     <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
+    <article class="card"><div class="card-title"><div><h2>4 salon pilotu</h2><p>Aktif demo stüdyosunu seç</p></div><span class="badge">${state.studios.length} stüdyo</span></div><div class="studio-pilot-list">${studioPilotRows()}</div></article>
   </section>`;
 }
 
@@ -583,6 +640,7 @@ const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyel
 function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
+  updateStudioShell();
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():genericPage(...pages[state.page]); bind();
 }
@@ -776,6 +834,20 @@ function deleteTrainer(id){
   showToast(`${trainer.name} ekipten kaldırıldı.`);
 }
 
+function selectStudio(id){
+  state.activeStudioId = id;
+  saveActiveStudio();
+  updateStudioShell();
+  render();
+  showToast(`${activeStudio().name} pilot alanına geçildi.`);
+}
+
+function cycleStudio(){
+  const index = state.studios.findIndex(studio=>studio.id === state.activeStudioId);
+  const next = state.studios[(index + 1) % state.studios.length];
+  if(next) selectStudio(next.id);
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -798,6 +870,8 @@ function bind(){
     if(action==='copy-report') return copyReport();
     if(action==='add-trainer') return openTrainerModal();
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
+    if(action==='select-studio') return selectStudio(b.dataset.studioId);
+    if(action==='cycle-studio') return cycleStudio();
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
