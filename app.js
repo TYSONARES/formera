@@ -2,6 +2,7 @@ const STORAGE_KEY = 'formera_members';
 const FINANCE_STORAGE_KEY = 'formera_finance_entries';
 const PROGRAM_STORAGE_KEY = 'formera_programs';
 const SESSION_STORAGE_KEY = 'formera_sessions';
+const TEAM_STORAGE_KEY = 'formera_team';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -34,6 +35,11 @@ const starterSessions = [
   {id:'s_5', date:'2026-07-14', time:'18:00', member:'Deniz Erdem', trainer:'Ece', program:'Mobilite + core', room:'Salon A', status:'done'}
 ];
 
+const starterTeam = [
+  {id:'t_1', name:'Ece', role:'Head Coach', specialty:'Kuvvet · postür', phone:'0532 100 10 10', commission:18},
+  {id:'t_2', name:'Kerem', role:'PT Coach', specialty:'Fonksiyonel · kilo kontrol', phone:'0532 200 20 20', commission:16}
+];
+
 const state = {
   role: 'owner',
   page: 'dashboard',
@@ -41,7 +47,8 @@ const state = {
   members: starterMembers.map(normalizeMember),
   finance: starterFinance.map(normalizeFinanceEntry),
   programs: starterPrograms.map(normalizeProgram),
-  sessions: starterSessions.map(normalizeSession)
+  sessions: starterSessions.map(normalizeSession),
+  team: starterTeam.map(normalizeTrainer)
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -68,6 +75,12 @@ if(savedSessions){
   catch(e){ console.warn('Kayıtlı seanslar okunamadı.'); }
 }
 
+const savedTeam = localStorage.getItem(TEAM_STORAGE_KEY);
+if(savedTeam){
+  try{ state.team = JSON.parse(savedTeam).map(normalizeTrainer); }
+  catch(e){ console.warn('Kayıtlı ekip okunamadı.'); }
+}
+
 const money = new Intl.NumberFormat('tr-TR');
 const app = document.querySelector('#appContent');
 const toast = document.querySelector('#toast');
@@ -81,6 +94,8 @@ const programModal = document.querySelector('#programModal');
 const programForm = document.querySelector('#programForm');
 const sessionModal = document.querySelector('#sessionModal');
 const sessionForm = document.querySelector('#sessionForm');
+const trainerModal = document.querySelector('#trainerModal');
+const trainerForm = document.querySelector('#trainerForm');
 
 function makeId(){
   return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -231,6 +246,44 @@ function sessionSummary(date=todayISO()){
   }, {});
   const busiest = Object.entries(peakHour).sort((a,b)=>b[1]-a[1])[0];
   return {total: all.length, done, cancelled, scheduled, busiest};
+}
+
+function normalizeTrainer(trainer){
+  return {
+    id: trainer.id || makeId(),
+    name: trainer.name || 'Yeni antrenör',
+    role: trainer.role || 'PT Coach',
+    specialty: trainer.specialty || 'Genel fitness',
+    phone: trainer.phone || '',
+    commission: Number(trainer.commission) || 15
+  };
+}
+
+function saveTeam(){
+  localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state.team));
+}
+
+function trainerStats(trainerName){
+  const todaySessions = sessionsForDate().filter(session=>session.trainer === trainerName);
+  const done = todaySessions.filter(session=>session.status === 'done').length;
+  const scheduled = todaySessions.filter(session=>session.status === 'scheduled').length;
+  const cancelled = todaySessions.filter(session=>session.status === 'cancelled').length;
+  const trainerMembers = state.members.filter(member=>member.trainer === trainerName).map(member=>member.name);
+  const revenue = state.finance
+    .filter(entry=>entry.type === 'income' && trainerMembers.some(name=>entry.title.includes(name)))
+    .reduce((sum,entry)=>sum + entry.amount, 0);
+  const activeMembers = trainerMembers.length;
+  return {todayTotal: todaySessions.length, done, scheduled, cancelled, revenue, activeMembers};
+}
+
+function teamSummary(){
+  const stats = state.team.map(trainer=>trainerStats(trainer.name));
+  return {
+    trainers: state.team.length,
+    todaySessions: stats.reduce((sum,item)=>sum + item.todayTotal, 0),
+    completed: stats.reduce((sum,item)=>sum + item.done, 0),
+    estimatedCommission: state.team.reduce((sum,trainer)=>sum + trainerStats(trainer.name).revenue * (trainer.commission / 100), 0)
+  };
 }
 
 function metric(title, value, delta, icon, down=false){
@@ -461,6 +514,60 @@ function reportsPage(){
   </section>`;
 }
 
+function teamCards(){
+  return state.team.map(trainer=>{
+    const stats = trainerStats(trainer.name);
+    const estimatedCommission = stats.revenue * (trainer.commission / 100);
+    return `<article class="team-card">
+      <div class="team-head">
+        <span class="avatar">${initialsFromName(trainer.name)}</span>
+        <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p></div>
+        <span class="badge">%${trainer.commission} prim</span>
+      </div>
+      <div class="team-stats">
+        <div><span>Bugünkü seans</span><strong>${stats.todayTotal}</strong></div>
+        <div><span>Tamamlanan</span><strong>${stats.done}</strong></div>
+        <div><span>Aktif üye</span><strong>${stats.activeMembers}</strong></div>
+        <div><span>Gelir katkısı</span><strong>${formatCurrency(stats.revenue)}</strong></div>
+      </div>
+      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div>
+    </article>`;
+  }).join('');
+}
+
+function teamAiNotes(){
+  const summary = teamSummary();
+  const busiest = state.team
+    .map(trainer=>({trainer, stats:trainerStats(trainer.name)}))
+    .sort((a,b)=>b.stats.todayTotal-a.stats.todayTotal)[0];
+  const notes = [];
+  if(busiest?.stats.todayTotal >= 3) notes.push(`${busiest.trainer.name} bugün yoğun; seanslar arasında 10 dk tampon bırak.`);
+  if(summary.completed < summary.todaySessions) notes.push(`${summary.todaySessions - summary.completed} seans hâlâ tamamlanmayı bekliyor; gün sonunda işaretle.`);
+  notes.push(`Bugünkü tahmini ekip primi ${formatCurrency(summary.estimatedCommission)} seviyesinde.`);
+  notes.push('Pilot salonlarda antrenör bazlı memnuniyet notu toplamaya başla.');
+  return notes;
+}
+
+function teamPage(){
+  const summary = teamSummary();
+  return `<div class="welcome"><div><span class="eyebrow">EKİP</span><h1>Antrenör performansı</h1><p>Seans yükü, aktif üye, gelir katkısı ve prim görünümünü takip et.</p></div><button class="primary" data-action="add-trainer">+ Antrenör ekle</button></div>
+  <section class="metrics">
+    ${metric('Antrenör',String(summary.trainers),'aktif ekip','♧')}
+    ${metric('Bugünkü seans',String(summary.todaySessions),'ekip toplamı','□')}
+    ${metric('Tamamlanan',String(summary.completed),'bugün','✓')}
+    ${metric('Tahmini prim',formatCurrency(summary.estimatedCommission),'gelire göre','₺')}
+  </section>
+  <section class="dashboard-grid">
+    <div class="team-grid">${teamCards()}</div>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · EKİP KOÇU</span>
+      <h2>Bugünkü ekip notları</h2>
+      <p>Antrenör yükü, seans tamamlanma ve gelir katkısına göre kısa yönetim önerileri.</p>
+      ${teamAiNotes().map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Ekip aksiyonu</small></div></div>`).join('')}
+    </article>
+  </section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
@@ -477,7 +584,7 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -654,6 +761,21 @@ function copyReport(){
   showToast('Haftalık rapor panoya kopyalandı.');
 }
 
+function openTrainerModal(){
+  trainerForm.reset();
+  trainerModal.showModal();
+}
+
+function deleteTrainer(id){
+  const trainer = state.team.find(x=>x.id === id);
+  if(!trainer) return;
+  if(!confirm(`${trainer.name} ekipten kaldırılsın mı?`)) return;
+  state.team = state.team.filter(x=>x.id !== id);
+  saveTeam();
+  render();
+  showToast(`${trainer.name} ekipten kaldırıldı.`);
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -674,6 +796,8 @@ function bind(){
     if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
     if(action==='delete-session') return deleteSession(b.dataset.sessionId);
     if(action==='copy-report') return copyReport();
+    if(action==='add-trainer') return openTrainerModal();
+    if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
@@ -793,6 +917,25 @@ sessionForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${session.member} için ${session.time} seansı eklendi.`);
+};
+
+trainerForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const trainer = normalizeTrainer({
+    id: makeId(),
+    name: data.get('name').trim(),
+    role: data.get('role').trim(),
+    specialty: data.get('specialty').trim(),
+    phone: data.get('phone').trim(),
+    commission: data.get('commission')
+  });
+  state.team.push(trainer);
+  saveTeam();
+  trainerModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${trainer.name} ekibe eklendi.`);
 };
 
 render();

@@ -91,6 +91,15 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Seansı kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="trainerModal">
+    <form method="dialog" id="trainerForm">
+      <div class="modal-head"><div><span class="eyebrow">EKİP</span><h2>Antrenör ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Ad<input name="name" required placeholder="Örn. Derya"></label>
+      <div class="form-grid"><label>Rol<input name="role" placeholder="PT Coach"></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
+      <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>Prim %<input name="commission" inputmode="numeric" placeholder="15"></label></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
+    </form>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>
