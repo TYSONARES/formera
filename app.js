@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'formera_members';
 const FINANCE_STORAGE_KEY = 'formera_finance_entries';
+const PROGRAM_STORAGE_KEY = 'formera_programs';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -18,11 +19,18 @@ const starterFinance = [
   {id:'f_6', type:'expense', title:'Ekipman bakım', category:'Operasyon', amount:1850, date:'2026-06-30', status:'paid'}
 ];
 
+const starterPrograms = [
+  {id:'p_1', title:'Alt vücut güç', goal:'Kuvvet ve form', level:'Orta', duration:48, assigned:'Selin Aksoy', exercises:['Goblet squat · 4 × 10','Romanian deadlift · 3 × 12','Walking lunge · 3 × 10','Hip thrust · 4 × 12']},
+  {id:'p_2', title:'Fonksiyonel full body', goal:'Yağ yakımı ve kondisyon', level:'Başlangıç', duration:42, assigned:'Can Aydın', exercises:['Kettlebell deadlift · 3 × 12','TRX row · 3 × 10','Step-up · 3 × 12','Farmer carry · 4 tur']},
+  {id:'p_3', title:'Mobilite + core', goal:'Duruş ve sakatlık önleme', level:'Herkes', duration:35, assigned:'Deniz Erdem', exercises:['Dead bug · 3 × 12','Side plank · 3 × 30 sn','World greatest stretch · 2 tur','Pallof press · 3 × 10']}
+];
+
 const state = {
   role: 'owner',
   page: 'dashboard',
   members: starterMembers.map(normalizeMember),
-  finance: starterFinance.map(normalizeFinanceEntry)
+  finance: starterFinance.map(normalizeFinanceEntry),
+  programs: starterPrograms.map(normalizeProgram)
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -37,6 +45,12 @@ if(savedFinance){
   catch(e){ console.warn('Kayıtlı finans hareketleri okunamadı.'); }
 }
 
+const savedPrograms = localStorage.getItem(PROGRAM_STORAGE_KEY);
+if(savedPrograms){
+  try{ state.programs = JSON.parse(savedPrograms).map(normalizeProgram); }
+  catch(e){ console.warn('Kayıtlı programlar okunamadı.'); }
+}
+
 const money = new Intl.NumberFormat('tr-TR');
 const app = document.querySelector('#appContent');
 const toast = document.querySelector('#toast');
@@ -46,6 +60,8 @@ const memberModalTitle = document.querySelector('#memberModalTitle');
 const memberModalEyebrow = document.querySelector('#memberModalEyebrow');
 const financeModal = document.querySelector('#financeModal');
 const financeForm = document.querySelector('#financeForm');
+const programModal = document.querySelector('#programModal');
+const programForm = document.querySelector('#programForm');
 
 function makeId(){
   return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -132,6 +148,25 @@ function weeklyChartData(){
   ];
   const current = financeSummary();
   return [...base, ['H28', current.income, current.expense]];
+}
+
+function normalizeProgram(program){
+  const exercises = Array.isArray(program.exercises)
+    ? program.exercises
+    : String(program.exercises || '').split('\n').map(x=>x.trim()).filter(Boolean);
+  return {
+    id: program.id || makeId(),
+    title: program.title || 'Yeni program',
+    goal: program.goal || 'Genel fitness',
+    level: program.level || 'Başlangıç',
+    duration: Number(program.duration) || 40,
+    assigned: program.assigned || 'Atanmadı',
+    exercises: exercises.length ? exercises : ['Isınma · 8 dk','Ana çalışma · 25 dk','Soğuma · 7 dk']
+  };
+}
+
+function savePrograms(){
+  localStorage.setItem(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
 }
 
 function metric(title, value, delta, icon, down=false){
@@ -247,13 +282,31 @@ function financePage(){
   </section>`;
 }
 
+function programCards(){
+  return state.programs.map(program=>`<article class="program-card">
+    <div class="card-title"><div><h2>${program.title}</h2><p>${program.goal} · ${program.duration} dk</p></div><span class="badge">${program.level}</span></div>
+    <div class="program-assignee"><span class="avatar">${initialsFromName(program.assigned)}</span><div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
+    <div class="program-exercises">
+      ${program.exercises.slice(0,4).map((exercise,index)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><div><strong>${exercise}</strong><small>Setleri PT onayıyla güncelle</small></div></div>`).join('')}
+    </div>
+    <div class="program-actions"><button class="secondary" data-action="assign-program" data-program-id="${program.id}">Üyeye gönder</button><button class="mini-button danger" data-action="delete-program" data-program-id="${program.id}">Sil</button></div>
+  </article>`).join('');
+}
+
+function programsPage(){
+  return `<div class="welcome"><div><span class="eyebrow">PROGRAMLAR</span><h1>Antrenman şablonları</h1><p>PT programlarını oluştur, üyeye ata ve üye arayüzünde takip ettir.</p></div><button class="primary" data-action="add-program">+ Program oluştur</button></div>
+  <section class="program-grid">${programCards()}</section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
-function memberDashboard(){return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
+function memberDashboard(){
+  const program = state.programs[0] || normalizeProgram({});
+  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman','2 / 3','1 kaldı','✓')}${metric('Toplam seans','7 / 12','5 seans kaldı','◷')}${metric('Seri','3 hafta','Kişisel rekor','↗')}${metric('Son ölçüm','−1,8 kg','Son 30 gün','◎')}</section>
-  <section class="dashboard-grid"><article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>Alt vücut · 48 dakika</p></div><span class="badge">PT Ece</span></div>
-  ${['Goblet squat · 4 × 10','Romanian deadlift · 3 × 12','Walking lunge · 3 × 10','Hip thrust · 4 × 12'].map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
-  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>Son üç haftadır programına %89 uyum gösterdin. Bugün squat ağırlığını artırmadan formunu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article></section>`}
+  <section class="dashboard-grid"><article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
+  ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
+  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article></section>`}
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧']};
 
@@ -261,7 +314,7 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -352,6 +405,27 @@ function showAiPlan(){
   if(state.page !== 'finance') navigate('finance');
 }
 
+function openProgramModal(){
+  programForm.reset();
+  programModal.showModal();
+}
+
+function deleteProgram(id){
+  const program = state.programs.find(x=>x.id === id);
+  if(!program) return;
+  if(!confirm(`${program.title} programını silmek istiyor musun?`)) return;
+  state.programs = state.programs.filter(x=>x.id !== id);
+  savePrograms();
+  render();
+  showToast('Program silindi.');
+}
+
+function assignProgram(id){
+  const program = state.programs.find(x=>x.id === id);
+  if(!program) return;
+  showToast(`${program.title}, ${program.assigned} üye ekranına gönderildi.`);
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -364,6 +438,9 @@ function bind(){
     if(action==='add-finance') return openFinanceModal();
     if(action==='delete-finance') return deleteFinanceEntry(b.dataset.financeId);
     if(action==='ai-plan') return showAiPlan();
+    if(action==='add-program') return openProgramModal();
+    if(action==='delete-program') return deleteProgram(b.dataset.programId);
+    if(action==='assign-program') return assignProgram(b.dataset.programId);
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
@@ -439,6 +516,26 @@ financeForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${entry.type === 'expense' ? 'Gider' : 'Gelir'} kaydedildi: ${formatCurrency(entry.amount)}`);
+};
+
+programForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const program = normalizeProgram({
+    id: makeId(),
+    title: data.get('title').trim(),
+    goal: data.get('goal').trim(),
+    level: data.get('level'),
+    duration: data.get('duration'),
+    assigned: data.get('assigned').trim() || 'Atanmadı',
+    exercises: data.get('exercises')
+  });
+  state.programs.unshift(program);
+  savePrograms();
+  programModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${program.title} programı oluşturuldu.`);
 };
 
 render();

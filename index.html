@@ -72,6 +72,16 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İşlemi kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="programModal">
+    <form method="dialog" id="programForm">
+      <div class="modal-head"><div><span class="eyebrow">PROGRAM</span><h2>Program oluştur</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Program adı<input name="title" required placeholder="Örn. Alt vücut güç"></label>
+      <div class="form-grid"><label>Hedef<input name="goal" placeholder="Kuvvet ve form"></label><label>Seviye<select name="level"><option>Başlangıç</option><option>Orta</option><option>İleri</option><option>Herkes</option></select></label></div>
+      <div class="form-grid"><label>Süre / dk<input name="duration" inputmode="numeric" placeholder="45"></label><label>Atanan üye<input name="assigned" placeholder="Selin Aksoy"></label></div>
+      <label>Egzersizler<textarea name="exercises" required rows="5" placeholder="Goblet squat · 4 × 10&#10;Romanian deadlift · 3 × 12"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Programı kaydet</button></div>
+    </form>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>
