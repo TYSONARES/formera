@@ -26,6 +26,7 @@ create table if not exists public.profiles (
   studio_id uuid references public.studios(id) on delete cascade,
   full_name text not null,
   role text not null check (role in ('owner', 'trainer', 'member')),
+  email text,
   phone text,
   avatar_data_url text,
   created_at timestamptz not null default now()
@@ -34,9 +35,11 @@ create table if not exists public.profiles (
 create table if not exists public.members (
   id uuid primary key default gen_random_uuid(),
   studio_id uuid references public.studios(id) on delete cascade,
+  profile_id uuid references public.profiles(id) on delete set null,
   trainer_profile_id uuid references public.profiles(id) on delete set null,
   full_name text not null,
   initials text,
+  email text,
   phone text,
   avatar_data_url text,
   last_visit_label text default 'Henüz gelmedi',

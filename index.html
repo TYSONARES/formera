@@ -63,6 +63,7 @@
       <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
       <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
       <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
+      <label>Giriş e-postası<input name="email" type="email" placeholder="uye@email.com"></label>
       <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeyi kaydet</button></div>
     </form>
@@ -102,6 +103,7 @@
       <label>Ad<input name="name" required placeholder="Örn. Derya"></label>
       <div class="form-grid"><label>Rol<input name="role" placeholder="PT Coach"></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
       <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>Prim %<input name="commission" inputmode="numeric" placeholder="15"></label></div>
+      <label>Giriş e-postası<input name="email" type="email" placeholder="antrenor@email.com"></label>
       <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
     </form>
@@ -144,7 +146,7 @@
       <form id="supabaseAuthForm">
         <label>Email<input name="email" type="email" required placeholder="owner@email.com"></label>
         <label>Şifre<input name="password" type="password" required placeholder="Supabase Auth şifresi"></label>
-        <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="submit" class="primary">Giriş yap ve veriyi çek</button></div>
+        <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="button" class="secondary" id="signupSupabase">Hesap oluştur</button><button type="submit" class="primary">Giriş yap ve veriyi çek</button></div>
       </form>
     </div>
   </dialog>

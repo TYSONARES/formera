@@ -25,6 +25,7 @@
 .backend-pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;font:800 11px "DM Sans";color:var(--muted);cursor:pointer;white-space:nowrap}
 .backend-pill.connected{background:#edf7ee;border-color:#c7e4ca;color:var(--green)}
 .backend-pill.warning{background:#fff5e5;border-color:#f0d5a9;color:#9c641d}
+.role-switch.locked{cursor:not-allowed;opacity:.78}
 .modal-panel{padding:25px}
 .modal-panel form{padding:0;border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
 .modal-note{color:var(--muted);font-size:12px;line-height:1.55;margin:-10px 0 12px}

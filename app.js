@@ -75,7 +75,8 @@ const state = {
     user: null,
     profile: null,
     studioId: null,
-    brandingReady: false
+    brandingReady: false,
+    accountsReady: false
   }
 };
 
@@ -184,6 +185,7 @@ function normalizeMember(member){
   const normalized = {
     id: member.id || makeId(),
     studioId: member.studioId || member.studio_id || null,
+    profileId: member.profileId || member.profile_id || null,
     trainerProfileId: member.trainerProfileId || member.trainer_profile_id || null,
     name: member.name || 'İsimsiz Üye',
     initials: member.initials || initialsFromName(member.name || 'İsimsiz Üye'),
@@ -193,7 +195,8 @@ function normalizeMember(member){
     sessions: member.sessions || '0 / 12',
     status: member.status || 'Aktif',
     type: member.type || 'good',
-    phone: member.phone || ''
+    phone: member.phone || '',
+    email: member.email || ''
   };
   return {...normalized, ...statusFor(normalized)};
 }
@@ -326,7 +329,8 @@ function normalizeTrainer(trainer){
     specialty: trainer.specialty || 'Genel fitness',
     phone: trainer.phone || '',
     commission: Number(trainer.commission) || 15,
-    avatarDataUrl: trainer.avatarDataUrl || trainer.avatar_data_url || ''
+    avatarDataUrl: trainer.avatarDataUrl || trainer.avatar_data_url || '',
+    email: trainer.email || ''
   };
 }
 
@@ -556,7 +560,8 @@ function mapRemoteTrainer(profile){
     specialty: profile.role === 'owner' ? 'İşletme yönetimi' : 'Genel fitness',
     phone: profile.phone || '',
     commission: 15,
-    avatarDataUrl: profile.avatar_data_url
+    avatarDataUrl: profile.avatar_data_url,
+    email: profile.email || ''
   });
 }
 
@@ -564,6 +569,7 @@ function mapRemoteMember(member, profilesById){
   return normalizeMember({
     id: member.id,
     studioId: member.studio_id,
+    profileId: member.profile_id,
     trainerProfileId: member.trainer_profile_id,
     name: member.full_name,
     initials: member.initials,
@@ -573,7 +579,8 @@ function mapRemoteMember(member, profilesById){
     status: member.status,
     type: member.risk_type,
     phone: member.phone || '',
-    avatarDataUrl: member.avatar_data_url
+    avatarDataUrl: member.avatar_data_url,
+    email: member.email || profilesById[member.profile_id]?.email || ''
   });
 }
 
@@ -655,16 +662,20 @@ async function loadRemoteData(){
   state.backend.loading = true;
   updateBackendShell();
   const db = state.backend.client;
-  const {data: profile, error: profileError} = await db
+  let {data: profile, error: profileError} = await db
     .from('profiles')
     .select('*')
     .eq('auth_user_id', state.backend.user.id)
     .maybeSingle();
   if(profileError) return remoteError(profileError, 'Profil okunamadı.');
   if(!profile){
+    const {data: claimedProfile, error: claimError} = await db.rpc('claim_profile_by_email');
+    if(!claimError && claimedProfile) profile = Array.isArray(claimedProfile) ? claimedProfile[0] : claimedProfile;
+  }
+  if(!profile){
     state.backend.loading = false;
     state.backend.connected = false;
-    state.backend.error = 'Bu Auth kullanıcısına bağlı owner profili bulunamadı.';
+    state.backend.error = 'Bu e-postaya bağlı işletmeci/antrenör/üye profili bulunamadı.';
     updateBackendShell();
     return;
   }
@@ -697,6 +708,7 @@ async function loadRemoteData(){
   if(failed) return remoteError(failed.error);
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
+  state.backend.accountsReady = (profilesResult.data || []).some(item=>'email' in item) || (membersResult.data || []).some(item=>'profile_id' in item);
 
   const profilesById = Object.fromEntries((profilesResult.data || []).map(item=>[item.id, item]));
   const memberNamesById = Object.fromEntries((membersResult.data || []).map(item=>[item.id, item.full_name]));
@@ -726,6 +738,7 @@ async function loadRemoteData(){
   state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
+  if(profile.role === 'member') state.page = 'dashboard';
   state.backend.connected = true;
   state.backend.loading = false;
   state.backend.error = '';
@@ -776,12 +789,41 @@ async function signInSupabase(email, password){
   supabaseModal?.close();
 }
 
+async function signUpSupabase(email, password){
+  if(!state.backend.client){
+    await initSupabase();
+  }
+  if(!state.backend.client){
+    showToast('Önce Supabase URL ve anon key kaydet.');
+    return;
+  }
+  state.backend.loading = true;
+  updateBackendShell();
+  const {data, error} = await state.backend.client.auth.signUp({email, password});
+  state.backend.loading = false;
+  if(error){
+    remoteError(error, 'Hesap oluşturulamadı.');
+    showToast('Hesap oluşturulamadı. Email/şifreyi kontrol et.');
+    return;
+  }
+  if(data.session?.user){
+    state.backend.user = data.session.user;
+    await loadRemoteData();
+    supabaseModal?.close();
+    showToast('Hesap oluşturuldu ve giriş yapıldı.');
+    return;
+  }
+  updateBackendShell();
+  showToast('Hesap oluşturuldu. Email doğrulaması gerekiyorsa gelen kutunu kontrol et.');
+}
+
 async function signOutSupabase(){
   if(state.backend.client) await state.backend.client.auth.signOut();
   state.backend.connected = false;
   state.backend.user = null;
   state.backend.profile = null;
   state.backend.studioId = null;
+  state.backend.accountsReady = false;
   updateBackendShell();
   showToast('Canlı veri oturumu kapatıldı.');
 }
@@ -794,14 +836,29 @@ async function syncRemote(table, rows){
   remoteError(error);
 }
 
-function syncMembersToSupabase(){
+async function syncMembersToSupabase(){
   const studioId = studioIdForRemote();
   if(!studioId) return;
+  if(state.backend.accountsReady){
+    const profileRows = state.members
+      .filter(member=>member.email || member.profileId)
+      .map(member=>({
+        id: member.profileId || makeId(),
+        studio_id: studioId,
+        full_name: member.name,
+        role: 'member',
+        phone: member.phone || null,
+        email: member.email || null,
+        avatar_data_url: member.avatarDataUrl || null
+      }));
+    await syncRemote('profiles', profileRows);
+  }
   const rows = state.members.map(member=>{
     const parsed = parseSessions(member.sessions);
     const row = {
       id: member.id,
       studio_id: studioId,
+      profile_id: state.backend.accountsReady ? member.profileId : null,
       trainer_profile_id: trainerProfileIdByName(member.trainer),
       full_name: member.name,
       initials: member.initials,
@@ -812,10 +869,13 @@ function syncMembersToSupabase(){
       status: member.status,
       risk_type: member.type
     };
-    if(state.backend.brandingReady) row.avatar_data_url = member.avatarDataUrl || null;
+    if(state.backend.accountsReady){
+      row.email = member.email || null;
+      row.avatar_data_url = member.avatarDataUrl || null;
+    }else if(state.backend.brandingReady) row.avatar_data_url = member.avatarDataUrl || null;
     return row;
   });
-  syncRemote('members', rows);
+  await syncRemote('members', rows);
 }
 
 function syncStudiosToSupabase(){
@@ -901,7 +961,10 @@ function syncTeamToSupabase(){
       role: 'trainer',
       phone: trainer.phone || null
     };
-    if(state.backend.brandingReady) row.avatar_data_url = trainer.avatarDataUrl || null;
+    if(state.backend.accountsReady){
+      row.email = trainer.email || null;
+      row.avatar_data_url = trainer.avatarDataUrl || null;
+    }else if(state.backend.brandingReady) row.avatar_data_url = trainer.avatarDataUrl || null;
     return row;
   }));
 }
@@ -956,7 +1019,7 @@ function roleMeta(){
     return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName), avatarImage:trainer?.avatarDataUrl || ''};
   }
   if(state.role === 'member'){
-    const member = memberByName('Selin Aksoy');
+    const member = currentMember();
     return {label:'Üye', next:'İşletmeci görünümü', avatar:member?.initials || 'SA', avatarImage:member?.avatarDataUrl || ''};
   }
   const studio = activeStudio();
@@ -969,7 +1032,9 @@ function updateRoleShell(){
   const avatar = document.querySelector('.user-avatar');
   if(roleButton){
     roleButton.querySelector('span').textContent = meta.label;
-    roleButton.querySelector('small').textContent = meta.next;
+    roleButton.querySelector('small').textContent = state.backend.connected ? 'Canlı rol' : meta.next;
+    roleButton.classList.toggle('locked', state.backend.connected);
+    roleButton.title = state.backend.connected ? 'Canlı modda rol giriş yapan hesaba göre belirlenir.' : 'Demo rolünü değiştir';
   }
   setAvatarElement(avatar, meta.avatar, meta.avatarImage);
   const sidebar = document.querySelector('.sidebar');
@@ -1031,6 +1096,17 @@ function memberByName(name){
 
 function trainerByName(name){
   return state.team.find(trainer=>trainer.name === name);
+}
+
+function currentMember(){
+  const profile = state.backend.profile;
+  if(profile?.role === 'member'){
+    return state.members.find(member=>member.profileId === profile.id)
+      || state.members.find(member=>member.email && profile.email && member.email.toLocaleLowerCase('tr') === profile.email.toLocaleLowerCase('tr'))
+      || state.members.find(member=>member.name === profile.full_name)
+      || state.members[0];
+  }
+  return memberByName('Selin Aksoy') || state.members[0] || normalizeMember({});
 }
 
 function memberSignature(memberName){
@@ -1495,11 +1571,16 @@ function pilotPage(){
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
-  const memberName = 'Selin Aksoy';
+  const member = currentMember();
+  const memberName = member.name;
   const program = selectedProgramForMember(memberName);
   const signature = memberSignature(memberName);
-  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman','2 / 3','1 kaldı','✓')}${metric('Toplam seans','7 / 12','5 seans kaldı','◷')}${metric('İmza durumu',signature ? 'Tamam' : 'Eksik',signature ? 'onay kayıtlı' : 'onay bekliyor','✍',!signature)}${metric('Son ölçüm','−1,8 kg','Son 30 gün','◎')}</section>
+  const parsed = parseSessions(member.sessions);
+  const remaining = Math.max(0, parsed.total - parsed.used);
+  const memberSessions = state.sessions.filter(session=>session.member === memberName);
+  const weeklyDone = memberSessions.filter(session=>session.status === 'done').length;
+  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
+  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('İmza durumu',signature ? 'Tamam' : 'Eksik',signature ? 'onay kayıtlı' : 'onay bekliyor','✍',!signature)}${metric('Antrenör',member.trainer || 'Atanmadı','sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
@@ -1532,6 +1613,7 @@ function openMemberModal(member){
     memberForm.elements.trainer.value = member.trainer;
     memberForm.elements.package.value = `${parseSessions(member.sessions).total} Seans`;
     memberForm.elements.phone.value = member.phone || '';
+    memberForm.elements.email.value = member.email || '';
   }
   memberModal.showModal();
 }
@@ -1892,7 +1974,7 @@ function bind(){
     if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
     if(action==='reset-demo-data') return confirmResetDemoData();
     if(action==='sign-member') return openSignatureModal(state.members.find(m=>m.id === b.dataset.memberId));
-    if(action==='sign-current-member') return openSignatureModal(state.members.find(m=>m.name === 'Selin Aksoy'));
+    if(action==='sign-current-member') return openSignatureModal(currentMember());
     if(action==='clear-signature') return clearSignatureCanvas();
     if(action==='select-member-program') return selectMemberProgram(b.dataset.memberName, b.dataset.programId);
     showToast({
@@ -1952,6 +2034,10 @@ function toggleSidebar(){
 
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
 document.querySelector('#roleSwitch').onclick=()=>{
+  if(state.backend.connected){
+    showToast('Canlı modda rol, giriş yapan hesaba göre otomatik belirlenir.');
+    return;
+  }
   state.role = state.role === 'owner' ? 'trainer' : state.role === 'trainer' ? 'member' : 'owner';
   render();
 };
@@ -1982,9 +2068,11 @@ memberForm.onsubmit=async e=>{
   let avatarDataUrl = current?.avatarDataUrl || '';
   const avatarFile = data.get('avatar');
   if(avatarFile?.size) avatarDataUrl = await imageFileToDataUrl(avatarFile, 420);
+  const email = data.get('email').trim().toLocaleLowerCase('tr');
   const member = normalizeMember({
     ...(current || {}),
     id: current?.id || makeId(),
+    profileId: current?.profileId || (email ? makeId() : null),
     name,
     initials: initialsFromName(name),
     avatarDataUrl,
@@ -1993,7 +2081,8 @@ memberForm.onsubmit=async e=>{
     sessions,
     status: current?.status || 'Yeni',
     type: current?.type || 'warn',
-    phone:data.get('phone')
+    phone:data.get('phone'),
+    email
   });
   if(current){
     state.members = state.members.map(m=>m.id === editingId ? member : m);
@@ -2076,6 +2165,7 @@ trainerForm.onsubmit=async e=>{
   const data = new FormData(e.currentTarget);
   const avatarFile = data.get('avatar');
   const avatarDataUrl = avatarFile?.size ? await imageFileToDataUrl(avatarFile, 420) : '';
+  const email = data.get('email').trim().toLocaleLowerCase('tr');
   const trainer = normalizeTrainer({
     id: makeId(),
     name: data.get('name').trim(),
@@ -2083,7 +2173,8 @@ trainerForm.onsubmit=async e=>{
     specialty: data.get('specialty').trim(),
     phone: data.get('phone').trim(),
     commission: data.get('commission'),
-    avatarDataUrl
+    avatarDataUrl,
+    email
   });
   state.team.push(trainer);
   saveTeam();
@@ -2149,6 +2240,11 @@ document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async 
   showToast('Supabase bağlantı ayarı temizlendi.');
 });
 document.querySelector('#logoutSupabase')?.addEventListener('click', signOutSupabase);
+document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
+  if(!supabaseAuthForm) return;
+  const data = new FormData(supabaseAuthForm);
+  await signUpSupabase(data.get('email'), data.get('password'));
+});
 
 supabaseConfigForm?.addEventListener('submit', async event=>{
   event.preventDefault();

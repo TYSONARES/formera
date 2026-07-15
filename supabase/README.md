@@ -46,17 +46,29 @@ where email = 'OWNER_EMAIL_ADRESINI_BURAYA_YAZ'
 
 Ardından SQL Editor’da `seed.sql` içeriğini çalıştır.
 
-## 5. Güvenlik notu
+## 5. Marka ve gerçek hesap alanlarını ekle
+
+Mevcut projede logo, işletme iletişim bilgileri ve avatarlar için:
+
+SQL Editor → New query → `branding.sql` içeriğini yapıştır → Run.
+
+Antrenör/üye gerçek girişleri için:
+
+SQL Editor → New query → `role-accounts.sql` içeriğini yapıştır → Run.
+
+Bu dosya, işletmecinin üye/antrenör kaydına eklediği e-posta ile Supabase Auth kullanıcısını ilk girişte otomatik eşleştirir.
+
+## 6. Güvenlik notu
 
 Şemada RLS açık gelir ve başlangıçta politika yoktur. Bu bilinçli bir tercih: canlı anahtar bağlamadan önce veri dışarı açılmaz.
 
 Bir sonraki backend adımında:
 
-- Auth eklenecek
-- Her kullanıcı bir stüdyoya bağlanacak
+- Her kullanıcı kendi rolüne göre yönlenecek
+- Antrenör ve üye erişimleri daha sıkı RLS politikalarıyla daraltılacak
 - localStorage verisi Supabase’e göç ettirilecek
 
-## 6. Frontend bağlantısı
+## 7. Frontend bağlantısı
 
 `config.example.js` dosyasını örnek alarak canlı ortamda `config.js` oluşturulabilir. `config.js` repo’ya eklenmemelidir.
 
