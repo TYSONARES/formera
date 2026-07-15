@@ -421,6 +421,46 @@ function calendarPage(){
   </section>`;
 }
 
+function reportsPage(){
+  const finance = financeSummary();
+  const today = sessionSummary();
+  const risky = state.members.filter(m=>m.type !== 'good');
+  const completionRate = today.total ? Math.round((today.done / today.total) * 100) : 0;
+  const avgSessionValue = today.total ? Math.round(finance.income / Math.max(today.total, 1)) : finance.income;
+  const reportItems = [
+    {label:'Gelir', value:formatCurrency(finance.income), note:`Net ${formatCurrency(finance.net)}`},
+    {label:'Tahsilat', value:`%${finance.collectionRate}`, note:`Bekleyen ${formatCurrency(finance.pending)}`},
+    {label:'Seans tamamlama', value:`%${completionRate}`, note:`${today.done}/${today.total} bugün`},
+    {label:'Riskli üye', value:String(risky.length), note:'yenileme / katılım takibi'}
+  ];
+  const aiNotes = [
+    finance.pending > 0 ? `Öncelik: ${formatCurrency(finance.pending)} bekleyen tahsilatı kapat.` : 'Tahsilat tarafı temiz görünüyor.',
+    risky.length ? `${risky.slice(0,3).map(m=>m.name).join(', ')} için birebir takip listesi oluştur.` : 'Riskli üye görünmüyor; yeni satışa odaklan.',
+    today.total >= 4 ? 'Seans yoğunluğu pilot için yeterli; iptal/gelmeme oranını ayrıca ölçmeye başla.' : 'Takvime daha fazla seans girilirse rapor kalitesi artar.',
+    `Seans başı yaklaşık gelir göstergesi: ${formatCurrency(avgSessionValue)}.`
+  ];
+  return `<div class="welcome"><div><span class="eyebrow">RAPORLAR</span><h1>Haftalık performans</h1><p>Salonun gelir, tahsilat, seans ve üye risk özetini tek ekranda oku.</p></div><button class="primary" data-action="copy-report">Raporu kopyala</button></div>
+  <section class="metrics">${reportItems.map(item=>metric(item.label,item.value,item.note,'↗',item.value.includes('-'))).join('')}</section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>Operasyon özeti</h2><p>Pilot haftası için hızlı okunabilir tablo</p></div><span class="badge">${state.members.length} üye</span></div>
+      <div class="report-list">
+        <div><span>Aktif kayıt</span><strong>${state.members.length}</strong></div>
+        <div><span>Toplam program</span><strong>${state.programs.length}</strong></div>
+        <div><span>Bugünkü seans</span><strong>${today.total}</strong></div>
+        <div><span>Finans hareketi</span><strong>${state.finance.length}</strong></div>
+        <div><span>Net kâr</span><strong>${formatCurrency(finance.net)}</strong></div>
+      </div>
+    </article>
+    <article class="card ai-card">
+      <span class="ai-label">✦ FORMA AI · HAFTALIK RAPOR</span>
+      <h2>Bu haftanın net yorumu</h2>
+      <p>Mevcut pilot verisine göre uygulanabilir kısa yönetici özeti.</p>
+      ${aiNotes.map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Haftalık rapor maddesi</small></div></div>`).join('')}
+    </article>
+  </section>`;
+}
+
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
@@ -437,7 +477,7 @@ function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -596,6 +636,24 @@ function deleteSession(id){
   showToast('Seans silindi.');
 }
 
+function copyReport(){
+  const finance = financeSummary();
+  const today = sessionSummary();
+  const risky = state.members.filter(m=>m.type !== 'good');
+  const text = [
+    'Formera Haftalık Rapor',
+    `Üye: ${state.members.length}`,
+    `Gelir: ${formatCurrency(finance.income)}`,
+    `Gider: ${formatCurrency(finance.expense)}`,
+    `Net: ${formatCurrency(finance.net)}`,
+    `Bekleyen tahsilat: ${formatCurrency(finance.pending)}`,
+    `Bugünkü seans: ${today.total}`,
+    `Riskli üye: ${risky.map(m=>m.name).join(', ') || 'Yok'}`
+  ].join('\n');
+  navigator.clipboard?.writeText(text);
+  showToast('Haftalık rapor panoya kopyalandı.');
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -615,6 +673,7 @@ function bind(){
     if(action==='complete-session') return completeSession(b.dataset.sessionId);
     if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
     if(action==='delete-session') return deleteSession(b.dataset.sessionId);
+    if(action==='copy-report') return copyReport();
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
