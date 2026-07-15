@@ -74,7 +74,8 @@ const state = {
     client: null,
     user: null,
     profile: null,
-    studioId: null
+    studioId: null,
+    brandingReady: false
   }
 };
 
@@ -144,6 +145,8 @@ const trainerForm = document.querySelector('#trainerForm');
 const signatureModal = document.querySelector('#signatureModal');
 const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
+const studioBrandModal = document.querySelector('#studioBrandModal');
+const studioBrandForm = document.querySelector('#studioBrandForm');
 const supabaseModal = document.querySelector('#supabaseModal');
 const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
@@ -184,6 +187,7 @@ function normalizeMember(member){
     trainerProfileId: member.trainerProfileId || member.trainer_profile_id || null,
     name: member.name || 'İsimsiz Üye',
     initials: member.initials || initialsFromName(member.name || 'İsimsiz Üye'),
+    avatarDataUrl: member.avatarDataUrl || member.avatar_data_url || '',
     trainer: member.trainer || 'Ece',
     last: member.last || 'Henüz gelmedi',
     sessions: member.sessions || '0 / 12',
@@ -321,7 +325,8 @@ function normalizeTrainer(trainer){
     role: trainer.role || 'PT Coach',
     specialty: trainer.specialty || 'Genel fitness',
     phone: trainer.phone || '',
-    commission: Number(trainer.commission) || 15
+    commission: Number(trainer.commission) || 15,
+    avatarDataUrl: trainer.avatarDataUrl || trainer.avatar_data_url || ''
   };
 }
 
@@ -359,7 +364,9 @@ function normalizeStudio(studio){
     name: studio.name || 'Yeni stüdyo',
     initials: studio.initials || initialsFromName(studio.name || 'Yeni stüdyo'),
     location: studio.location || 'Konum eklenmedi',
-    status: studio.status || 'Demo'
+    status: studio.status || 'Demo',
+    logoDataUrl: studio.logoDataUrl || studio.logo_data_url || '',
+    accentColor: studio.accentColor || studio.accent_color || '#d9ff64'
   };
 }
 
@@ -369,6 +376,7 @@ function activeStudio(){
 
 function saveStudios(){
   localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
+  syncStudiosToSupabase();
 }
 
 function saveActiveStudio(){
@@ -521,7 +529,9 @@ function mapRemoteStudio(studio){
     name: studio.name,
     initials: studio.initials,
     location: studio.location,
-    status: studio.status
+    status: studio.status,
+    logoDataUrl: studio.logo_data_url,
+    accentColor: studio.accent_color
   });
 }
 
@@ -533,7 +543,8 @@ function mapRemoteTrainer(profile){
     role: profile.role === 'owner' ? 'Owner' : 'PT Coach',
     specialty: profile.role === 'owner' ? 'İşletme yönetimi' : 'Genel fitness',
     phone: profile.phone || '',
-    commission: 15
+    commission: 15,
+    avatarDataUrl: profile.avatar_data_url
   });
 }
 
@@ -549,7 +560,8 @@ function mapRemoteMember(member, profilesById){
     sessions: `${member.sessions_used || 0} / ${member.sessions_total || 12}`,
     status: member.status,
     type: member.risk_type,
-    phone: member.phone || ''
+    phone: member.phone || '',
+    avatarDataUrl: member.avatar_data_url
   });
 }
 
@@ -671,6 +683,8 @@ async function loadRemoteData(){
 
   const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult].find(result=>result.error);
   if(failed) return remoteError(failed.error);
+  const firstStudio = studiosResult.data?.[0] || {};
+  state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
 
   const profilesById = Object.fromEntries((profilesResult.data || []).map(item=>[item.id, item]));
   const memberNamesById = Object.fromEntries((membersResult.data || []).map(item=>[item.id, item.full_name]));
@@ -773,7 +787,7 @@ function syncMembersToSupabase(){
   if(!studioId) return;
   const rows = state.members.map(member=>{
     const parsed = parseSessions(member.sessions);
-    return {
+    const row = {
       id: member.id,
       studio_id: studioId,
       trainer_profile_id: trainerProfileIdByName(member.trainer),
@@ -786,8 +800,31 @@ function syncMembersToSupabase(){
       status: member.status,
       risk_type: member.type
     };
+    if(state.backend.brandingReady) row.avatar_data_url = member.avatarDataUrl || null;
+    return row;
   });
   syncRemote('members', rows);
+}
+
+function syncStudiosToSupabase(){
+  if(!isSupabaseReady()) return;
+  const rows = state.studios
+    .filter(studio=>isUuid(studio.id))
+    .map(studio=>{
+      const row = {
+        id: studio.id,
+        name: studio.name,
+        initials: studio.initials,
+        location: studio.location,
+        status: studio.status
+      };
+      if(state.backend.brandingReady){
+        row.logo_data_url = studio.logoDataUrl || null;
+        row.accent_color = studio.accentColor || '#d9ff64';
+      }
+      return row;
+    });
+  syncRemote('studios', rows);
 }
 
 function syncFinanceToSupabase(){
@@ -838,13 +875,17 @@ function syncSessionsToSupabase(){
 function syncTeamToSupabase(){
   const studioId = studioIdForRemote();
   if(!studioId) return;
-  syncRemote('profiles', state.team.map(trainer=>({
-    id: trainer.profileId || trainer.id,
-    studio_id: studioId,
-    full_name: trainer.name,
-    role: 'trainer',
-    phone: trainer.phone || null
-  })));
+  syncRemote('profiles', state.team.map(trainer=>{
+    const row = {
+      id: trainer.profileId || trainer.id,
+      studio_id: studioId,
+      full_name: trainer.name,
+      role: 'trainer',
+      phone: trainer.phone || null
+    };
+    if(state.backend.brandingReady) row.avatar_data_url = trainer.avatarDataUrl || null;
+    return row;
+  }));
 }
 
 function syncSignaturesToSupabase(){
@@ -881,17 +922,27 @@ async function deleteRemoteRow(table, id){
 function updateStudioShell(){
   const studio = activeStudio();
   const avatar = document.querySelector('#studioAvatar');
+  const brandMark = document.querySelector('.brand-mark');
   const name = document.querySelector('#studioName');
   const location = document.querySelector('#studioLocation');
-  if(avatar) avatar.textContent = studio.initials;
+  setAvatarElement(avatar, studio.initials, studio.logoDataUrl);
+  setAvatarElement(brandMark, 'F', studio.logoDataUrl);
   if(name) name.textContent = studio.name;
   if(location) location.textContent = studio.location;
+  document.documentElement.style.setProperty('--acid', studio.accentColor || '#d9ff64');
 }
 
 function roleMeta(){
-  if(state.role === 'trainer') return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName)};
-  if(state.role === 'member') return {label:'Üye', next:'İşletmeci görünümü', avatar:'SA'};
-  return {label:'İşletmeci', next:'Antrenör görünümü', avatar:'OY'};
+  if(state.role === 'trainer'){
+    const trainer = trainerByName(state.trainerName);
+    return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName), avatarImage:trainer?.avatarDataUrl || ''};
+  }
+  if(state.role === 'member'){
+    const member = memberByName('Selin Aksoy');
+    return {label:'Üye', next:'İşletmeci görünümü', avatar:member?.initials || 'SA', avatarImage:member?.avatarDataUrl || ''};
+  }
+  const studio = activeStudio();
+  return {label:'İşletmeci', next:'Antrenör görünümü', avatar:studio.initials || 'OY', avatarImage:studio.logoDataUrl || ''};
 }
 
 function updateRoleShell(){
@@ -902,7 +953,7 @@ function updateRoleShell(){
     roleButton.querySelector('span').textContent = meta.label;
     roleButton.querySelector('small').textContent = meta.next;
   }
-  if(avatar) avatar.textContent = meta.avatar;
+  setAvatarElement(avatar, meta.avatar, meta.avatarImage);
   const sidebar = document.querySelector('.sidebar');
   const main = document.querySelector('main');
   if(sidebar) sidebar.style.display = state.role === 'owner' ? '' : 'none';
@@ -917,6 +968,53 @@ function escapeAttr(value=''){
   return String(value).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 }
 
+function avatarStyle(imageDataUrl){
+  return imageDataUrl ? ` style="background-image:url('${escapeAttr(imageDataUrl)}')"` : '';
+}
+
+function avatarMarkup(initials, imageDataUrl='', className='avatar'){
+  return `<span class="${className}${imageDataUrl ? ' has-image' : ''}"${avatarStyle(imageDataUrl)}>${imageDataUrl ? '' : escapeAttr(initials || 'F')}</span>`;
+}
+
+function setAvatarElement(element, initials, imageDataUrl=''){
+  if(!element) return;
+  element.classList.toggle('has-image', Boolean(imageDataUrl));
+  element.style.backgroundImage = imageDataUrl ? `url('${imageDataUrl}')` : '';
+  element.textContent = imageDataUrl ? '' : initials;
+}
+
+function imageFileToDataUrl(file, maxSize=420){
+  return new Promise((resolve, reject)=>{
+    if(!file) return resolve('');
+    if(!file.type?.startsWith('image/')) return reject(new Error('Görsel dosyası seçilmedi.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Görsel okunamadı.'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Görsel işlenemedi.'));
+      image.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function memberByName(name){
+  return state.members.find(member=>member.name === name);
+}
+
+function trainerByName(name){
+  return state.team.find(trainer=>trainer.name === name);
+}
+
 function memberSignature(memberName){
   return state.signatures
     .filter(signature=>signature.member === memberName)
@@ -927,7 +1025,7 @@ function memberRows(items=state.members){
   return items.map(m=>{
     const signature = memberSignature(m.name);
     return `<div class="member-row">
-    <div class="member"><span class="avatar">${m.initials}</span><div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small></div></div>
+    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${m.last}</span>
     <span><small class="cell-label">Seans</small><br>${m.sessions}</span>
     <span class="status ${m.type}">${m.status}</span>
@@ -959,7 +1057,7 @@ function compactSessionRows(items=sessionsForDate()){
 
 function studioPilotRows(){
   return state.studios.map(studio=>`<button class="studio-pilot ${studio.id === state.activeStudioId ? 'active' : ''}" data-action="select-studio" data-studio-id="${studio.id}">
-    <span class="studio-avatar">${studio.initials}</span>
+    ${avatarMarkup(studio.initials, studio.logoDataUrl, 'studio-avatar')}
     <div><strong>${studio.name}</strong><small>${studio.location} · ${studio.status}</small></div>
   </button>`).join('');
 }
@@ -1054,14 +1152,17 @@ function financePage(){
 }
 
 function programCards(){
-  return state.programs.map(program=>`<article class="program-card">
+  return state.programs.map(program=>{
+    const assignedMember = memberByName(program.assigned);
+    return `<article class="program-card">
     <div class="card-title"><div><h2>${program.title}</h2><p>${program.goal} · ${program.duration} dk</p></div><span class="badge">${program.level}</span></div>
-    <div class="program-assignee"><span class="avatar">${initialsFromName(program.assigned)}</span><div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
+    <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
     <div class="program-exercises">
       ${program.exercises.slice(0,4).map((exercise,index)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><div><strong>${exercise}</strong><small>Setleri PT onayıyla güncelle</small></div></div>`).join('')}
     </div>
     <div class="program-actions"><button class="secondary" data-action="assign-program" data-program-id="${program.id}">Üyeye gönder</button><button class="mini-button danger" data-action="delete-program" data-program-id="${program.id}">Sil</button></div>
-  </article>`).join('');
+  </article>`;
+  }).join('');
 }
 
 function programsPage(){
@@ -1162,7 +1263,7 @@ function teamCards(){
     const estimatedCommission = stats.revenue * (trainer.commission / 100);
     return `<article class="team-card">
       <div class="team-head">
-        <span class="avatar">${initialsFromName(trainer.name)}</span>
+        ${avatarMarkup(initialsFromName(trainer.name), trainer.avatarDataUrl)}
         <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p></div>
         <span class="badge">%${trainer.commission} prim</span>
       </div>
@@ -1234,7 +1335,7 @@ function trainerSessionRows(){
 function trainerClientRows(){
   const clients = state.members.filter(member=>member.trainer === state.trainerName);
   return clients.map(member=>`<div class="member-row">
-    <div class="member"><span class="avatar">${member.initials}</span><div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
+    <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
     <span><small class="cell-label">Seans</small><br>${member.sessions}</span>
     <span class="status ${member.type}">${member.status}</span>
@@ -1291,7 +1392,7 @@ function pilotChecklist(){
 
 function pilotPage(){
   const payload = backupPayload();
-  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><button class="primary" data-action="export-full-backup">Tüm veriyi yedekle</button></div>
+  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
     ${metric('Seans',String(payload.sessions.length),'takvim','□')}
@@ -1302,6 +1403,7 @@ function pilotPage(){
     <article class="card">
       <div class="card-title"><div><h2>Veri işlemleri</h2><p>Ücretsiz pilot için tarayıcı verisini güvenceye al</p></div><span class="badge">JSON</span></div>
       <div class="pilot-actions">
+        <button class="primary" data-action="customize-studio">Logo / renk ayarla</button>
         <button class="primary" data-action="export-full-backup">Tüm veriyi indir</button>
         <button class="secondary" data-action="import-full-backup">Yedeği geri yükle</button>
         <button class="secondary danger-action" data-action="reset-demo-data">Demo verisini sıfırla</button>
@@ -1589,6 +1691,16 @@ function confirmResetDemoData(){
   showToast('Demo verisi sıfırlandı.');
 }
 
+function openStudioBrandModal(){
+  const studio = activeStudio();
+  studioBrandForm.reset();
+  studioBrandForm.elements.name.value = studio.name;
+  studioBrandForm.elements.location.value = studio.location;
+  studioBrandForm.elements.initials.value = studio.initials;
+  studioBrandForm.elements.accentColor.value = studio.accentColor || '#d9ff64';
+  studioBrandModal.showModal();
+}
+
 function signaturePoint(event){
   const rect = signatureCanvas.getBoundingClientRect();
   const pointer = event.touches?.[0] || event;
@@ -1707,6 +1819,7 @@ function bind(){
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='cycle-studio') return cycleStudio();
+    if(action==='customize-studio') return openStudioBrandModal();
     if(action==='export-full-backup') return exportFullBackup();
     if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
     if(action==='reset-demo-data') return confirmResetDemoData();
@@ -1790,7 +1903,7 @@ window.addEventListener('resize', ()=>{
   closeSidebar();
 });
 
-memberForm.onsubmit=e=>{
+memberForm.onsubmit=async e=>{
   e.preventDefault();
   const data=new FormData(e.currentTarget);
   const name=data.get('name').trim();
@@ -1798,11 +1911,15 @@ memberForm.onsubmit=e=>{
   const editingId = e.currentTarget.dataset.editingId;
   const current = editingId ? state.members.find(m=>m.id === editingId) : null;
   const sessions = current ? `${parseSessions(current.sessions).used} / ${total}` : `0 / ${total}`;
+  let avatarDataUrl = current?.avatarDataUrl || '';
+  const avatarFile = data.get('avatar');
+  if(avatarFile?.size) avatarDataUrl = await imageFileToDataUrl(avatarFile, 420);
   const member = normalizeMember({
     ...(current || {}),
     id: current?.id || makeId(),
     name,
     initials: initialsFromName(name),
+    avatarDataUrl,
     trainer:data.get('trainer'),
     last: current?.last || 'Henüz gelmedi',
     sessions,
@@ -1886,16 +2003,19 @@ sessionForm.onsubmit=e=>{
   showToast(`${session.member} için ${session.time} seansı eklendi.`);
 };
 
-trainerForm.onsubmit=e=>{
+trainerForm.onsubmit=async e=>{
   e.preventDefault();
   const data = new FormData(e.currentTarget);
+  const avatarFile = data.get('avatar');
+  const avatarDataUrl = avatarFile?.size ? await imageFileToDataUrl(avatarFile, 420) : '';
   const trainer = normalizeTrainer({
     id: makeId(),
     name: data.get('name').trim(),
     role: data.get('role').trim(),
     specialty: data.get('specialty').trim(),
     phone: data.get('phone').trim(),
-    commission: data.get('commission')
+    commission: data.get('commission'),
+    avatarDataUrl
   });
   state.team.push(trainer);
   saveTeam();
@@ -1903,6 +2023,29 @@ trainerForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${trainer.name} ekibe eklendi.`);
+};
+
+studioBrandForm.onsubmit=async e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const studio = activeStudio();
+  const logoFile = data.get('logo');
+  const logoDataUrl = logoFile?.size ? await imageFileToDataUrl(logoFile, 520) : studio.logoDataUrl;
+  const name = data.get('name').trim();
+  const updated = normalizeStudio({
+    ...studio,
+    name,
+    location: data.get('location').trim() || 'Konum eklenmedi',
+    initials: data.get('initials').trim().toLocaleUpperCase('tr') || initialsFromName(name),
+    accentColor: data.get('accentColor') || '#d9ff64',
+    logoDataUrl
+  });
+  state.studios = state.studios.map(item=>item.id === studio.id ? updated : item);
+  saveStudios();
+  studioBrandModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${updated.name} marka ayarları güncellendi.`);
 };
 
 signatureForm.onsubmit=e=>{

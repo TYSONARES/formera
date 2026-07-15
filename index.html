@@ -63,6 +63,7 @@
       <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
       <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
       <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
+      <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeyi kaydet</button></div>
     </form>
   </dialog>
@@ -101,6 +102,7 @@
       <label>Ad<input name="name" required placeholder="Örn. Derya"></label>
       <div class="form-grid"><label>Rol<input name="role" placeholder="PT Coach"></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
       <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>Prim %<input name="commission" inputmode="numeric" placeholder="15"></label></div>
+      <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
     </form>
   </dialog>
@@ -114,6 +116,16 @@
         <small>Üye parmağıyla veya mouse ile imza atabilir.</small>
       </div>
       <div class="modal-actions"><button type="button" class="secondary" data-action="clear-signature">Temizle</button><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İmzayı kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="studioBrandModal">
+    <form method="dialog" id="studioBrandForm">
+      <div class="modal-head"><div><span class="eyebrow">MARKA</span><h2>Sayfayı özelleştir</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>İşletme adı<input name="name" required placeholder="NorthFit Studio"></label>
+      <label>Konum / kısa açıklama<input name="location" placeholder="Kadıköy · İstanbul"></label>
+      <div class="form-grid"><label>Kısa kod<input name="initials" maxlength="4" placeholder="NF"></label><label>Vurgu rengi<input name="accentColor" type="color" value="#d9ff64"></label></div>
+      <label>Logo veya işletme avatarı<input name="logo" type="file" accept="image/*"></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Markayı kaydet</button></div>
     </form>
   </dialog>
   <dialog class="modal" id="supabaseModal">

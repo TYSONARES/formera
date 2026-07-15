@@ -10,6 +10,8 @@ create table if not exists public.studios (
   initials text,
   location text,
   status text default 'Demo',
+  logo_data_url text,
+  accent_color text default '#d9ff64',
   created_at timestamptz not null default now()
 );
 
@@ -19,6 +21,7 @@ create table if not exists public.profiles (
   full_name text not null,
   role text not null check (role in ('owner', 'trainer', 'member')),
   phone text,
+  avatar_data_url text,
   created_at timestamptz not null default now()
 );
 
@@ -29,6 +32,7 @@ create table if not exists public.members (
   full_name text not null,
   initials text,
   phone text,
+  avatar_data_url text,
   last_visit_label text default 'Henüz gelmedi',
   sessions_used integer not null default 0,
   sessions_total integer not null default 12,

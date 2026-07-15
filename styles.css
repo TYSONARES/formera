@@ -28,6 +28,12 @@
 .modal-panel{padding:25px}
 .modal-panel form{padding:0;border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
 .modal-note{color:var(--muted);font-size:12px;line-height:1.55;margin:-10px 0 12px}
+.avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
+.modal input[type="color"]{height:45px;padding:5px;cursor:pointer}
+.modal input[type="file"]{background:#fff}
+.pilot-actions{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1050px){.pilot-actions{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.pilot-actions{grid-template-columns:1fr}}
 
 .sidebar,.app-shell,main{transition:.25s ease}
 .sidebar-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:1px solid #30342a;background:#22251e;color:#fff;border-radius:9px;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
