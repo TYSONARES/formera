@@ -825,7 +825,27 @@ async function signUpSupabase(email, password){
 }
 
 async function signOutSupabase(){
-  if(state.backend.client) await state.backend.client.auth.signOut();
+  const client = state.backend.client;
+  state.backend.connected = false;
+  state.backend.user = null;
+  state.backend.profile = null;
+  state.backend.studioId = null;
+  state.backend.accountsReady = false;
+  state.role = 'owner';
+  state.page = 'dashboard';
+  if(supabaseAuthForm) supabaseAuthForm.reset();
+  supabaseModal?.close();
+  updateBackendShell();
+  render();
+  showToast('Canlı veri oturumu kapatıldı.');
+  if(client){
+    const {error} = await client.auth.signOut();
+    if(error) console.warn(error);
+  }
+}
+
+async function switchSupabaseAccount(){
+  const client = state.backend.client;
   state.backend.connected = false;
   state.backend.user = null;
   state.backend.profile = null;
@@ -836,13 +856,12 @@ async function signOutSupabase(){
   if(supabaseAuthForm) supabaseAuthForm.reset();
   updateBackendShell();
   render();
-  showToast('Canlı veri oturumu kapatıldı.');
-}
-
-async function switchSupabaseAccount(){
-  await signOutSupabase();
   openSupabaseModal();
   showToast('Yeni hesapla giriş yapabilirsin.');
+  if(client){
+    const {error} = await client.auth.signOut();
+    if(error) console.warn(error);
+  }
 }
 
 async function syncRemote(table, rows){
@@ -2283,16 +2302,24 @@ document.querySelectorAll('.modal').forEach(modal=>{
     });
   });
 });
-document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async ()=>{
+document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async event=>{
+  event.preventDefault();
   localStorage.removeItem(SUPABASE_CONFIG_STORAGE_KEY);
   await signOutSupabase();
   state.backend.configured = false;
   state.backend.client = null;
   updateBackendShell();
+  updateAccountSummary();
   showToast('Supabase bağlantı ayarı temizlendi.');
 });
-document.querySelector('#logoutSupabase')?.addEventListener('click', signOutSupabase);
-document.querySelector('#switchSupabaseAccount')?.addEventListener('click', switchSupabaseAccount);
+document.querySelector('#logoutSupabase')?.addEventListener('click', event=>{
+  event.preventDefault();
+  signOutSupabase();
+});
+document.querySelector('#switchSupabaseAccount')?.addEventListener('click', event=>{
+  event.preventDefault();
+  switchSupabaseAccount();
+});
 document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm) return;
   const data = new FormData(supabaseAuthForm);
