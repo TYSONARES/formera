@@ -1382,6 +1382,7 @@ function trainerDashboard(){
     ${metric('Riskli danışan',String(riskyClients.length),'takip et','! ',riskyClients.length > 0)}
   </section>
   <section class="dashboard-grid">
+    ${studioPublicCard('ANTRENÖR ALANI · İŞLETME')}
     <article class="card">
       <div class="card-title"><div><h2>Bugünkü seanslarım</h2><p>${formatDateTR(todayISO())}</p></div><span class="badge">${trainer.role}</span></div>
       <div class="session-list">${trainerSessionRows()}</div>
@@ -1420,6 +1421,30 @@ function studioContactRows(){
     ['Konum linki', studio.mapUrl ? 'Harita linki hazır' : 'Eklenmedi']
   ];
   return items.map(([label,value])=>`<div><span>${label}</span><strong>${escapeAttr(value)}</strong></div>`).join('');
+}
+
+function compactStudioInfoItems(){
+  const studio = activeStudio();
+  const instagram = studio.instagram ? (studio.instagram.startsWith('@') ? studio.instagram : `@${studio.instagram}`) : '';
+  return [
+    ['Konum', studio.address || studio.location || 'Adres eklenmedi'],
+    ['Telefon', studio.phone || 'Telefon eklenmedi'],
+    ['Instagram', instagram || 'Instagram eklenmedi'],
+    ['Web', studio.website || 'Web sitesi eklenmedi']
+  ];
+}
+
+function studioPublicCard(note='İşletme bilgileri'){
+  const studio = activeStudio();
+  return `<article class="card studio-public-card">
+    <div class="studio-public-head">
+      ${avatarMarkup(studio.initials, studio.logoDataUrl, 'studio-public-logo')}
+      <div><span class="eyebrow">${escapeAttr(note)}</span><h2>${escapeAttr(studio.name)}</h2><p>${escapeAttr(studio.location || 'Konum eklenmedi')}</p></div>
+    </div>
+    <div class="studio-public-info">
+      ${compactStudioInfoItems().map(([label,value])=>`<div><span>${label}</span><strong>${escapeAttr(value)}</strong></div>`).join('')}
+    </div>
+  </article>`;
 }
 
 function pilotPage(){
@@ -1475,7 +1500,8 @@ function memberDashboard(){
   const signature = memberSignature(memberName);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman','2 / 3','1 kaldı','✓')}${metric('Toplam seans','7 / 12','5 seans kaldı','◷')}${metric('İmza durumu',signature ? 'Tamam' : 'Eksik',signature ? 'onay kayıtlı' : 'onay bekliyor','✍',!signature)}${metric('Son ölçüm','−1,8 kg','Son 30 gün','◎')}</section>
-  <section class="dashboard-grid"><article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
+  <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
+  <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
   <article class="card"><div class="card-title"><div><h2>Program seç</h2><p>Bugün takip etmek istediğin programı seç.</p></div><span class="badge">${state.programs.length} seçenek</span></div>

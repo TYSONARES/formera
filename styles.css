@@ -29,11 +29,22 @@
 .modal-panel form{padding:0;border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
 .modal-note{color:var(--muted);font-size:12px;line-height:1.55;margin:-10px 0 12px}
 .avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
+.studio-public-card{background:linear-gradient(135deg,#fff 0%,#f8faef 100%)}
+.studio-public-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.studio-public-logo{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;background:var(--acid);background-size:cover;background-position:center;color:#263016;font:800 18px Manrope;flex:0 0 auto}
+.studio-public-logo.has-image{color:transparent}
+.studio-public-head h2{font:800 22px Manrope;margin:4px 0}
+.studio-public-head p{margin:0;color:var(--muted);font-size:13px}
+.studio-public-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.studio-public-info div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.studio-public-info span{display:block;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.studio-public-info strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal input[type="color"]{height:45px;padding:5px;cursor:pointer}
 .modal input[type="file"]{background:#fff}
 .pilot-actions{grid-template-columns:repeat(4,1fr)}
 @media(max-width:1050px){.pilot-actions{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.pilot-actions{grid-template-columns:1fr}}
+@media(max-width:760px){.studio-public-info{grid-template-columns:1fr}.studio-public-head{align-items:flex-start}.studio-public-logo{width:50px;height:50px}}
 
 .sidebar,.app-shell,main{transition:.25s ease}
 .sidebar-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:1px solid #30342a;background:#22251e;color:#fff;border-radius:9px;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
