@@ -101,6 +101,18 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal signature-modal" id="signatureModal">
+    <form method="dialog" id="signatureForm">
+      <div class="modal-head"><div><span class="eyebrow">İMZA</span><h2>Dijital onay al</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Üye<input name="member" required placeholder="Selin Aksoy"></label>
+      <label>Onay tipi<select name="type"><option>Aydınlatma ve üyelik onayı</option><option>PT paket sözleşmesi</option><option>Ölçüm ve takip onayı</option><option>Seans katılım onayı</option></select></label>
+      <div class="signature-pad-wrap">
+        <canvas id="signatureCanvas" width="620" height="220" aria-label="İmza alanı"></canvas>
+        <small>Üye parmağıyla veya mouse ile imza atabilir.</small>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" data-action="clear-signature">Temizle</button><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İmzayı kaydet</button></div>
+    </form>
+  </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="app.js"></script>
 </body>

@@ -5,6 +5,8 @@ const SESSION_STORAGE_KEY = 'formera_sessions';
 const TEAM_STORAGE_KEY = 'formera_team';
 const STUDIO_STORAGE_KEY = 'formera_studios';
 const ACTIVE_STUDIO_STORAGE_KEY = 'formera_active_studio';
+const SIGNATURE_STORAGE_KEY = 'formera_signatures';
+const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -60,7 +62,9 @@ const state = {
   sessions: starterSessions.map(normalizeSession),
   team: starterTeam.map(normalizeTrainer),
   studios: starterStudios.map(normalizeStudio),
-  activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1'
+  activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
+  signatures: [],
+  programSelections: {}
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -99,6 +103,18 @@ if(savedStudios){
   catch(e){ console.warn('Kayıtlı stüdyolar okunamadı.'); }
 }
 
+const savedSignatures = localStorage.getItem(SIGNATURE_STORAGE_KEY);
+if(savedSignatures){
+  try{ state.signatures = JSON.parse(savedSignatures).map(normalizeSignature); }
+  catch(e){ console.warn('Kayıtlı imzalar okunamadı.'); }
+}
+
+const savedProgramSelections = localStorage.getItem(PROGRAM_SELECTION_STORAGE_KEY);
+if(savedProgramSelections){
+  try{ state.programSelections = JSON.parse(savedProgramSelections); }
+  catch(e){ console.warn('Kayıtlı program seçimleri okunamadı.'); }
+}
+
 const money = new Intl.NumberFormat('tr-TR');
 const app = document.querySelector('#appContent');
 const toast = document.querySelector('#toast');
@@ -114,6 +130,11 @@ const sessionModal = document.querySelector('#sessionModal');
 const sessionForm = document.querySelector('#sessionForm');
 const trainerModal = document.querySelector('#trainerModal');
 const trainerForm = document.querySelector('#trainerForm');
+const signatureModal = document.querySelector('#signatureModal');
+const signatureForm = document.querySelector('#signatureForm');
+const signatureCanvas = document.querySelector('#signatureCanvas');
+let signaturePadReady = false;
+let signatureDrawing = false;
 
 function makeId(){
   return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -326,6 +347,24 @@ function saveActiveStudio(){
   localStorage.setItem(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
 }
 
+function normalizeSignature(signature){
+  return {
+    id: signature.id || makeId(),
+    member: signature.member || 'Üye seçilmedi',
+    type: signature.type || 'Aydınlatma ve üyelik onayı',
+    signedAt: signature.signedAt || new Date().toISOString(),
+    dataUrl: signature.dataUrl || ''
+  };
+}
+
+function saveSignatures(){
+  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
+}
+
+function saveProgramSelections(){
+  localStorage.setItem(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
+}
+
 function persistAllData(){
   saveMembers();
   saveFinance();
@@ -334,6 +373,8 @@ function persistAllData(){
   saveTeam();
   saveStudios();
   saveActiveStudio();
+  saveSignatures();
+  saveProgramSelections();
 }
 
 function backupPayload(){
@@ -347,7 +388,9 @@ function backupPayload(){
     programs:state.programs,
     sessions:state.sessions,
     team:state.team,
-    studios:state.studios
+    studios:state.studios,
+    signatures:state.signatures,
+    programSelections:state.programSelections
   };
 }
 
@@ -359,6 +402,8 @@ function applyBackupPayload(payload){
   state.sessions = (payload.sessions || []).map(normalizeSession);
   state.team = (payload.team || []).map(normalizeTrainer);
   state.studios = (payload.studios || []).map(normalizeStudio);
+  state.signatures = (payload.signatures || []).map(normalizeSignature);
+  state.programSelections = payload.programSelections || {};
   state.activeStudioId = payload.activeStudioId || state.studios[0]?.id || 'studio_1';
   persistAllData();
 }
@@ -370,6 +415,8 @@ function resetDemoData(){
   state.sessions = starterSessions.map(normalizeSession);
   state.team = starterTeam.map(normalizeTrainer);
   state.studios = starterStudios.map(normalizeStudio);
+  state.signatures = [];
+  state.programSelections = {};
   state.activeStudioId = 'studio_1';
   state.calendarDate = todayISO();
   persistAllData();
@@ -414,18 +461,29 @@ function escapeAttr(value=''){
   return String(value).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 }
 
+function memberSignature(memberName){
+  return state.signatures
+    .filter(signature=>signature.member === memberName)
+    .sort((a,b)=>b.signedAt.localeCompare(a.signedAt))[0];
+}
+
 function memberRows(items=state.members){
-  return items.map(m=>`<div class="member-row">
+  return items.map(m=>{
+    const signature = memberSignature(m.name);
+    return `<div class="member-row">
     <div class="member"><span class="avatar">${m.initials}</span><div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${m.last}</span>
     <span><small class="cell-label">Seans</small><br>${m.sessions}</span>
     <span class="status ${m.type}">${m.status}</span>
+    <span class="status ${signature ? 'good' : 'warn'}">${signature ? 'İmzalı' : 'İmza yok'}</span>
     <div class="row-actions">
       <button class="mini-button" data-action="checkin-member" data-member-id="${m.id}">Geldi</button>
+      <button class="mini-button" data-action="sign-member" data-member-id="${m.id}">İmza al</button>
       <button class="mini-button" data-action="edit-member" data-member-id="${m.id}">Düzenle</button>
       <button class="mini-button danger" data-action="delete-member" data-member-id="${m.id}">Sil</button>
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
 }
 
 function sessionStatusLabel(status){
@@ -696,6 +754,14 @@ function teamPage(){
   </section>`;
 }
 
+function selectedProgramForMember(memberName){
+  const selectedId = state.programSelections[memberName];
+  return state.programs.find(program=>program.id === selectedId)
+    || state.programs.find(program=>program.assigned === memberName)
+    || state.programs[0]
+    || normalizeProgram({});
+}
+
 function trainerSessionRows(){
   const sessions = sessionsForDate().filter(session=>session.trainer === state.trainerName);
   return sessions.map(session=>`<div class="session-row">
@@ -802,12 +868,18 @@ function pilotPage(){
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
 
 function memberDashboard(){
-  const program = state.programs[0] || normalizeProgram({});
+  const memberName = 'Selin Aksoy';
+  const program = selectedProgramForMember(memberName);
+  const signature = memberSignature(memberName);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba Selin, hazırsan başlayalım.</h1><p>Bu hafta 2 antrenmanı tamamladın. Hedefine bir adım daha yakınsın.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman','2 / 3','1 kaldı','✓')}${metric('Toplam seans','7 / 12','5 seans kaldı','◷')}${metric('Seri','3 hafta','Kişisel rekor','↗')}${metric('Son ölçüm','−1,8 kg','Son 30 gün','◎')}</section>
+  <section class="metrics">${metric('Bu haftaki antrenman','2 / 3','1 kaldı','✓')}${metric('Toplam seans','7 / 12','5 seans kaldı','◷')}${metric('İmza durumu',signature ? 'Tamam' : 'Eksik',signature ? 'onay kayıtlı' : 'onay bekliyor','✍',!signature)}${metric('Son ölçüm','−1,8 kg','Son 30 gün','◎')}</section>
   <section class="dashboard-grid"><article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
-  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article></section>`}
+  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
+  <article class="card"><div class="card-title"><div><h2>Program seç</h2><p>Bugün takip etmek istediğin programı seç.</p></div><span class="badge">${state.programs.length} seçenek</span></div>
+  <div class="choice-list">${state.programs.map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('')}</div></article>
+  <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
+  <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
@@ -1047,6 +1119,86 @@ function confirmResetDemoData(){
   showToast('Demo verisi sıfırlandı.');
 }
 
+function signaturePoint(event){
+  const rect = signatureCanvas.getBoundingClientRect();
+  const pointer = event.touches?.[0] || event;
+  return {
+    x: (pointer.clientX - rect.left) * (signatureCanvas.width / rect.width),
+    y: (pointer.clientY - rect.top) * (signatureCanvas.height / rect.height)
+  };
+}
+
+function clearSignatureCanvas(){
+  if(!signatureCanvas) return;
+  const context = signatureCanvas.getContext('2d');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+  context.strokeStyle = '#171914';
+  context.lineWidth = 3;
+  context.lineCap = 'round';
+}
+
+function setupSignaturePad(){
+  if(signaturePadReady || !signatureCanvas) return;
+  clearSignatureCanvas();
+  const context = signatureCanvas.getContext('2d');
+  const start = event => {
+    event.preventDefault();
+    signatureDrawing = true;
+    const point = signaturePoint(event);
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+  };
+  const move = event => {
+    if(!signatureDrawing) return;
+    event.preventDefault();
+    const point = signaturePoint(event);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  };
+  const stop = () => { signatureDrawing = false; };
+  signatureCanvas.addEventListener('mousedown', start);
+  signatureCanvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', stop);
+  signatureCanvas.addEventListener('touchstart', start, {passive:false});
+  signatureCanvas.addEventListener('touchmove', move, {passive:false});
+  signatureCanvas.addEventListener('touchend', stop);
+  signaturePadReady = true;
+}
+
+function openSignatureModal(member){
+  signatureForm.reset();
+  signatureForm.elements.member.value = member?.name || 'Selin Aksoy';
+  setupSignaturePad();
+  clearSignatureCanvas();
+  signatureModal.showModal();
+}
+
+function saveSignature(form){
+  const data = new FormData(form);
+  const signature = normalizeSignature({
+    id: makeId(),
+    member: data.get('member').trim(),
+    type: data.get('type'),
+    signedAt: new Date().toISOString(),
+    dataUrl: signatureCanvas.toDataURL('image/png')
+  });
+  state.signatures.unshift(signature);
+  saveSignatures();
+  signatureModal.close();
+  render();
+  showToast(`${signature.member} için imza kaydedildi.`);
+}
+
+function selectMemberProgram(memberName, programId){
+  const program = state.programs.find(item=>item.id === programId);
+  if(!program) return;
+  state.programSelections[memberName] = programId;
+  saveProgramSelections();
+  render();
+  showToast(`${memberName} için ${program.title} seçildi.`);
+}
+
 function selectStudio(id){
   state.activeStudioId = id;
   saveActiveStudio();
@@ -1088,6 +1240,10 @@ function bind(){
     if(action==='export-full-backup') return exportFullBackup();
     if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
     if(action==='reset-demo-data') return confirmResetDemoData();
+    if(action==='sign-member') return openSignatureModal(state.members.find(m=>m.id === b.dataset.memberId));
+    if(action==='sign-current-member') return openSignatureModal(state.members.find(m=>m.name === 'Selin Aksoy'));
+    if(action==='clear-signature') return clearSignatureCanvas();
+    if(action==='select-member-program') return selectMemberProgram(b.dataset.memberName, b.dataset.programId);
     showToast({
       'start-workout':'Antrenman modu başlatıldı. Hadi bakalım! 💪',
       'coach-tip':'Ece’nin notu: Tempo kontrollü, form öncelikli.'
@@ -1231,6 +1387,11 @@ trainerForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${trainer.name} ekibe eklendi.`);
+};
+
+signatureForm.onsubmit=e=>{
+  e.preventDefault();
+  saveSignature(e.currentTarget);
 };
 
 render();
