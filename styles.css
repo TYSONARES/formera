@@ -21,3 +21,10 @@
 @media(max-width:760px){.program-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
 .member-row{grid-template-columns:1.45fr .75fr .75fr auto auto auto}.signature-modal{width:min(720px,calc(100% - 32px))}.signature-pad-wrap{margin-top:14px;background:#f8f9f4;border:1px solid var(--line);border-radius:13px;padding:12px}.signature-pad-wrap canvas{width:100%;height:220px;background:#fff;border:1px dashed #cfd5c3;border-radius:10px;touch-action:none;display:block}.signature-pad-wrap small{display:block;color:var(--muted);font-size:11px;margin-top:8px}.choice-list{display:grid;gap:10px}.choice-card{width:100%;border:1px solid var(--line);background:#f8f9f4;border-radius:12px;padding:12px;text-align:left;cursor:pointer}.choice-card strong,.choice-card small{display:block}.choice-card small{color:var(--muted);font-size:11px;margin-top:4px}.choice-card.active{border-color:#b5c879;background:#f2f8df;box-shadow:inset 3px 0 var(--acid)}
 @media(max-width:760px){.member-row{grid-template-columns:1fr auto}.signature-pad-wrap canvas{height:180px}}
+
+.backend-pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;font:800 11px "DM Sans";color:var(--muted);cursor:pointer;white-space:nowrap}
+.backend-pill.connected{background:#edf7ee;border-color:#c7e4ca;color:var(--green)}
+.backend-pill.warning{background:#fff5e5;border-color:#f0d5a9;color:#9c641d}
+.modal-panel{padding:25px}
+.modal-panel form{padding:0;border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
+.modal-note{color:var(--muted);font-size:12px;line-height:1.55;margin:-10px 0 12px}

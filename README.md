@@ -43,4 +43,8 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 3. `supabase/policies.sql` dosyasını SQL Editor’da çalıştır
 4. Supabase Auth içinde owner kullanıcısını oluştur
 5. `supabase/seed.sql` içindeki email’i değiştirip örnek veriyi çalıştır
-6. localStorage verisini Supabase’e taşı
+6. Uygulamada üst bardaki `Demo mod` düğmesine bas
+7. Supabase Project URL ve anon public key değerlerini gir
+8. Owner email/şifre ile giriş yapıp canlı veriyi yükle
+
+Supabase bilgileri GitHub’a yazılmaz; tarayıcıda saklanır. Anon key public kullanıma uygundur, veri güvenliği RLS politikalarıyla sağlanır.

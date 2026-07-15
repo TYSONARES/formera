@@ -7,6 +7,7 @@ const STUDIO_STORAGE_KEY = 'formera_studios';
 const ACTIVE_STUDIO_STORAGE_KEY = 'formera_active_studio';
 const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
+const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -64,7 +65,17 @@ const state = {
   studios: starterStudios.map(normalizeStudio),
   activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
   signatures: [],
-  programSelections: {}
+  programSelections: {},
+  backend: {
+    configured: false,
+    connected: false,
+    loading: false,
+    error: '',
+    client: null,
+    user: null,
+    profile: null,
+    studioId: null
+  }
 };
 
 const savedMembers = localStorage.getItem(STORAGE_KEY);
@@ -133,11 +144,14 @@ const trainerForm = document.querySelector('#trainerForm');
 const signatureModal = document.querySelector('#signatureModal');
 const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
+const supabaseModal = document.querySelector('#supabaseModal');
+const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
+const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
 let signaturePadReady = false;
 let signatureDrawing = false;
 
 function makeId(){
-  return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return crypto?.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
 function initialsFromName(name){
@@ -166,6 +180,8 @@ function statusFor(member){
 function normalizeMember(member){
   const normalized = {
     id: member.id || makeId(),
+    studioId: member.studioId || member.studio_id || null,
+    trainerProfileId: member.trainerProfileId || member.trainer_profile_id || null,
     name: member.name || 'İsimsiz Üye',
     initials: member.initials || initialsFromName(member.name || 'İsimsiz Üye'),
     trainer: member.trainer || 'Ece',
@@ -180,11 +196,13 @@ function normalizeMember(member){
 
 function saveMembers(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.members));
+  syncMembersToSupabase();
 }
 
 function normalizeFinanceEntry(entry){
   return {
     id: entry.id || makeId(),
+    studioId: entry.studioId || entry.studio_id || null,
     type: entry.type === 'expense' ? 'expense' : 'income',
     title: entry.title || 'İsimsiz işlem',
     category: entry.category || (entry.type === 'expense' ? 'Gider' : 'Gelir'),
@@ -196,6 +214,7 @@ function normalizeFinanceEntry(entry){
 
 function saveFinance(){
   localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
+  syncFinanceToSupabase();
 }
 
 function formatCurrency(value){
@@ -229,6 +248,7 @@ function normalizeProgram(program){
     : String(program.exercises || '').split('\n').map(x=>x.trim()).filter(Boolean);
   return {
     id: program.id || makeId(),
+    studioId: program.studioId || program.studio_id || null,
     title: program.title || 'Yeni program',
     goal: program.goal || 'Genel fitness',
     level: program.level || 'Başlangıç',
@@ -240,6 +260,7 @@ function normalizeProgram(program){
 
 function savePrograms(){
   localStorage.setItem(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
+  syncProgramsToSupabase();
 }
 
 function todayISO(){
@@ -249,6 +270,10 @@ function todayISO(){
 function normalizeSession(session){
   return {
     id: session.id || makeId(),
+    studioId: session.studioId || session.studio_id || null,
+    memberId: session.memberId || session.member_id || null,
+    trainerProfileId: session.trainerProfileId || session.trainer_profile_id || null,
+    programId: session.programId || session.program_id || null,
     date: session.date || todayISO(),
     time: session.time || '09:00',
     member: session.member || state?.members?.[0]?.name || 'Üye seçilmedi',
@@ -261,6 +286,7 @@ function normalizeSession(session){
 
 function saveSessions(){
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
+  syncSessionsToSupabase();
 }
 
 function formatDateTR(date){
@@ -290,6 +316,7 @@ function sessionSummary(date=todayISO()){
 function normalizeTrainer(trainer){
   return {
     id: trainer.id || makeId(),
+    profileId: trainer.profileId || trainer.profile_id || trainer.id || null,
     name: trainer.name || 'Yeni antrenör',
     role: trainer.role || 'PT Coach',
     specialty: trainer.specialty || 'Genel fitness',
@@ -300,6 +327,7 @@ function normalizeTrainer(trainer){
 
 function saveTeam(){
   localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state.team));
+  syncTeamToSupabase();
 }
 
 function trainerStats(trainerName){
@@ -350,6 +378,8 @@ function saveActiveStudio(){
 function normalizeSignature(signature){
   return {
     id: signature.id || makeId(),
+    studioId: signature.studioId || signature.studio_id || null,
+    memberId: signature.memberId || signature.member_id || null,
     member: signature.member || 'Üye seçilmedi',
     type: signature.type || 'Aydınlatma ve üyelik onayı',
     signedAt: signature.signedAt || new Date().toISOString(),
@@ -359,10 +389,12 @@ function normalizeSignature(signature){
 
 function saveSignatures(){
   localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
+  syncSignaturesToSupabase();
 }
 
 function saveProgramSelections(){
   localStorage.setItem(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
+  syncProgramSelectionsToSupabase();
 }
 
 function persistAllData(){
@@ -420,6 +452,430 @@ function resetDemoData(){
   state.activeStudioId = 'studio_1';
   state.calendarDate = todayISO();
   persistAllData();
+}
+
+function readSupabaseConfig(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_STORAGE_KEY) || 'null');
+    if(saved?.url && saved?.anonKey) return saved;
+  }catch(e){
+    console.warn('Supabase ayarı okunamadı.');
+  }
+  return window.FORMERA_SUPABASE?.url && window.FORMERA_SUPABASE?.anonKey ? window.FORMERA_SUPABASE : null;
+}
+
+function writeSupabaseConfig(config){
+  localStorage.setItem(SUPABASE_CONFIG_STORAGE_KEY, JSON.stringify({
+    url: String(config.url || '').trim(),
+    anonKey: String(config.anonKey || '').trim()
+  }));
+}
+
+function isUuid(value){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+}
+
+function isSupabaseReady(){
+  return Boolean(state.backend.connected && state.backend.client && state.backend.studioId);
+}
+
+function studioIdForRemote(){
+  return state.backend.studioId || (isUuid(state.activeStudioId) ? state.activeStudioId : null);
+}
+
+function trainerProfileIdByName(name){
+  return state.team.find(trainer=>trainer.name === name)?.profileId || null;
+}
+
+function memberIdByName(name){
+  return state.members.find(member=>member.name === name)?.id || null;
+}
+
+function programIdByTitle(title){
+  return state.programs.find(program=>program.title === title)?.id || null;
+}
+
+function memberNameById(id){
+  return state.members.find(member=>member.id === id)?.name || 'Üye seçilmedi';
+}
+
+function programTitleById(id){
+  return state.programs.find(program=>program.id === id)?.title || 'Genel PT';
+}
+
+function trainerNameById(id){
+  return state.team.find(trainer=>trainer.profileId === id || trainer.id === id)?.name || 'Ece';
+}
+
+function remoteError(error, fallback='Canlı veri işleminde hata oluştu.'){
+  if(!error) return;
+  console.warn(error);
+  state.backend.loading = false;
+  state.backend.error = error.message || fallback;
+  updateBackendShell();
+}
+
+function mapRemoteStudio(studio){
+  return normalizeStudio({
+    id: studio.id,
+    name: studio.name,
+    initials: studio.initials,
+    location: studio.location,
+    status: studio.status
+  });
+}
+
+function mapRemoteTrainer(profile){
+  return normalizeTrainer({
+    id: profile.id,
+    profileId: profile.id,
+    name: profile.full_name,
+    role: profile.role === 'owner' ? 'Owner' : 'PT Coach',
+    specialty: profile.role === 'owner' ? 'İşletme yönetimi' : 'Genel fitness',
+    phone: profile.phone || '',
+    commission: 15
+  });
+}
+
+function mapRemoteMember(member, profilesById){
+  return normalizeMember({
+    id: member.id,
+    studioId: member.studio_id,
+    trainerProfileId: member.trainer_profile_id,
+    name: member.full_name,
+    initials: member.initials,
+    trainer: profilesById[member.trainer_profile_id]?.full_name || 'Atanmadı',
+    last: member.last_visit_label,
+    sessions: `${member.sessions_used || 0} / ${member.sessions_total || 12}`,
+    status: member.status,
+    type: member.risk_type,
+    phone: member.phone || ''
+  });
+}
+
+function mapRemoteProgram(program, selectionByProgramId){
+  return normalizeProgram({
+    id: program.id,
+    studioId: program.studio_id,
+    title: program.title,
+    goal: program.goal,
+    level: program.level,
+    duration: program.duration_minutes,
+    assigned: selectionByProgramId[program.id] || 'Atanmadı',
+    exercises: Array.isArray(program.exercises) ? program.exercises : []
+  });
+}
+
+function mapRemoteSession(session){
+  return normalizeSession({
+    id: session.id,
+    studioId: session.studio_id,
+    memberId: session.member_id,
+    trainerProfileId: session.trainer_profile_id,
+    programId: session.program_id,
+    date: session.session_date,
+    time: String(session.session_time || '09:00').slice(0,5),
+    member: memberNameById(session.member_id),
+    trainer: trainerNameById(session.trainer_profile_id),
+    program: programTitleById(session.program_id),
+    room: session.room,
+    status: session.status
+  });
+}
+
+function mapRemoteFinance(entry){
+  return normalizeFinanceEntry({
+    id: entry.id,
+    studioId: entry.studio_id,
+    type: entry.type,
+    title: entry.title,
+    category: entry.category,
+    amount: Number(entry.amount),
+    date: entry.entry_date,
+    status: entry.status
+  });
+}
+
+function mapRemoteSignature(signature){
+  return normalizeSignature({
+    id: signature.id,
+    studioId: signature.studio_id,
+    memberId: signature.member_id,
+    member: memberNameById(signature.member_id),
+    type: signature.type,
+    signedAt: signature.signed_at,
+    dataUrl: signature.image_data_url
+  });
+}
+
+async function initSupabase(){
+  const config = readSupabaseConfig();
+  state.backend.configured = Boolean(config);
+  updateBackendShell();
+  if(!config) return;
+  if(!window.supabase?.createClient){
+    state.backend.error = 'Supabase kütüphanesi yüklenemedi.';
+    updateBackendShell();
+    return;
+  }
+  state.backend.client = window.supabase.createClient(config.url, config.anonKey);
+  const {data, error} = await state.backend.client.auth.getSession();
+  if(error) return remoteError(error, 'Oturum okunamadı.');
+  state.backend.user = data.session?.user || null;
+  if(state.backend.user) await loadRemoteData();
+  updateBackendShell();
+}
+
+async function loadRemoteData(){
+  if(!state.backend.client || !state.backend.user) return;
+  state.backend.loading = true;
+  updateBackendShell();
+  const db = state.backend.client;
+  const {data: profile, error: profileError} = await db
+    .from('profiles')
+    .select('*')
+    .eq('auth_user_id', state.backend.user.id)
+    .maybeSingle();
+  if(profileError) return remoteError(profileError, 'Profil okunamadı.');
+  if(!profile){
+    state.backend.loading = false;
+    state.backend.connected = false;
+    state.backend.error = 'Bu Auth kullanıcısına bağlı owner profili bulunamadı.';
+    updateBackendShell();
+    return;
+  }
+
+  state.backend.profile = profile;
+  state.backend.studioId = profile.studio_id;
+  const studioId = profile.studio_id;
+
+  const [
+    studiosResult,
+    profilesResult,
+    membersResult,
+    selectionsResult,
+    programsResult,
+    sessionsResult,
+    financeResult,
+    signaturesResult
+  ] = await Promise.all([
+    db.from('studios').select('*').eq('id', studioId),
+    db.from('profiles').select('*').eq('studio_id', studioId),
+    db.from('members').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('member_program_selections').select('*'),
+    db.from('programs').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('sessions').select('*').eq('studio_id', studioId).order('session_date', {ascending:true}).order('session_time', {ascending:true}),
+    db.from('finance_entries').select('*').eq('studio_id', studioId).order('entry_date', {ascending:false}),
+    db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false})
+  ]);
+
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult].find(result=>result.error);
+  if(failed) return remoteError(failed.error);
+
+  const profilesById = Object.fromEntries((profilesResult.data || []).map(item=>[item.id, item]));
+  const memberNamesById = Object.fromEntries((membersResult.data || []).map(item=>[item.id, item.full_name]));
+  const selectionByProgramId = {};
+  const programSelections = {};
+  (selectionsResult.data || []).forEach(selection=>{
+    const memberName = memberNamesById[selection.member_id];
+    if(memberName){
+      selectionByProgramId[selection.program_id] = memberName;
+      programSelections[memberName] = selection.program_id;
+    }
+  });
+
+  state.studios = (studiosResult.data || []).map(mapRemoteStudio);
+  state.activeStudioId = studioId;
+  state.team = (profilesResult.data || [])
+    .filter(item=>item.role === 'trainer')
+    .map(mapRemoteTrainer);
+  if(!state.team.length){
+    state.team = (profilesResult.data || []).filter(item=>item.role === 'owner').map(mapRemoteTrainer);
+  }
+  state.members = (membersResult.data || []).map(member=>mapRemoteMember(member, profilesById));
+  state.programSelections = programSelections;
+  state.programs = (programsResult.data || []).map(program=>mapRemoteProgram(program, selectionByProgramId));
+  state.sessions = (sessionsResult.data || []).map(mapRemoteSession);
+  state.finance = (financeResult.data || []).map(mapRemoteFinance);
+  state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
+  state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
+  if(profile.role === 'trainer') state.trainerName = profile.full_name;
+  state.backend.connected = true;
+  state.backend.loading = false;
+  state.backend.error = '';
+  persistAllData();
+  render();
+  showToast('Supabase canlı verisi yüklendi.');
+}
+
+function updateBackendShell(){
+  const button = document.querySelector('#backendStatus');
+  if(!button) return;
+  button.classList.toggle('connected', state.backend.connected);
+  button.classList.toggle('warning', state.backend.configured && !state.backend.connected);
+  if(state.backend.loading) button.textContent = 'Bağlanıyor...';
+  else if(state.backend.connected) button.textContent = 'Canlı veri';
+  else if(state.backend.configured) button.textContent = 'Giriş gerekli';
+  else button.textContent = 'Demo mod';
+}
+
+function openSupabaseModal(){
+  const config = readSupabaseConfig();
+  if(config && supabaseConfigForm){
+    supabaseConfigForm.elements.url.value = config.url || '';
+    supabaseConfigForm.elements.anonKey.value = config.anonKey || '';
+  }
+  supabaseModal?.showModal();
+}
+
+async function signInSupabase(email, password){
+  if(!state.backend.client){
+    await initSupabase();
+  }
+  if(!state.backend.client){
+    showToast('Önce Supabase URL ve anon key kaydet.');
+    return;
+  }
+  state.backend.loading = true;
+  updateBackendShell();
+  const {data, error} = await state.backend.client.auth.signInWithPassword({email, password});
+  if(error){
+    state.backend.loading = false;
+    remoteError(error, 'Giriş başarısız.');
+    showToast('Giriş başarısız. Email/şifreyi kontrol et.');
+    return;
+  }
+  state.backend.user = data.user;
+  await loadRemoteData();
+  supabaseModal?.close();
+}
+
+async function signOutSupabase(){
+  if(state.backend.client) await state.backend.client.auth.signOut();
+  state.backend.connected = false;
+  state.backend.user = null;
+  state.backend.profile = null;
+  state.backend.studioId = null;
+  updateBackendShell();
+  showToast('Canlı veri oturumu kapatıldı.');
+}
+
+async function syncRemote(table, rows){
+  if(!isSupabaseReady()) return;
+  const validRows = rows.filter(row=>row.id && isUuid(row.id));
+  if(!validRows.length) return;
+  const {error} = await state.backend.client.from(table).upsert(validRows, {onConflict:'id'});
+  remoteError(error);
+}
+
+function syncMembersToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  const rows = state.members.map(member=>{
+    const parsed = parseSessions(member.sessions);
+    return {
+      id: member.id,
+      studio_id: studioId,
+      trainer_profile_id: trainerProfileIdByName(member.trainer),
+      full_name: member.name,
+      initials: member.initials,
+      phone: member.phone || null,
+      last_visit_label: member.last,
+      sessions_used: parsed.used,
+      sessions_total: parsed.total,
+      status: member.status,
+      risk_type: member.type
+    };
+  });
+  syncRemote('members', rows);
+}
+
+function syncFinanceToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  syncRemote('finance_entries', state.finance.map(entry=>({
+    id: entry.id,
+    studio_id: studioId,
+    type: entry.type,
+    title: entry.title,
+    category: entry.category,
+    amount: entry.amount,
+    entry_date: entry.date,
+    status: entry.status
+  })));
+}
+
+function syncProgramsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  syncRemote('programs', state.programs.map(program=>({
+    id: program.id,
+    studio_id: studioId,
+    title: program.title,
+    goal: program.goal,
+    level: program.level,
+    duration_minutes: program.duration,
+    exercises: program.exercises
+  })));
+}
+
+function syncSessionsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  syncRemote('sessions', state.sessions.map(session=>({
+    id: session.id,
+    studio_id: studioId,
+    member_id: session.memberId || memberIdByName(session.member),
+    trainer_profile_id: session.trainerProfileId || trainerProfileIdByName(session.trainer),
+    program_id: session.programId || programIdByTitle(session.program),
+    session_date: session.date,
+    session_time: session.time,
+    room: session.room,
+    status: session.status
+  })));
+}
+
+function syncTeamToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  syncRemote('profiles', state.team.map(trainer=>({
+    id: trainer.profileId || trainer.id,
+    studio_id: studioId,
+    full_name: trainer.name,
+    role: 'trainer',
+    phone: trainer.phone || null
+  })));
+}
+
+function syncSignaturesToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId) return;
+  syncRemote('signatures', state.signatures.map(signature=>({
+    id: signature.id,
+    studio_id: studioId,
+    member_id: signature.memberId || memberIdByName(signature.member),
+    type: signature.type,
+    image_data_url: signature.dataUrl,
+    signed_at: signature.signedAt
+  })));
+}
+
+async function syncProgramSelectionsToSupabase(){
+  if(!isSupabaseReady()) return;
+  const rows = Object.entries(state.programSelections)
+    .map(([memberName, programId])=>({member_id: memberIdByName(memberName), program_id: programId}))
+    .filter(row=>isUuid(row.member_id) && isUuid(row.program_id));
+  if(!rows.length) return;
+  const {error} = await state.backend.client
+    .from('member_program_selections')
+    .upsert(rows, {onConflict:'member_id'});
+  remoteError(error);
+}
+
+async function deleteRemoteRow(table, id){
+  if(!isSupabaseReady() || !isUuid(id)) return;
+  const {error} = await state.backend.client.from(table).delete().eq('id', id);
+  remoteError(error);
 }
 
 function updateStudioShell(){
@@ -896,6 +1352,7 @@ function render(){
   if(count) count.textContent = state.members.length;
   updateStudioShell();
   updateRoleShell();
+  updateBackendShell();
   if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
@@ -931,6 +1388,7 @@ function deleteMember(id){
   const member = state.members.find(m=>m.id === id);
   if(!member) return;
   if(!confirm(`${member.name} kaydını silmek istiyor musun?`)) return;
+  deleteRemoteRow('members', id);
   state.members = state.members.filter(m=>m.id !== id);
   saveMembers();
   render();
@@ -988,6 +1446,7 @@ function deleteFinanceEntry(id){
   const entry = state.finance.find(x=>x.id === id);
   if(!entry) return;
   if(!confirm(`${entry.title} işlemini silmek istiyor musun?`)) return;
+  deleteRemoteRow('finance_entries', id);
   state.finance = state.finance.filter(x=>x.id !== id);
   saveFinance();
   render();
@@ -1008,6 +1467,7 @@ function deleteProgram(id){
   const program = state.programs.find(x=>x.id === id);
   if(!program) return;
   if(!confirm(`${program.title} programını silmek istiyor musun?`)) return;
+  deleteRemoteRow('programs', id);
   state.programs = state.programs.filter(x=>x.id !== id);
   savePrograms();
   render();
@@ -1061,6 +1521,7 @@ function deleteSession(id){
   const session = state.sessions.find(x=>x.id === id);
   if(!session) return;
   if(!confirm(`${session.member} ${session.time} seansını silmek istiyor musun?`)) return;
+  deleteRemoteRow('sessions', id);
   state.sessions = state.sessions.filter(x=>x.id !== id);
   saveSessions();
   render();
@@ -1094,6 +1555,7 @@ function deleteTrainer(id){
   const trainer = state.team.find(x=>x.id === id);
   if(!trainer) return;
   if(!confirm(`${trainer.name} ekipten kaldırılsın mı?`)) return;
+  deleteRemoteRow('profiles', trainer.profileId || id);
   state.team = state.team.filter(x=>x.id !== id);
   saveTeam();
   render();
@@ -1402,4 +1864,33 @@ signatureForm.onsubmit=e=>{
   saveSignature(e.currentTarget);
 };
 
+document.querySelector('#backendStatus')?.addEventListener('click', openSupabaseModal);
+document.querySelector('#closeSupabaseModal')?.addEventListener('click', ()=>supabaseModal?.close());
+document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async ()=>{
+  localStorage.removeItem(SUPABASE_CONFIG_STORAGE_KEY);
+  await signOutSupabase();
+  state.backend.configured = false;
+  state.backend.client = null;
+  updateBackendShell();
+  showToast('Supabase bağlantı ayarı temizlendi.');
+});
+document.querySelector('#logoutSupabase')?.addEventListener('click', signOutSupabase);
+
+supabaseConfigForm?.addEventListener('submit', async event=>{
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  writeSupabaseConfig({url:data.get('url'), anonKey:data.get('anonKey')});
+  state.backend.client = null;
+  state.backend.connected = false;
+  await initSupabase();
+  showToast('Supabase ayarları kaydedildi.');
+});
+
+supabaseAuthForm?.addEventListener('submit', async event=>{
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  await signInSupabase(data.get('email'), data.get('password'));
+});
+
 render();
+initSupabase();
