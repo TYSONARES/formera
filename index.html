@@ -21,7 +21,7 @@
       <nav class="nav" aria-label="Ana menü">
         <p class="nav-label">Çalışma alanı</p>
         <button class="nav-item active" data-page="dashboard"><span>⌂</span> Genel bakış</button>
-        <button class="nav-item" data-page="members"><span>♙</span> Üyeler <b>48</b></button>
+        <button class="nav-item" data-page="members"><span>♙</span> Üyeler <b id="memberCount">48</b></button>
         <button class="nav-item" data-page="programs"><span>▤</span> Programlar</button>
         <button class="nav-item" data-page="calendar"><span>□</span> Takvim</button>
         <p class="nav-label">İşletme</p>
@@ -55,7 +55,7 @@
   <div class="toast" id="toast" role="status"></div>
   <dialog class="modal" id="memberModal">
     <form method="dialog" id="memberForm">
-      <div class="modal-head"><div><span class="eyebrow">YENİ KAYIT</span><h2>Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="modal-head"><div><span class="eyebrow" id="memberModalEyebrow">YENİ KAYIT</span><h2 id="memberModalTitle">Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
       <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
       <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
