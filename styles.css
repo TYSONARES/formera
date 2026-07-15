@@ -28,3 +28,33 @@
 .modal-panel{padding:25px}
 .modal-panel form{padding:0;border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
 .modal-note{color:var(--muted);font-size:12px;line-height:1.55;margin:-10px 0 12px}
+
+.sidebar,.app-shell,main{transition:.25s ease}
+.sidebar-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:1px solid #30342a;background:#22251e;color:#fff;border-radius:9px;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.sidebar-backdrop{display:none}
+.app-shell.sidebar-collapsed{grid-template-columns:76px 1fr}
+.app-shell.sidebar-collapsed .sidebar{width:76px;padding:27px 10px 18px;overflow:hidden}
+.app-shell.sidebar-collapsed .brand{justify-content:center;margin-left:0;margin-right:0}
+.app-shell.sidebar-collapsed .brand span:last-child,
+.app-shell.sidebar-collapsed .nav-label,
+.app-shell.sidebar-collapsed .nav-item:not(.active)::after,
+.app-shell.sidebar-collapsed .nav-item b,
+.app-shell.sidebar-collapsed .studio-card div,
+.app-shell.sidebar-collapsed .studio-card button{display:none}
+.app-shell.sidebar-collapsed .nav-item{justify-content:center;padding:11px 8px}
+.app-shell.sidebar-collapsed .nav-item span{width:auto}
+.app-shell.sidebar-collapsed .studio-card{justify-content:center;padding:10px 6px}
+
+@media(max-width:760px){
+  .sidebar-close{display:grid}
+  .sidebar-backdrop.show{display:block;position:fixed;inset:0;background:rgba(12,14,10,.48);backdrop-filter:blur(2px);z-index:4}
+  .app-shell.sidebar-collapsed{grid-template-columns:1fr}
+  .app-shell.sidebar-collapsed .sidebar{width:250px;padding:27px 18px 18px}
+  .app-shell.sidebar-collapsed .brand span:last-child,
+  .app-shell.sidebar-collapsed .nav-label,
+  .app-shell.sidebar-collapsed .nav-item b,
+  .app-shell.sidebar-collapsed .studio-card div,
+  .app-shell.sidebar-collapsed .studio-card button{display:block}
+  .app-shell.sidebar-collapsed .nav-item{justify-content:flex-start;padding:11px 12px}
+  .app-shell.sidebar-collapsed .studio-card{justify-content:flex-start;padding:11px}
+}
