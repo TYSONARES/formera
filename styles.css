@@ -33,6 +33,12 @@
 .account-summary strong,.account-summary small{display:block}
 .account-summary strong{font:800 15px Manrope}
 .account-summary small{color:var(--muted);font-size:11px;margin-top:3px}
+.account-alert{display:none;border-radius:12px;padding:12px 13px;margin:14px 0 2px;font-size:12px;font-weight:800;line-height:1.45}
+.account-alert.show{display:block}
+.account-alert.error{background:#fff0ed;border:1px solid #f0c8c1;color:var(--red)}
+.account-alert.warning{background:#fff5e5;border:1px solid #f0d5a9;color:#9c641d}
+.account-alert.success{background:#edf7ee;border:1px solid #c7e4ca;color:var(--green)}
+.account-alert.info{background:#f0f3e8;border:1px solid var(--line);color:var(--ink)}
 .avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
 .studio-public-card{background:linear-gradient(135deg,#fff 0%,#f8faef 100%)}
 .studio-public-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}

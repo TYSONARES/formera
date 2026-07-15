@@ -152,6 +152,7 @@ const supabaseModal = document.querySelector('#supabaseModal');
 const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
 const accountSummary = document.querySelector('#accountSummary');
+const accountAlert = document.querySelector('#accountAlert');
 let signaturePadReady = false;
 let signatureDrawing = false;
 
@@ -532,6 +533,31 @@ function remoteError(error, fallback='Canlı veri işleminde hata oluştu.'){
   state.backend.loading = false;
   state.backend.error = error.message || fallback;
   updateBackendShell();
+  showAccountMessage(state.backend.error, 'error');
+}
+
+function isAccountModalOpen(){
+  return Boolean(supabaseModal?.open);
+}
+
+function showAccountMessage(message, type='info'){
+  if(!message || !accountAlert) return;
+  accountAlert.textContent = message;
+  accountAlert.className = `account-alert show ${type}`;
+}
+
+function clearAccountMessage(){
+  if(!accountAlert) return;
+  accountAlert.textContent = '';
+  accountAlert.className = 'account-alert';
+}
+
+function notify(message, type='info'){
+  if(isAccountModalOpen()){
+    showAccountMessage(message, type);
+    return;
+  }
+  showToast(message);
 }
 
 function mapRemoteStudio(studio){
@@ -761,6 +787,7 @@ function updateBackendShell(){
 }
 
 function openSupabaseModal(){
+  clearAccountMessage();
   const config = readSupabaseConfig();
   if(config && supabaseConfigForm){
     supabaseConfigForm.elements.url.value = config.url || '';
@@ -779,7 +806,7 @@ async function signInSupabase(email, password){
     await initSupabase();
   }
   if(!state.backend.client){
-    showToast('Önce Supabase URL ve anon key kaydet.');
+    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
     return;
   }
   state.backend.loading = true;
@@ -788,7 +815,7 @@ async function signInSupabase(email, password){
   if(error){
     state.backend.loading = false;
     remoteError(error, 'Giriş başarısız.');
-    showToast('Giriş başarısız. Email/şifreyi kontrol et.');
+    notify('Giriş başarısız. Email/şifreyi kontrol et.', 'error');
     return;
   }
   state.backend.user = data.user;
@@ -801,7 +828,7 @@ async function signUpSupabase(email, password){
     await initSupabase();
   }
   if(!state.backend.client){
-    showToast('Önce Supabase URL ve anon key kaydet.');
+    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
     return;
   }
   state.backend.loading = true;
@@ -810,18 +837,18 @@ async function signUpSupabase(email, password){
   state.backend.loading = false;
   if(error){
     remoteError(error, 'Hesap oluşturulamadı.');
-    showToast('Hesap oluşturulamadı. Email/şifreyi kontrol et.');
+    notify('Hesap oluşturulamadı. Email/şifreyi kontrol et.', 'error');
     return;
   }
   if(data.session?.user){
     state.backend.user = data.session.user;
     await loadRemoteData();
     supabaseModal?.close();
-    showToast('Hesap oluşturuldu ve giriş yapıldı.');
+    notify('Hesap oluşturuldu ve giriş yapıldı.', 'success');
     return;
   }
   updateBackendShell();
-  showToast('Hesap oluşturuldu. Email doğrulaması gerekiyorsa gelen kutunu kontrol et.');
+  notify('Hesap oluşturuldu. Email doğrulaması gerekiyorsa gelen kutunu kontrol et.', 'success');
 }
 
 async function signOutSupabase(){
@@ -2310,7 +2337,7 @@ document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async 
   state.backend.client = null;
   updateBackendShell();
   updateAccountSummary();
-  showToast('Supabase bağlantı ayarı temizlendi.');
+  notify('Supabase bağlantı ayarı temizlendi.', 'success');
 });
 document.querySelector('#logoutSupabase')?.addEventListener('click', event=>{
   event.preventDefault();
@@ -2333,7 +2360,7 @@ supabaseConfigForm?.addEventListener('submit', async event=>{
   state.backend.client = null;
   state.backend.connected = false;
   await initSupabase();
-  showToast('Supabase ayarları kaydedildi.');
+  notify('Supabase ayarları kaydedildi.', 'success');
 });
 
 supabaseAuthForm?.addEventListener('submit', async event=>{
