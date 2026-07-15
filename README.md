@@ -1,6 +1,8 @@
 # Formera prototipi
 
-PT stüdyoları için işletmeci ve üye arayüzü prototipi.
+PT stüdyoları için işletmeci, antrenör ve üye arayüzü prototipi.
+
+Canlı demo: https://tysonares.github.io/formera/
 
 ## Çalıştırma
 
@@ -12,4 +14,31 @@ npx serve .
 
 Alternatif olarak `index.html` dosyasını doğrudan tarayıcıda açabilirsiniz.
 
-Sağ üstteki **Üye görünümü** düğmesiyle işletmeci ve üye arayüzleri arasında geçiş yapılabilir.
+Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
+
+- İşletmeci
+- Antrenör
+- Üye
+
+## Pilot kapsamı
+
+- Üye yönetimi
+- Program seçimi ve program takibi
+- Dijital imza alma
+- Takvim ve seans planlama
+- Finans / gelir-gider takibi
+- Haftalık raporlar
+- Ekip / antrenör performansı
+- 4 stüdyo pilot seçici
+- JSON yedekleme ve geri yükleme
+
+## Backend hazırlığı
+
+Çok cihazlı MVP’ye geçiş için Supabase başlangıç şeması `supabase/` klasöründedir.
+
+Önerilen sıradaki teknik adım:
+
+1. Supabase projesi aç
+2. `supabase/schema.sql` dosyasını SQL Editor’da çalıştır
+3. Auth ve RLS politikalarını ekle
+4. localStorage verisini Supabase’e taşı

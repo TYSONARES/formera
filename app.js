@@ -862,6 +862,14 @@ function pilotPage(){
       <p>Bu paneli her salon demosundan önce ve sonra kullan. Veri kaybı riskini minimumda tutar.</p>
       ${pilotChecklist()}
     </article>
+    <article class="card">
+      <div class="card-title"><div><h2>Backend hazırlığı</h2><p>Çok cihazlı MVP için Supabase geçiş adımları</p></div><span class="badge">Hazır şema</span></div>
+      <div class="report-list">
+        <div><span>Veritabanı şeması</span><strong>supabase/schema.sql</strong></div>
+        <div><span>Kurulum notu</span><strong>supabase/README.md</strong></div>
+        <div><span>Bağlantı örneği</span><strong>config.example.js</strong></div>
+      </div>
+    </article>
   </section>`;
 }
 
