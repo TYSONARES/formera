@@ -7,6 +7,7 @@ const STUDIO_STORAGE_KEY = 'formera_studios';
 const ACTIVE_STUDIO_STORAGE_KEY = 'formera_active_studio';
 const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
+const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 
 const starterMembers = [
@@ -45,6 +46,11 @@ const starterTeam = [
   {id:'t_2', name:'Kerem', role:'PT Coach', specialty:'Fonksiyonel · kilo kontrol', phone:'0532 200 20 20', commission:16}
 ];
 
+const starterTrainerTasks = [
+  {id:'tt_1', trainer:'Ece', title:'Riskli üyeleri ara', note:'Selin ve Can için seans sonrası kısa geri bildirim notu ekle.', priority:'high', dueDate:'2026-07-16', status:'open'},
+  {id:'tt_2', trainer:'Kerem', title:'Yenileme önerisi hazırla', note:'Paket bitimine yaklaşan üyeler için 8 seanslık yenileme önerisi çıkar.', priority:'medium', dueDate:'2026-07-17', status:'open'}
+];
+
 const starterStudios = [
   {id:'studio_1', name:'NorthFit Studio', initials:'NF', location:'Kadıköy · İstanbul', status:'Pilot aktif'},
   {id:'studio_2', name:'CoreLab PT', initials:'CL', location:'Ataşehir · İstanbul', status:'Kurulum'},
@@ -62,6 +68,7 @@ const state = {
   programs: starterPrograms.map(normalizeProgram),
   sessions: starterSessions.map(normalizeSession),
   team: starterTeam.map(normalizeTrainer),
+  trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
   studios: starterStudios.map(normalizeStudio),
   activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
   signatures: [],
@@ -76,7 +83,8 @@ const state = {
     profile: null,
     studioId: null,
     brandingReady: false,
-    accountsReady: false
+    accountsReady: false,
+    trainerTasksReady: false
   }
 };
 
@@ -108,6 +116,12 @@ const savedTeam = localStorage.getItem(TEAM_STORAGE_KEY);
 if(savedTeam){
   try{ state.team = JSON.parse(savedTeam).map(normalizeTrainer); }
   catch(e){ console.warn('Kayıtlı ekip okunamadı.'); }
+}
+
+const savedTrainerTasks = localStorage.getItem(TRAINER_TASK_STORAGE_KEY);
+if(savedTrainerTasks){
+  try{ state.trainerTasks = JSON.parse(savedTrainerTasks).map(normalizeTrainerTask); }
+  catch(e){ console.warn('Kayıtlı antrenör görevleri okunamadı.'); }
 }
 
 const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
@@ -143,6 +157,8 @@ const sessionModal = document.querySelector('#sessionModal');
 const sessionForm = document.querySelector('#sessionForm');
 const trainerModal = document.querySelector('#trainerModal');
 const trainerForm = document.querySelector('#trainerForm');
+const trainerTaskModal = document.querySelector('#trainerTaskModal');
+const trainerTaskForm = document.querySelector('#trainerTaskForm');
 const signatureModal = document.querySelector('#signatureModal');
 const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
@@ -343,6 +359,27 @@ function saveTeam(){
   syncTeamToSupabase();
 }
 
+function normalizeTrainerTask(task){
+  return {
+    id: task.id || makeId(),
+    studioId: task.studioId || task.studio_id || null,
+    trainerProfileId: task.trainerProfileId || task.trainer_profile_id || null,
+    trainer: task.trainer || 'Ece',
+    title: task.title || 'Yeni görev',
+    note: task.note || '',
+    priority: ['low','medium','high'].includes(task.priority) ? task.priority : 'medium',
+    dueDate: task.dueDate || task.due_date || todayISO(),
+    status: ['open','done'].includes(task.status) ? task.status : 'open',
+    createdAt: task.createdAt || task.created_at || new Date().toISOString(),
+    completedAt: task.completedAt || task.completed_at || null
+  };
+}
+
+function saveTrainerTasks(){
+  localStorage.setItem(TRAINER_TASK_STORAGE_KEY, JSON.stringify(state.trainerTasks));
+  syncTrainerTasksToSupabase();
+}
+
 function trainerStats(trainerName){
   const todaySessions = sessionsForDate().filter(session=>session.trainer === trainerName);
   const done = todaySessions.filter(session=>session.status === 'done').length;
@@ -425,6 +462,7 @@ function persistAllData(){
   savePrograms();
   saveSessions();
   saveTeam();
+  saveTrainerTasks();
   saveStudios();
   saveActiveStudio();
   saveSignatures();
@@ -442,6 +480,7 @@ function backupPayload(){
     programs:state.programs,
     sessions:state.sessions,
     team:state.team,
+    trainerTasks:state.trainerTasks,
     studios:state.studios,
     signatures:state.signatures,
     programSelections:state.programSelections
@@ -455,6 +494,7 @@ function applyBackupPayload(payload){
   state.programs = (payload.programs || []).map(normalizeProgram);
   state.sessions = (payload.sessions || []).map(normalizeSession);
   state.team = (payload.team || []).map(normalizeTrainer);
+  state.trainerTasks = (payload.trainerTasks || []).map(normalizeTrainerTask);
   state.studios = (payload.studios || []).map(normalizeStudio);
   state.signatures = (payload.signatures || []).map(normalizeSignature);
   state.programSelections = payload.programSelections || {};
@@ -468,6 +508,7 @@ function resetDemoData(){
   state.programs = starterPrograms.map(normalizeProgram);
   state.sessions = starterSessions.map(normalizeSession);
   state.team = starterTeam.map(normalizeTrainer);
+  state.trainerTasks = starterTrainerTasks.map(normalizeTrainerTask);
   state.studios = starterStudios.map(normalizeStudio);
   state.signatures = [];
   state.programSelections = {};
@@ -684,6 +725,22 @@ function mapRemoteSignature(signature){
   });
 }
 
+function mapRemoteTrainerTask(task){
+  return normalizeTrainerTask({
+    id: task.id,
+    studioId: task.studio_id,
+    trainerProfileId: task.trainer_profile_id,
+    trainer: trainerNameById(task.trainer_profile_id),
+    title: task.title,
+    note: task.note,
+    priority: task.priority,
+    dueDate: task.due_date,
+    status: task.status,
+    createdAt: task.created_at,
+    completedAt: task.completed_at
+  });
+}
+
 async function initSupabase(){
   const config = readSupabaseConfig();
   state.backend.configured = Boolean(config);
@@ -737,7 +794,8 @@ async function loadRemoteData(){
     programsResult,
     sessionsResult,
     financeResult,
-    signaturesResult
+    signaturesResult,
+    trainerTasksResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -746,10 +804,13 @@ async function loadRemoteData(){
     db.from('programs').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
     db.from('sessions').select('*').eq('studio_id', studioId).order('session_date', {ascending:true}).order('session_time', {ascending:true}),
     db.from('finance_entries').select('*').eq('studio_id', studioId).order('entry_date', {ascending:false}),
-    db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false})
+    db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false}),
+    db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult].find(result=>result.error);
+  const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
+  state.backend.trainerTasksReady = !taskTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
@@ -781,6 +842,7 @@ async function loadRemoteData(){
   state.sessions = (sessionsResult.data || []).map(mapRemoteSession);
   state.finance = (financeResult.data || []).map(mapRemoteFinance);
   state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
+  state.trainerTasks = taskTableMissing ? state.trainerTasks : (trainerTasksResult.data || []).map(mapRemoteTrainerTask);
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
   if(profile.role === 'member') state.page = 'dashboard';
@@ -885,6 +947,7 @@ async function signOutSupabase(){
   state.backend.profile = null;
   state.backend.studioId = null;
   state.backend.accountsReady = false;
+  state.backend.trainerTasksReady = false;
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -905,6 +968,7 @@ async function switchSupabaseAccount(){
   state.backend.profile = null;
   state.backend.studioId = null;
   state.backend.accountsReady = false;
+  state.backend.trainerTasksReady = false;
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1057,6 +1121,23 @@ function syncTeamToSupabase(){
     }else if(state.backend.brandingReady) row.avatar_data_url = trainer.avatarDataUrl || null;
     return row;
   }));
+}
+
+function syncTrainerTasksToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.trainerTasksReady)) return;
+  syncRemote('trainer_tasks', state.trainerTasks.map(task=>({
+    id: task.id,
+    studio_id: studioId,
+    trainer_profile_id: task.trainerProfileId || trainerProfileIdByName(task.trainer),
+    created_by_profile_id: state.backend.profile?.id || null,
+    title: task.title,
+    note: task.note,
+    priority: task.priority,
+    due_date: task.dueDate,
+    status: task.status,
+    completed_at: task.completedAt
+  })));
 }
 
 function syncSignaturesToSupabase(){
@@ -1509,14 +1590,44 @@ function teamAiNotes(){
   return notes;
 }
 
+function taskPriorityLabel(priority){
+  return {high:'Yüksek', medium:'Normal', low:'Düşük'}[priority] || 'Normal';
+}
+
+function taskPriorityClass(priority){
+  return {high:'risk', medium:'warn', low:'good'}[priority] || 'warn';
+}
+
+function trainerTaskSummary(){
+  const open = state.trainerTasks.filter(task=>task.status === 'open').length;
+  const done = state.trainerTasks.filter(task=>task.status === 'done').length;
+  const high = state.trainerTasks.filter(task=>task.status === 'open' && task.priority === 'high').length;
+  return {open, done, high, total: state.trainerTasks.length};
+}
+
+function trainerTaskRows(items=state.trainerTasks){
+  return items
+    .slice()
+    .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
+    .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
+      <div><strong>${task.title}</strong><small>${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
+      <div class="row-actions">
+        ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
+        <button class="mini-button danger" data-action="delete-trainer-task" data-task-id="${task.id}">Sil</button>
+      </div>
+    </div>`).join('') || `<div class="empty-mini">Henüz görev veya öneri yok.</div>`;
+}
+
 function teamPage(){
   const summary = teamSummary();
+  const taskSummary = trainerTaskSummary();
   return `<div class="welcome"><div><span class="eyebrow">EKİP</span><h1>Antrenör performansı</h1><p>Seans yükü, aktif üye, gelir katkısı ve prim görünümünü takip et.</p></div><button class="primary" data-action="add-trainer">+ Antrenör ekle</button></div>
   <section class="metrics">
     ${metric('Antrenör',String(summary.trainers),'aktif ekip','♧')}
     ${metric('Bugünkü seans',String(summary.todaySessions),'ekip toplamı','□')}
     ${metric('Tamamlanan',String(summary.completed),'bugün','✓')}
-    ${metric('Tahmini prim',formatCurrency(summary.estimatedCommission),'gelire göre','₺')}
+    ${metric('Açık görev',String(taskSummary.open),`${taskSummary.high} yüksek öncelik`,'!',taskSummary.high > 0)}
   </section>
   <section class="dashboard-grid">
     <div class="team-grid">${teamCards()}</div>
@@ -1525,6 +1636,10 @@ function teamPage(){
       <h2>Bugünkü ekip notları</h2>
       <p>Antrenör yükü, seans tamamlanma ve gelir katkısına göre kısa yönetim önerileri.</p>
       ${teamAiNotes().map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Ekip aksiyonu</small></div></div>`).join('')}
+    </article>
+    <article class="card">
+      <div class="card-title"><div><h2>Görevler ve öneriler</h2><p>İşletmeciden antrenörlere takip aksiyonları</p></div><button class="secondary" data-action="add-trainer-task">+ Görev ver</button></div>
+      <div class="task-list">${trainerTaskRows()}</div>
     </article>
   </section>`;
 }
@@ -1568,18 +1683,35 @@ function trainerProgramRows(){
   </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
 }
 
+function currentTrainerTasks(){
+  return state.trainerTasks.filter(task=>task.trainer === state.trainerName || task.trainerProfileId === trainerProfileIdByName(state.trainerName));
+}
+
+function trainerOwnTaskRows(){
+  const tasks = currentTrainerTasks();
+  return tasks
+    .slice()
+    .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
+    .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
+      <div><strong>${task.title}</strong><small>${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
+      ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
+    </div>`).join('') || `<div class="empty-mini">İşletmeciden atanmış görev yok.</div>`;
+}
+
 function trainerDashboard(){
   const trainer = state.team.find(item=>item.name === state.trainerName) || state.team[0] || normalizeTrainer({name:'Ece'});
   state.trainerName = trainer.name;
   const stats = trainerStats(trainer.name);
   const clients = state.members.filter(member=>member.trainer === trainer.name);
   const riskyClients = clients.filter(member=>member.type !== 'good');
+  const openTasks = currentTrainerTasks().filter(task=>task.status === 'open').length;
   return `<div class="welcome"><div><span class="eyebrow">ANTRENÖR ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve seanslarını buradan takip et.</p></div><button class="primary" data-action="add-session">+ Seans planla</button></div>
   <section class="metrics">
     ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
     ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
     ${metric('Danışan',String(clients.length),'aktif','♙')}
-    ${metric('Riskli danışan',String(riskyClients.length),'takip et','! ',riskyClients.length > 0)}
+    ${metric('Açık görev',String(openTasks),'işletmeci notu','! ',openTasks > 0)}
   </section>
   <section class="dashboard-grid">
     ${studioPublicCard('ANTRENÖR ALANI · İŞLETME')}
@@ -1597,6 +1729,7 @@ function trainerDashboard(){
     </article>
     <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenörüne atanmış üyeler</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
     <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Danışanlara atanmış şablonlar</p></div><button class="secondary" data-action="add-program">Program oluştur</button></div>${trainerProgramRows()}</article>
+    <article class="card"><div class="card-title"><div><h2>Görevlerim</h2><p>İşletmeciden gelen öneri ve aksiyonlar</p></div><span class="badge">${openTasks} açık</span></div><div class="task-list">${trainerOwnTaskRows()}</div></article>
   </section>`;
 }
 
@@ -1922,6 +2055,35 @@ function openTrainerModal(){
   trainerModal.showModal();
 }
 
+function openTrainerTaskModal(){
+  trainerTaskForm.reset();
+  const select = trainerTaskForm.elements.trainer;
+  select.innerHTML = state.team.map(trainer=>`<option value="${escapeAttr(trainer.name)}">${escapeAttr(trainer.name)}</option>`).join('');
+  trainerTaskForm.elements.dueDate.value = todayISO();
+  trainerTaskModal.showModal();
+}
+
+function completeTrainerTask(id){
+  const task = state.trainerTasks.find(item=>item.id === id);
+  if(!task) return;
+  task.status = 'done';
+  task.completedAt = new Date().toISOString();
+  saveTrainerTasks();
+  render();
+  showToast(`${task.title} tamamlandı işaretlendi.`);
+}
+
+function deleteTrainerTask(id){
+  const task = state.trainerTasks.find(item=>item.id === id);
+  if(!task) return;
+  if(!confirm(`${task.title} görevini silmek istiyor musun?`)) return;
+  deleteRemoteRow('trainer_tasks', id);
+  state.trainerTasks = state.trainerTasks.filter(item=>item.id !== id);
+  saveTrainerTasks();
+  render();
+  showToast('Görev silindi.');
+}
+
 function deleteTrainer(id){
   const trainer = state.team.find(x=>x.id === id);
   if(!trainer) return;
@@ -2092,6 +2254,9 @@ function bind(){
     if(action==='copy-report') return copyReport();
     if(action==='add-trainer') return openTrainerModal();
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
+    if(action==='add-trainer-task') return openTrainerTaskModal();
+    if(action==='complete-trainer-task') return completeTrainerTask(b.dataset.taskId);
+    if(action==='delete-trainer-task') return deleteTrainerTask(b.dataset.taskId);
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
@@ -2307,6 +2472,30 @@ trainerForm.onsubmit=async e=>{
   e.currentTarget.reset();
   render();
   showToast(`${trainer.name} ekibe eklendi.`);
+};
+
+trainerTaskForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const trainerName = data.get('trainer');
+  const task = normalizeTrainerTask({
+    id: makeId(),
+    studioId: studioIdForRemote(),
+    trainerProfileId: trainerProfileIdByName(trainerName),
+    trainer: trainerName,
+    title: data.get('title').trim(),
+    note: data.get('note').trim(),
+    priority: data.get('priority'),
+    dueDate: data.get('dueDate') || todayISO(),
+    status: 'open',
+    createdAt: new Date().toISOString()
+  });
+  state.trainerTasks.unshift(task);
+  saveTrainerTasks();
+  trainerTaskModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${task.trainer} için görev gönderildi.`);
 };
 
 studioBrandForm.onsubmit=async e=>{

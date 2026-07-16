@@ -108,6 +108,16 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="trainerTaskModal">
+    <form method="dialog" id="trainerTaskForm">
+      <div class="modal-head"><div><span class="eyebrow">GÖREV</span><h2>Antrenöre görev / öneri ver</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Antrenör<select name="trainer"></select></label>
+      <label>Görev başlığı<input name="title" required placeholder="Örn. Riskli üyeleri ara"></label>
+      <div class="form-grid"><label>Öncelik<select name="priority"><option value="medium">Normal</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
+      <label>Not / öneri<textarea name="note" rows="4" placeholder="Kısa açıklama, öneri veya takip notu"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Görevi gönder</button></div>
+    </form>
+  </dialog>
   <dialog class="modal signature-modal" id="signatureModal">
     <form method="dialog" id="signatureForm">
       <div class="modal-head"><div><span class="eyebrow">İMZA</span><h2>Dijital onay al</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>

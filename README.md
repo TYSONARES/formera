@@ -51,4 +51,6 @@ Logo, marka rengi, işletme iletişim bilgileri ve üye/antrenör avatarlarını
 
 Gerçek antrenör/üye girişleri için ayrıca `supabase/role-accounts.sql` dosyasını SQL Editor’da bir kez çalıştırın. İşletmeci üye veya antrenör kaydına giriş e-postası eklediğinde, kullanıcı aynı e-postayla hesap oluşturup giriş yapınca kendi rol ekranına yönlenir.
 
+İşletmecinin antrenörlere görev/öneri göndermesi ve antrenörlerin kendi görevlerini tamamlandı işaretlemesi için `supabase/trainer-tasks.sql` dosyasını SQL Editor’da bir kez çalıştırın.
+
 Supabase bilgileri GitHub’a yazılmaz; tarayıcıda saklanır. Anon key public kullanıma uygundur, veri güvenliği RLS politikalarıyla sağlanır.

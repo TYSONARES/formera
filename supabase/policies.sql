@@ -14,7 +14,8 @@ grant select, insert, update, delete on
   public.member_program_selections,
   public.sessions,
   public.finance_entries,
-  public.signatures
+  public.signatures,
+  public.trainer_tasks
 to authenticated;
 
 create or replace function public.current_profile()
@@ -51,6 +52,19 @@ security definer
 set search_path = public
 as $$
   select p.role
+  from public.profiles p
+  where p.auth_user_id = auth.uid()
+  limit 1;
+$$;
+
+create or replace function public.current_profile_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id
   from public.profiles p
   where p.auth_user_id = auth.uid()
   limit 1;
@@ -240,4 +254,39 @@ with check (
       and m.studio_id = public.current_studio_id()
       and p.studio_id = public.current_studio_id()
   )
+);
+
+drop policy if exists "trainer_tasks_owner_all_same_studio" on public.trainer_tasks;
+create policy "trainer_tasks_owner_all_same_studio"
+on public.trainer_tasks
+for all
+to authenticated
+using (public.is_owner() and studio_id = public.current_studio_id())
+with check (public.is_owner() and studio_id = public.current_studio_id());
+
+drop policy if exists "trainer_tasks_trainer_select_own" on public.trainer_tasks;
+create policy "trainer_tasks_trainer_select_own"
+on public.trainer_tasks
+for select
+to authenticated
+using (
+  public.is_trainer()
+  and studio_id = public.current_studio_id()
+  and trainer_profile_id = public.current_profile_id()
+);
+
+drop policy if exists "trainer_tasks_trainer_update_own" on public.trainer_tasks;
+create policy "trainer_tasks_trainer_update_own"
+on public.trainer_tasks
+for update
+to authenticated
+using (
+  public.is_trainer()
+  and studio_id = public.current_studio_id()
+  and trainer_profile_id = public.current_profile_id()
+)
+with check (
+  public.is_trainer()
+  and studio_id = public.current_studio_id()
+  and trainer_profile_id = public.current_profile_id()
 );

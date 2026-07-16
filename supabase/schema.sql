@@ -103,6 +103,20 @@ create table if not exists public.signatures (
   signed_at timestamptz not null default now()
 );
 
+create table if not exists public.trainer_tasks (
+  id uuid primary key default gen_random_uuid(),
+  studio_id uuid references public.studios(id) on delete cascade,
+  trainer_profile_id uuid references public.profiles(id) on delete cascade,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  title text not null,
+  note text,
+  priority text not null default 'medium' check (priority in ('low', 'medium', 'high')),
+  due_date date,
+  status text not null default 'open' check (status in ('open', 'done')),
+  completed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 alter table public.studios enable row level security;
 alter table public.profiles enable row level security;
 alter table public.members enable row level security;
@@ -111,6 +125,7 @@ alter table public.member_program_selections enable row level security;
 alter table public.sessions enable row level security;
 alter table public.finance_entries enable row level security;
 alter table public.signatures enable row level security;
+alter table public.trainer_tasks enable row level security;
 
 -- Pilot aşaması için güvenli başlangıç:
 -- RLS açık, politika yok. Bu durumda istemciden veri okunmaz/yazılmaz.
