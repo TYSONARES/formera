@@ -63,6 +63,8 @@ SQL Editor → New query → `role-accounts.sql` içeriğini yapıştır → Run
 
 Bu dosya, işletmecinin üye/antrenör kaydına eklediği e-posta ile Supabase Auth kullanıcısını ilk girişte otomatik eşleştirir.
 
+Uygulama tarafında işletmeci üye/antrenör listesinde hesap durumunu görür ve `Davet` butonuyla giriş metnini kopyalayabilir.
+
 Antrenör görevleri ve işletmeci önerileri için:
 
 SQL Editor → New query → `trainer-tasks.sql` içeriğini yapıştır → Run.

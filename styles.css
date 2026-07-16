@@ -70,7 +70,12 @@
 .task-type{width:34px;height:34px;border-radius:11px;background:#edf7ee;color:var(--green);display:grid;place-items:center;font-weight:800}
 .task-type.nutrition{background:#fff5e5;color:#9c641d}
 .task-type.followup{background:#fff0ed;color:var(--red)}
+.invite-note{background:#f8f9f4;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:11px;line-height:1.45;margin:8px 0 0;padding:10px}
+.account-line{display:block;color:var(--muted);font-size:11px;margin-top:5px}
+.team-badges{display:flex;gap:6px;align-items:flex-end;flex-direction:column}
+.member-row{grid-template-columns:1.35fr .65fr .65fr auto auto auto auto}
 @media(max-width:760px){.task-row{grid-template-columns:1fr auto}.task-row .row-actions{grid-column:1 / -1}}
+@media(max-width:760px){.team-badges{align-items:flex-start;flex-direction:row;grid-column:1 / -1}.member-row .status{justify-self:start}}
 @media(max-width:760px){.welcome-actions{justify-content:flex-start;margin-top:14px}.task-row.member-task{grid-template-columns:auto 1fr}.task-row.member-task>.status{grid-column:1 / -1;justify-self:start}}
 
 .sidebar,.app-shell,main{transition:.25s ease}

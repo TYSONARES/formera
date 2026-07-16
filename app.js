@@ -223,6 +223,7 @@ function normalizeMember(member){
     id: member.id || makeId(),
     studioId: member.studioId || member.studio_id || null,
     profileId: member.profileId || member.profile_id || null,
+    authUserId: member.authUserId || member.auth_user_id || null,
     trainerProfileId: member.trainerProfileId || member.trainer_profile_id || null,
     name: member.name || 'İsimsiz Üye',
     initials: member.initials || initialsFromName(member.name || 'İsimsiz Üye'),
@@ -239,6 +240,7 @@ function normalizeMember(member){
 }
 
 function saveMembers(){
+  ensureAccountProfileIds();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.members));
   syncMembersToSupabase();
 }
@@ -361,6 +363,7 @@ function normalizeTrainer(trainer){
   return {
     id: trainer.id || makeId(),
     profileId: trainer.profileId || trainer.profile_id || trainer.id || null,
+    authUserId: trainer.authUserId || trainer.auth_user_id || null,
     name: trainer.name || 'Yeni antrenör',
     role: trainer.role || 'PT Coach',
     specialty: trainer.specialty || 'Genel fitness',
@@ -372,6 +375,7 @@ function normalizeTrainer(trainer){
 }
 
 function saveTeam(){
+  ensureAccountProfileIds();
   localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state.team));
   syncTeamToSupabase();
 }
@@ -496,7 +500,17 @@ function saveProgramSelections(){
   syncProgramSelectionsToSupabase();
 }
 
+function ensureAccountProfileIds(){
+  state.members.forEach(member=>{
+    if(member.email && !member.profileId) member.profileId = makeId();
+  });
+  state.team.forEach(trainer=>{
+    if(trainer.email && !trainer.profileId) trainer.profileId = trainer.id || makeId();
+  });
+}
+
 function persistAllData(){
+  ensureAccountProfileIds();
   saveMembers();
   saveFinance();
   savePrograms();
@@ -685,6 +699,7 @@ function mapRemoteTrainer(profile){
   return normalizeTrainer({
     id: profile.id,
     profileId: profile.id,
+    authUserId: profile.auth_user_id,
     name: profile.full_name,
     role: profile.role === 'owner' ? 'Owner' : 'PT Coach',
     specialty: profile.role === 'owner' ? 'İşletme yönetimi' : 'Genel fitness',
@@ -700,6 +715,7 @@ function mapRemoteMember(member, profilesById){
     id: member.id,
     studioId: member.studio_id,
     profileId: member.profile_id,
+    authUserId: profilesById[member.profile_id]?.auth_user_id || null,
     trainerProfileId: member.trainer_profile_id,
     name: member.full_name,
     initials: member.initials,
@@ -1406,16 +1422,64 @@ function memberSignature(memberName){
     .sort((a,b)=>b.signedAt.localeCompare(a.signedAt))[0];
 }
 
+function accountStatusMeta(person){
+  if(person?.authUserId) return {label:'Hesap bağlı', className:'good', detail:'giriş yaptı'};
+  if(person?.email) return {label:'Davet bekliyor', className:'warn', detail:person.email};
+  return {label:'E-posta yok', className:'risk', detail:'giriş kapalı'};
+}
+
+function appAccessUrl(){
+  if(location.protocol === 'file:') return 'https://tysonares.github.io/formera/';
+  return `${location.origin}${location.pathname}`;
+}
+
+function inviteText(person, role){
+  return [
+    `Merhaba ${person.name},`,
+    `${activeStudio().name} Formera hesabın hazırlandı.`,
+    '',
+    `Giriş linki: ${appAccessUrl()}`,
+    `E-posta: ${person.email}`,
+    '',
+    'Adımlar:',
+    '1. Linki aç.',
+    '2. Sağ üstteki “Giriş gerekli / Demo mod” butonuna bas.',
+    '3. Bu e-posta ile “Hesap oluştur” veya hesabın varsa “Giriş yap” seçeneğini kullan.',
+    `4. Girişten sonra ${role} ekranın otomatik açılır.`
+  ].join('\n');
+}
+
+async function copyInvite(kind, id){
+  const person = kind === 'trainer'
+    ? state.team.find(trainer=>trainer.id === id || trainer.profileId === id)
+    : state.members.find(member=>member.id === id || member.profileId === id);
+  if(!person) return;
+  if(!person.email){
+    showToast(`${person.name} için önce giriş e-postası ekle.`);
+    return;
+  }
+  const text = inviteText(person, kind === 'trainer' ? 'antrenör' : 'üye');
+  try{
+    await navigator.clipboard?.writeText(text);
+    showToast(`${person.name} için davet metni kopyalandı.`);
+  }catch(e){
+    showToast('Davet metni kopyalanamadı. Tarayıcı izin vermedi.');
+  }
+}
+
 function memberRows(items=state.members){
   return items.map(m=>{
     const signature = memberSignature(m.name);
+    const account = accountStatusMeta(m);
     return `<div class="member-row">
-    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small></div></div>
+    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small><small>${escapeAttr(account.detail)}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${m.last}</span>
     <span><small class="cell-label">Seans</small><br>${m.sessions}</span>
     <span class="status ${m.type}">${m.status}</span>
+    <span class="status ${account.className}">${account.label}</span>
     <span class="status ${signature ? 'good' : 'warn'}">${signature ? 'İmzalı' : 'İmza yok'}</span>
     <div class="row-actions">
+      <button class="mini-button" data-action="copy-member-invite" data-member-id="${m.id}">Davet</button>
       <button class="mini-button" data-action="checkin-member" data-member-id="${m.id}">Geldi</button>
       <button class="mini-button" data-action="sign-member" data-member-id="${m.id}">İmza al</button>
       <button class="mini-button" data-action="edit-member" data-member-id="${m.id}">Düzenle</button>
@@ -1646,11 +1710,12 @@ function teamCards(){
   return state.team.map(trainer=>{
     const stats = trainerStats(trainer.name);
     const estimatedCommission = stats.revenue * (trainer.commission / 100);
+    const account = accountStatusMeta(trainer);
     return `<article class="team-card">
       <div class="team-head">
         ${avatarMarkup(initialsFromName(trainer.name), trainer.avatarDataUrl)}
-        <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p></div>
-        <span class="badge">%${trainer.commission} prim</span>
+        <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p><small class="account-line">${escapeAttr(account.detail)}</small></div>
+        <div class="team-badges"><span class="badge">%${trainer.commission} prim</span><span class="status ${account.className}">${account.label}</span></div>
       </div>
       <div class="team-stats">
         <div><span>Bugünkü seans</span><strong>${stats.todayTotal}</strong></div>
@@ -1658,7 +1723,7 @@ function teamCards(){
         <div><span>Aktif üye</span><strong>${stats.activeMembers}</strong></div>
         <div><span>Gelir katkısı</span><strong>${formatCurrency(stats.revenue)}</strong></div>
       </div>
-      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div>
+      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Davet</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
     </article>`;
   }).join('');
 }
@@ -2404,6 +2469,7 @@ function bind(){
     if(action==='new-member') return openMemberModal();
     if(action==='edit-member') return openMemberModal(state.members.find(m=>m.id === b.dataset.memberId));
     if(action==='delete-member') return deleteMember(b.dataset.memberId);
+    if(action==='copy-member-invite') return copyInvite('member', b.dataset.memberId);
     if(action==='checkin-member') return checkInMember(b.dataset.memberId);
     if(action==='export-members') return exportMembers();
     if(action==='import-members') return document.querySelector('#memberImport')?.click();
@@ -2420,6 +2486,7 @@ function bind(){
     if(action==='copy-report') return copyReport();
     if(action==='add-trainer') return openTrainerModal();
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
+    if(action==='copy-trainer-invite') return copyInvite('trainer', b.dataset.trainerId);
     if(action==='add-trainer-task') return openTrainerTaskModal();
     if(action==='complete-trainer-task') return completeTrainerTask(b.dataset.taskId);
     if(action==='delete-trainer-task') return deleteTrainerTask(b.dataset.taskId);
@@ -2445,7 +2512,7 @@ function bind(){
   const input=document.querySelector('#memberSearch');
   if(input) input.oninput=e=>{
     const q=e.target.value.toLocaleLowerCase('tr');
-    document.querySelector('#memberResults').innerHTML=memberRows(state.members.filter(m=>(m.name+m.trainer+m.phone).toLocaleLowerCase('tr').includes(q)));
+    document.querySelector('#memberResults').innerHTML=memberRows(state.members.filter(m=>(m.name+m.trainer+m.phone+m.email).toLocaleLowerCase('tr').includes(q)));
     bind();
   };
   const importer = document.querySelector('#memberImport');
@@ -2532,6 +2599,7 @@ memberForm.onsubmit=async e=>{
     ...(current || {}),
     id: current?.id || makeId(),
     profileId: current?.profileId || (email ? makeId() : null),
+    authUserId: current?.authUserId || null,
     name,
     initials: initialsFromName(name),
     avatarDataUrl,
@@ -2553,7 +2621,7 @@ memberForm.onsubmit=async e=>{
   e.currentTarget.reset();
   e.currentTarget.dataset.editingId = '';
   render();
-  showToast(`${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
+  showToast(email ? `${name} kaydedildi. Davet metnini üye listesinden kopyalayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
 };
 
 financeForm.onsubmit=e=>{
@@ -2627,6 +2695,7 @@ trainerForm.onsubmit=async e=>{
   const email = data.get('email').trim().toLocaleLowerCase('tr');
   const trainer = normalizeTrainer({
     id: makeId(),
+    profileId: makeId(),
     name: data.get('name').trim(),
     role: data.get('role').trim(),
     specialty: data.get('specialty').trim(),
@@ -2640,7 +2709,7 @@ trainerForm.onsubmit=async e=>{
   trainerModal.close();
   e.currentTarget.reset();
   render();
-  showToast(`${trainer.name} ekibe eklendi.`);
+  showToast(email ? `${trainer.name} ekibe eklendi. Davet metnini ekip kartından kopyalayabilirsin.` : `${trainer.name} ekibe eklendi.`);
 };
 
 trainerTaskForm.onsubmit=e=>{
