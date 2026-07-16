@@ -8,6 +8,7 @@ const ACTIVE_STUDIO_STORAGE_KEY = 'formera_active_studio';
 const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
+const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 
 const starterMembers = [
@@ -51,6 +52,12 @@ const starterTrainerTasks = [
   {id:'tt_2', trainer:'Kerem', title:'Yenileme önerisi hazırla', note:'Paket bitimine yaklaşan üyeler için 8 seanslık yenileme önerisi çıkar.', priority:'medium', dueDate:'2026-07-17', status:'open'}
 ];
 
+const starterMemberTasks = [
+  {id:'mt_1', member:'Selin Aksoy', trainer:'Ece', type:'workout', title:'Kalça aktivasyon ödevi', note:'Seans olmayan günlerde band walk 3 × 15 ve glute bridge 3 × 12 uygula.', dueDate:'2026-07-18', status:'open'},
+  {id:'mt_2', member:'Can Aydın', trainer:'Ece', type:'nutrition', title:'Protein takibi', note:'Bugün her ana öğüne bir protein kaynağı ekle ve su tüketimini 2 litreye tamamla.', dueDate:'2026-07-18', status:'open'},
+  {id:'mt_3', member:'Mert Özkan', trainer:'Kerem', type:'followup', title:'Haftalık kilo notu', note:'Sabah aç karnına kilo ölçümünü ve kısa enerji durumunu antrenörüne ilet.', dueDate:'2026-07-19', status:'open'}
+];
+
 const starterStudios = [
   {id:'studio_1', name:'NorthFit Studio', initials:'NF', location:'Kadıköy · İstanbul', status:'Pilot aktif'},
   {id:'studio_2', name:'CoreLab PT', initials:'CL', location:'Ataşehir · İstanbul', status:'Kurulum'},
@@ -69,6 +76,7 @@ const state = {
   sessions: starterSessions.map(normalizeSession),
   team: starterTeam.map(normalizeTrainer),
   trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
+  memberTasks: starterMemberTasks.map(normalizeMemberTask),
   studios: starterStudios.map(normalizeStudio),
   activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
   signatures: [],
@@ -84,7 +92,8 @@ const state = {
     studioId: null,
     brandingReady: false,
     accountsReady: false,
-    trainerTasksReady: false
+    trainerTasksReady: false,
+    memberTasksReady: false
   }
 };
 
@@ -124,6 +133,12 @@ if(savedTrainerTasks){
   catch(e){ console.warn('Kayıtlı antrenör görevleri okunamadı.'); }
 }
 
+const savedMemberTasks = localStorage.getItem(MEMBER_TASK_STORAGE_KEY);
+if(savedMemberTasks){
+  try{ state.memberTasks = JSON.parse(savedMemberTasks).map(normalizeMemberTask); }
+  catch(e){ console.warn('Kayıtlı üye aksiyonları okunamadı.'); }
+}
+
 const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
 if(savedStudios){
   try{ state.studios = JSON.parse(savedStudios).map(normalizeStudio); }
@@ -159,6 +174,8 @@ const trainerModal = document.querySelector('#trainerModal');
 const trainerForm = document.querySelector('#trainerForm');
 const trainerTaskModal = document.querySelector('#trainerTaskModal');
 const trainerTaskForm = document.querySelector('#trainerTaskForm');
+const memberTaskModal = document.querySelector('#memberTaskModal');
+const memberTaskForm = document.querySelector('#memberTaskForm');
 const signatureModal = document.querySelector('#signatureModal');
 const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
@@ -380,6 +397,29 @@ function saveTrainerTasks(){
   syncTrainerTasksToSupabase();
 }
 
+function normalizeMemberTask(task){
+  return {
+    id: task.id || makeId(),
+    studioId: task.studioId || task.studio_id || null,
+    memberId: task.memberId || task.member_id || null,
+    trainerProfileId: task.trainerProfileId || task.trainer_profile_id || null,
+    member: task.member || 'Üye seçilmedi',
+    trainer: task.trainer || 'Ece',
+    type: ['workout','nutrition','followup'].includes(task.type) ? task.type : 'followup',
+    title: task.title || 'Yeni aksiyon',
+    note: task.note || '',
+    dueDate: task.dueDate || task.due_date || todayISO(),
+    status: ['open','done'].includes(task.status) ? task.status : 'open',
+    createdAt: task.createdAt || task.created_at || new Date().toISOString(),
+    completedAt: task.completedAt || task.completed_at || null
+  };
+}
+
+function saveMemberTasks(){
+  localStorage.setItem(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
+  syncMemberTasksToSupabase();
+}
+
 function trainerStats(trainerName){
   const todaySessions = sessionsForDate().filter(session=>session.trainer === trainerName);
   const done = todaySessions.filter(session=>session.status === 'done').length;
@@ -463,6 +503,7 @@ function persistAllData(){
   saveSessions();
   saveTeam();
   saveTrainerTasks();
+  saveMemberTasks();
   saveStudios();
   saveActiveStudio();
   saveSignatures();
@@ -481,6 +522,7 @@ function backupPayload(){
     sessions:state.sessions,
     team:state.team,
     trainerTasks:state.trainerTasks,
+    memberTasks:state.memberTasks,
     studios:state.studios,
     signatures:state.signatures,
     programSelections:state.programSelections
@@ -495,6 +537,7 @@ function applyBackupPayload(payload){
   state.sessions = (payload.sessions || []).map(normalizeSession);
   state.team = (payload.team || []).map(normalizeTrainer);
   state.trainerTasks = (payload.trainerTasks || []).map(normalizeTrainerTask);
+  state.memberTasks = (payload.memberTasks || []).map(normalizeMemberTask);
   state.studios = (payload.studios || []).map(normalizeStudio);
   state.signatures = (payload.signatures || []).map(normalizeSignature);
   state.programSelections = payload.programSelections || {};
@@ -509,6 +552,7 @@ function resetDemoData(){
   state.sessions = starterSessions.map(normalizeSession);
   state.team = starterTeam.map(normalizeTrainer);
   state.trainerTasks = starterTrainerTasks.map(normalizeTrainerTask);
+  state.memberTasks = starterMemberTasks.map(normalizeMemberTask);
   state.studios = starterStudios.map(normalizeStudio);
   state.signatures = [];
   state.programSelections = {};
@@ -741,6 +785,24 @@ function mapRemoteTrainerTask(task){
   });
 }
 
+function mapRemoteMemberTask(task){
+  return normalizeMemberTask({
+    id: task.id,
+    studioId: task.studio_id,
+    memberId: task.member_id,
+    trainerProfileId: task.trainer_profile_id,
+    member: memberNameById(task.member_id),
+    trainer: trainerNameById(task.trainer_profile_id),
+    type: task.type,
+    title: task.title,
+    note: task.note,
+    dueDate: task.due_date,
+    status: task.status,
+    createdAt: task.created_at,
+    completedAt: task.completed_at
+  });
+}
+
 async function initSupabase(){
   const config = readSupabaseConfig();
   state.backend.configured = Boolean(config);
@@ -795,7 +857,8 @@ async function loadRemoteData(){
     sessionsResult,
     financeResult,
     signaturesResult,
-    trainerTasksResult
+    trainerTasksResult,
+    memberTasksResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -805,12 +868,15 @@ async function loadRemoteData(){
     db.from('sessions').select('*').eq('studio_id', studioId).order('session_date', {ascending:true}).order('session_time', {ascending:true}),
     db.from('finance_entries').select('*').eq('studio_id', studioId).order('entry_date', {ascending:false}),
     db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false}),
-    db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
+    db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('member_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
+  const memberTaskTableMissing = Boolean(memberTasksResult.error && (memberTasksResult.error.code === '42P01' || String(memberTasksResult.error.message || '').includes('member_tasks')));
   state.backend.trainerTasksReady = !taskTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult].filter(Boolean).find(result=>result.error);
+  state.backend.memberTasksReady = !memberTaskTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
@@ -843,6 +909,7 @@ async function loadRemoteData(){
   state.finance = (financeResult.data || []).map(mapRemoteFinance);
   state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
   state.trainerTasks = taskTableMissing ? state.trainerTasks : (trainerTasksResult.data || []).map(mapRemoteTrainerTask);
+  state.memberTasks = memberTaskTableMissing ? state.memberTasks : (memberTasksResult.data || []).map(mapRemoteMemberTask);
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
   if(profile.role === 'member') state.page = 'dashboard';
@@ -948,6 +1015,7 @@ async function signOutSupabase(){
   state.backend.studioId = null;
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
+  state.backend.memberTasksReady = false;
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -969,6 +1037,7 @@ async function switchSupabaseAccount(){
   state.backend.studioId = null;
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
+  state.backend.memberTasksReady = false;
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1134,6 +1203,23 @@ function syncTrainerTasksToSupabase(){
     title: task.title,
     note: task.note,
     priority: task.priority,
+    due_date: task.dueDate,
+    status: task.status,
+    completed_at: task.completedAt
+  })));
+}
+
+function syncMemberTasksToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.memberTasksReady)) return;
+  syncRemote('member_tasks', state.memberTasks.map(task=>({
+    id: task.id,
+    studio_id: studioId,
+    member_id: task.memberId || memberIdByName(task.member),
+    trainer_profile_id: task.trainerProfileId || trainerProfileIdByName(task.trainer),
+    type: task.type,
+    title: task.title,
+    note: task.note,
     due_date: task.dueDate,
     status: task.status,
     completed_at: task.completedAt
@@ -1598,6 +1684,18 @@ function taskPriorityClass(priority){
   return {high:'risk', medium:'warn', low:'good'}[priority] || 'warn';
 }
 
+function memberTaskTypeLabel(type){
+  return {workout:'Antrenman', nutrition:'Beslenme', followup:'Takip'}[type] || 'Takip';
+}
+
+function memberTaskTypeIcon(type){
+  return {workout:'▤', nutrition:'◒', followup:'✓'}[type] || '✓';
+}
+
+function memberTaskTypeStatus(type){
+  return {workout:'good', nutrition:'warn', followup:'risk'}[type] || 'warn';
+}
+
 function trainerTaskSummary(){
   const open = state.trainerTasks.filter(task=>task.status === 'open').length;
   const done = state.trainerTasks.filter(task=>task.status === 'done').length;
@@ -1617,6 +1715,31 @@ function trainerTaskRows(items=state.trainerTasks){
         <button class="mini-button danger" data-action="delete-trainer-task" data-task-id="${task.id}">Sil</button>
       </div>
     </div>`).join('') || `<div class="empty-mini">Henüz görev veya öneri yok.</div>`;
+}
+
+function currentTrainerMemberTasks(){
+  const trainerId = trainerProfileIdByName(state.trainerName);
+  return state.memberTasks.filter(task=>task.trainer === state.trainerName || (trainerId && task.trainerProfileId === trainerId));
+}
+
+function memberTasksForMember(memberName){
+  const member = memberByName(memberName);
+  return state.memberTasks.filter(task=>task.member === memberName || (member?.id && task.memberId === member.id));
+}
+
+function memberTaskRows(items, {owner=false}={}){
+  return items
+    .slice()
+    .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
+    .map(task=>`<div class="task-row member-task ${task.status === 'done' ? 'done' : ''}">
+      <span class="task-type ${task.type}">${memberTaskTypeIcon(task.type)}</span>
+      <div><strong>${task.title}</strong><small>${memberTaskTypeLabel(task.type)} · ${task.member} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <span class="status ${task.status === 'done' ? 'good' : memberTaskTypeStatus(task.type)}">${task.status === 'done' ? 'Tamamlandı' : memberTaskTypeLabel(task.type)}</span>
+      <div class="row-actions">
+        ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-member-task" data-member-task-id="${task.id}">Tamamla</button>`}
+        ${owner ? `<button class="mini-button danger" data-action="delete-member-task" data-member-task-id="${task.id}">Sil</button>` : ''}
+      </div>
+    </div>`).join('') || `<div class="empty-mini">Henüz üye aksiyonu yok.</div>`;
 }
 
 function teamPage(){
@@ -1672,7 +1795,7 @@ function trainerClientRows(){
     <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
     <span><small class="cell-label">Seans</small><br>${member.sessions}</span>
     <span class="status ${member.type}">${member.status}</span>
-    <div class="row-actions"><button class="mini-button" data-action="checkin-member" data-member-id="${member.id}">Geldi</button></div>
+    <div class="row-actions"><button class="mini-button" data-action="add-member-task" data-member-name="${escapeAttr(member.name)}">Aksiyon</button><button class="mini-button" data-action="checkin-member" data-member-id="${member.id}">Geldi</button></div>
   </div>`).join('') || `<div class="empty-mini">Henüz atanmış danışan yok.</div>`;
 }
 
@@ -1706,12 +1829,14 @@ function trainerDashboard(){
   const clients = state.members.filter(member=>member.trainer === trainer.name);
   const riskyClients = clients.filter(member=>member.type !== 'good');
   const openTasks = currentTrainerTasks().filter(task=>task.status === 'open').length;
-  return `<div class="welcome"><div><span class="eyebrow">ANTRENÖR ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve seanslarını buradan takip et.</p></div><button class="primary" data-action="add-session">+ Seans planla</button></div>
+  const clientActions = currentTrainerMemberTasks();
+  const openClientActions = clientActions.filter(task=>task.status === 'open').length;
+  return `<div class="welcome"><div><span class="eyebrow">ANTRENÖR ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve seanslarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ Üye aksiyonu</button><button class="primary" data-action="add-session">+ Seans planla</button></div></div>
   <section class="metrics">
     ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
     ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
     ${metric('Danışan',String(clients.length),'aktif','♙')}
-    ${metric('Açık görev',String(openTasks),'işletmeci notu','! ',openTasks > 0)}
+    ${metric('Açık aksiyon',String(openClientActions),`${openTasks} işletmeci notu`,'! ',openClientActions + openTasks > 0)}
   </section>
   <section class="dashboard-grid">
     ${studioPublicCard('ANTRENÖR ALANI · İŞLETME')}
@@ -1729,6 +1854,7 @@ function trainerDashboard(){
     </article>
     <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenörüne atanmış üyeler</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
     <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Danışanlara atanmış şablonlar</p></div><button class="secondary" data-action="add-program">Program oluştur</button></div>${trainerProgramRows()}</article>
+    <article class="card"><div class="card-title"><div><h2>Üye aksiyonları</h2><p>Antrenman görevi, beslenme notu ve takip komutu</p></div><button class="secondary" data-action="add-member-task">+ Üyeye gönder</button></div><div class="task-list">${memberTaskRows(clientActions, {owner:true})}</div></article>
     <article class="card"><div class="card-title"><div><h2>Görevlerim</h2><p>İşletmeciden gelen öneri ve aksiyonlar</p></div><span class="badge">${openTasks} açık</span></div><div class="task-list">${trainerOwnTaskRows()}</div></article>
   </section>`;
 }
@@ -1836,12 +1962,15 @@ function memberDashboard(){
   const remaining = Math.max(0, parsed.total - parsed.used);
   const memberSessions = state.sessions.filter(session=>session.member === memberName);
   const weeklyDone = memberSessions.filter(session=>session.status === 'done').length;
+  const actions = memberTasksForMember(memberName);
+  const openActions = actions.filter(task=>task.status === 'open').length;
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('İmza durumu',signature ? 'Tamam' : 'Eksik',signature ? 'onay kayıtlı' : 'onay bekliyor','✍',!signature)}${metric('Antrenör',member.trainer || 'Atanmadı','sorumlu PT','♧')}</section>
+  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'antrenör notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı','sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
+  <article class="card"><div class="card-title"><div><h2>Antrenör notları</h2><p>Program, beslenme ve takip görevlerin</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
   <article class="card"><div class="card-title"><div><h2>Program seç</h2><p>Bugün takip etmek istediğin programı seç.</p></div><span class="badge">${state.programs.length} seçenek</span></div>
   <div class="choice-list">${state.programs.map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('')}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
@@ -2063,6 +2192,22 @@ function openTrainerTaskModal(){
   trainerTaskModal.showModal();
 }
 
+function openMemberTaskModal(memberName=''){
+  memberTaskForm.reset();
+  const trainerSelect = memberTaskForm.elements.trainer;
+  const memberSelect = memberTaskForm.elements.member;
+  const trainerName = state.role === 'trainer' ? state.trainerName : state.team[0]?.name || 'Ece';
+  const visibleMembers = state.role === 'trainer'
+    ? state.members.filter(member=>member.trainer === trainerName)
+    : state.members;
+  memberSelect.innerHTML = visibleMembers.map(member=>`<option value="${escapeAttr(member.name)}">${escapeAttr(member.name)}</option>`).join('');
+  trainerSelect.innerHTML = state.team.map(trainer=>`<option value="${escapeAttr(trainer.name)}">${escapeAttr(trainer.name)}</option>`).join('');
+  if(memberName && visibleMembers.some(member=>member.name === memberName)) memberSelect.value = memberName;
+  trainerSelect.value = trainerName;
+  memberTaskForm.elements.dueDate.value = todayISO();
+  memberTaskModal.showModal();
+}
+
 function completeTrainerTask(id){
   const task = state.trainerTasks.find(item=>item.id === id);
   if(!task) return;
@@ -2082,6 +2227,27 @@ function deleteTrainerTask(id){
   saveTrainerTasks();
   render();
   showToast('Görev silindi.');
+}
+
+function completeMemberTask(id){
+  const task = state.memberTasks.find(item=>item.id === id);
+  if(!task) return;
+  task.status = 'done';
+  task.completedAt = new Date().toISOString();
+  saveMemberTasks();
+  render();
+  showToast(`${task.title} tamamlandı.`);
+}
+
+function deleteMemberTask(id){
+  const task = state.memberTasks.find(item=>item.id === id);
+  if(!task) return;
+  if(!confirm(`${task.member} için "${task.title}" aksiyonu silinsin mi?`)) return;
+  deleteRemoteRow('member_tasks', id);
+  state.memberTasks = state.memberTasks.filter(item=>item.id !== id);
+  saveMemberTasks();
+  render();
+  showToast('Üye aksiyonu silindi.');
 }
 
 function deleteTrainer(id){
@@ -2257,6 +2423,9 @@ function bind(){
     if(action==='add-trainer-task') return openTrainerTaskModal();
     if(action==='complete-trainer-task') return completeTrainerTask(b.dataset.taskId);
     if(action==='delete-trainer-task') return deleteTrainerTask(b.dataset.taskId);
+    if(action==='add-member-task') return openMemberTaskModal(b.dataset.memberName || '');
+    if(action==='complete-member-task') return completeMemberTask(b.dataset.memberTaskId);
+    if(action==='delete-member-task') return deleteMemberTask(b.dataset.memberTaskId);
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
@@ -2496,6 +2665,33 @@ trainerTaskForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${task.trainer} için görev gönderildi.`);
+};
+
+memberTaskForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const memberName = data.get('member');
+  const trainerName = data.get('trainer');
+  const task = normalizeMemberTask({
+    id: makeId(),
+    studioId: studioIdForRemote(),
+    memberId: memberIdByName(memberName),
+    trainerProfileId: trainerProfileIdByName(trainerName),
+    member: memberName,
+    trainer: trainerName,
+    type: data.get('type'),
+    title: data.get('title').trim(),
+    note: data.get('note').trim(),
+    dueDate: data.get('dueDate') || todayISO(),
+    status: 'open',
+    createdAt: new Date().toISOString()
+  });
+  state.memberTasks.unshift(task);
+  saveMemberTasks();
+  memberTaskModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${task.member} için ${memberTaskTypeLabel(task.type).toLocaleLowerCase('tr')} aksiyonu gönderildi.`);
 };
 
 studioBrandForm.onsubmit=async e=>{

@@ -22,6 +22,8 @@ Bu işlem şu tabloları oluşturur:
 - sessions
 - finance_entries
 - signatures
+- trainer_tasks
+- member_tasks
 
 ## 3. RLS politikalarını çalıştır
 
@@ -61,6 +63,10 @@ Bu dosya, işletmecinin üye/antrenör kaydına eklediği e-posta ile Supabase A
 Antrenör görevleri ve işletmeci önerileri için:
 
 SQL Editor → New query → `trainer-tasks.sql` içeriğini yapıştır → Run.
+
+Antrenörün üyeye program/görev/beslenme notu göndermesi için:
+
+SQL Editor → New query → `member-tasks.sql` içeriğini yapıştır → Run.
 
 ## 6. Güvenlik notu
 

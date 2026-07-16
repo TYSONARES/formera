@@ -118,6 +118,16 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Görevi gönder</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="memberTaskModal">
+    <form method="dialog" id="memberTaskForm">
+      <div class="modal-head"><div><span class="eyebrow">ÜYE AKSİYONU</span><h2>Üyeye program, görev veya beslenme notu ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="form-grid"><label>Üye<select name="member"></select></label><label>Tür<select name="type"><option value="workout">Antrenman görevi</option><option value="nutrition">Beslenme notu</option><option value="followup">Genel takip görevi</option></select></label></div>
+      <label>Başlık<input name="title" required placeholder="Örn. Protein takibi"></label>
+      <div class="form-grid"><label>Antrenör<select name="trainer"></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
+      <label>Komut / açıklama<textarea name="note" rows="5" required placeholder="Üyenin göreceği net talimatı yaz. Örn. Bugün her ana öğünde protein kaynağı ekle."></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeye gönder</button></div>
+    </form>
+  </dialog>
   <dialog class="modal signature-modal" id="signatureModal">
     <form method="dialog" id="signatureForm">
       <div class="modal-head"><div><span class="eyebrow">İMZA</span><h2>Dijital onay al</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>

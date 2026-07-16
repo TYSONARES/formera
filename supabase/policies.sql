@@ -15,7 +15,8 @@ grant select, insert, update, delete on
   public.sessions,
   public.finance_entries,
   public.signatures,
-  public.trainer_tasks
+  public.trainer_tasks,
+  public.member_tasks
 to authenticated;
 
 create or replace function public.current_profile()
@@ -289,4 +290,70 @@ with check (
   public.is_trainer()
   and studio_id = public.current_studio_id()
   and trainer_profile_id = public.current_profile_id()
+);
+
+drop policy if exists "member_tasks_owner_all_same_studio" on public.member_tasks;
+create policy "member_tasks_owner_all_same_studio"
+on public.member_tasks
+for all
+to authenticated
+using (public.is_owner() and studio_id = public.current_studio_id())
+with check (public.is_owner() and studio_id = public.current_studio_id());
+
+drop policy if exists "member_tasks_trainer_all_own" on public.member_tasks;
+create policy "member_tasks_trainer_all_own"
+on public.member_tasks
+for all
+to authenticated
+using (
+  public.is_trainer()
+  and studio_id = public.current_studio_id()
+  and trainer_profile_id = public.current_profile_id()
+)
+with check (
+  public.is_trainer()
+  and studio_id = public.current_studio_id()
+  and trainer_profile_id = public.current_profile_id()
+);
+
+drop policy if exists "member_tasks_member_select_own" on public.member_tasks;
+create policy "member_tasks_member_select_own"
+on public.member_tasks
+for select
+to authenticated
+using (
+  public.is_member()
+  and studio_id = public.current_studio_id()
+  and exists (
+    select 1
+    from public.members m
+    where m.id = member_id
+      and m.profile_id = public.current_profile_id()
+  )
+);
+
+drop policy if exists "member_tasks_member_update_own" on public.member_tasks;
+create policy "member_tasks_member_update_own"
+on public.member_tasks
+for update
+to authenticated
+using (
+  public.is_member()
+  and studio_id = public.current_studio_id()
+  and exists (
+    select 1
+    from public.members m
+    where m.id = member_id
+      and m.profile_id = public.current_profile_id()
+  )
+)
+with check (
+  public.is_member()
+  and studio_id = public.current_studio_id()
+  and exists (
+    select 1
+    from public.members m
+    where m.id = member_id
+      and m.profile_id = public.current_profile_id()
+  )
 );
