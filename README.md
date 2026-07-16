@@ -25,6 +25,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Üye yönetimi
 - Program seçimi ve program takibi
 - Üye/antrenör giriş e-postası ve davet metni kopyalama
+- İşletme / antrenör / üye sekmeli giriş ekranı
 - Antrenörün üyeye antrenman görevi / beslenme notu göndermesi
 - Dijital imza alma
 - Takvim ve seans planlama

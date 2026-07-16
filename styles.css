@@ -39,6 +39,9 @@
 .account-alert.warning{background:#fff5e5;border:1px solid #f0d5a9;color:#9c641d}
 .account-alert.success{background:#edf7ee;border:1px solid #c7e4ca;color:var(--green)}
 .account-alert.info{background:#f0f3e8;border:1px solid var(--line);color:var(--ink)}
+.login-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#f8f9f4;border:1px solid var(--line);border-radius:14px;padding:6px;margin:-4px 0 16px}
+.login-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 8px;font:800 12px "DM Sans";color:var(--muted);cursor:pointer}
+.login-tabs button.active{background:#151712;color:#fff;box-shadow:0 8px 18px rgba(15,17,12,.12)}
 .avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
 .studio-public-card{background:linear-gradient(135deg,#fff 0%,#f8faef 100%)}
 .studio-public-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}

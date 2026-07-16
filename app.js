@@ -188,8 +188,12 @@ const accountSummary = document.querySelector('#accountSummary');
 const accountAlert = document.querySelector('#accountAlert');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
 const togglePasswordButton = document.querySelector('#togglePassword');
+const loginRoleNote = document.querySelector('#loginRoleNote');
+const loginEmailLabel = document.querySelector('#loginEmailLabel');
+const loginRoleTabs = document.querySelectorAll('[data-login-role]');
 let signaturePadReady = false;
 let signatureDrawing = false;
+let selectedLoginRole = localStorage.getItem('formera_login_role') || 'owner';
 
 function makeId(){
   return crypto?.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -934,7 +938,12 @@ async function loadRemoteData(){
   state.backend.error = '';
   persistAllData();
   render();
-  showToast('Supabase canlı verisi yüklendi.');
+  const expectedRole = selectedLoginRole;
+  if(expectedRole && expectedRole !== profile.role){
+    showToast(`${loginRoleMeta(profile.role).label || roleLabel(profile.role)} hesabı açıldı. Rol, kayıtlı profile göre belirlenir.`);
+  }else{
+    showToast(`${loginRoleMeta(profile.role).label || roleLabel(profile.role)} hesabı açıldı.`);
+  }
 }
 
 function updateBackendShell(){
@@ -951,6 +960,7 @@ function updateBackendShell(){
 
 function openSupabaseModal(){
   clearAccountMessage();
+  setLoginRole(selectedLoginRole);
   const config = readSupabaseConfig();
   if(config && supabaseConfigForm){
     supabaseConfigForm.elements.url.value = config.url || '';
@@ -1301,6 +1311,46 @@ function roleMeta(){
 
 function roleLabel(role=state.role){
   return {owner:'İşletmeci', trainer:'Antrenör', member:'Üye'}[role] || 'Kullanıcı';
+}
+
+function loginRoleMeta(role=selectedLoginRole){
+  return {
+    owner: {
+      label: 'İşletme',
+      emailLabel: 'İşletme e-postası',
+      placeholder: 'owner@email.com',
+      note: 'İşletme hesabıyla tüm salon verilerini, ekibi, üyeleri ve finansı yönet.'
+    },
+    trainer: {
+      label: 'Antrenör',
+      emailLabel: 'Antrenör e-postası',
+      placeholder: 'antrenor@email.com',
+      note: 'Antrenör hesabıyla kendi danışanlarını, seanslarını ve üye aksiyonlarını yönet.'
+    },
+    member: {
+      label: 'Üye',
+      emailLabel: 'Üye e-postası',
+      placeholder: 'uye@email.com',
+      note: 'Üye hesabıyla kendi programını, seanslarını ve antrenör notlarını takip et.'
+    }
+  }[role] || {};
+}
+
+function setLoginRole(role){
+  selectedLoginRole = ['owner','trainer','member'].includes(role) ? role : 'owner';
+  localStorage.setItem('formera_login_role', selectedLoginRole);
+  const meta = loginRoleMeta();
+  loginRoleTabs.forEach(tab=>{
+    const active = tab.dataset.loginRole === selectedLoginRole;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  if(loginRoleNote) loginRoleNote.textContent = meta.note;
+  if(loginEmailLabel){
+    const input = loginEmailLabel.querySelector('input');
+    loginEmailLabel.childNodes[0].nodeValue = meta.emailLabel;
+    if(input) input.placeholder = meta.placeholder;
+  }
 }
 
 function accountMeta(){
@@ -2837,6 +2887,12 @@ togglePasswordButton?.addEventListener('click', event=>{
   togglePasswordButton.textContent = visible ? '👁' : '🙈';
   togglePasswordButton.setAttribute('aria-label', visible ? 'Şifreyi göster' : 'Şifreyi gizle');
 });
+loginRoleTabs.forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    setLoginRole(tab.dataset.loginRole);
+    clearAccountMessage();
+  });
+});
 document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm) return;
   if(!supabaseAuthForm.reportValidity()) return;
@@ -2860,5 +2916,6 @@ supabaseAuthForm?.addEventListener('submit', async event=>{
   await signInSupabase(data.get('email'), data.get('password'));
 });
 
+setLoginRole(selectedLoginRole);
 render();
 initSupabase();

@@ -163,7 +163,12 @@
         <span class="avatar">?</span>
         <div><strong>Demo mod</strong><small>Henüz canlı hesaba giriş yapılmadı.</small></div>
       </div>
-      <p class="modal-note">İşletmeci, antrenör veya üye aynı pencereden giriş yapabilir. Canlı modda ekran rolüne göre otomatik açılır.</p>
+      <div class="login-tabs" role="tablist" aria-label="Giriş tipi">
+        <button type="button" class="active" data-login-role="owner" role="tab" aria-selected="true">İşletme</button>
+        <button type="button" data-login-role="trainer" role="tab" aria-selected="false">Antrenör</button>
+        <button type="button" data-login-role="member" role="tab" aria-selected="false">Üye</button>
+      </div>
+      <p class="modal-note" id="loginRoleNote">İşletme hesabıyla tüm salon verilerini yönet.</p>
       <form id="supabaseConfigForm">
         <label>Project URL<input name="url" required placeholder="https://xxxxx.supabase.co"></label>
         <label>Anon public key<textarea name="anonKey" required rows="4" placeholder="eyJhbGciOi..."></textarea></label>
@@ -171,7 +176,7 @@
       </form>
       <div class="account-alert" id="accountAlert" role="status" aria-live="polite"></div>
       <form id="supabaseAuthForm">
-        <label>Email<input name="email" type="email" required placeholder="owner@email.com"></label>
+        <label id="loginEmailLabel">İşletme e-postası<input name="email" type="email" required placeholder="owner@email.com"></label>
         <label>Şifre<span class="password-field"><input name="password" type="password" required placeholder="Supabase Auth şifresi"><button type="button" id="togglePassword" aria-label="Şifreyi göster">👁</button></span></label>
         <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="button" class="secondary" id="switchSupabaseAccount">Başka hesapla giriş yap</button><button type="button" class="secondary" id="signupSupabase">Hesap oluştur</button><button type="submit" class="primary">Giriş yap</button></div>
       </form>
