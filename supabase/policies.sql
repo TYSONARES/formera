@@ -101,12 +101,99 @@ as $$
   select public.current_role() = 'member';
 $$;
 
+create or replace function public.can_access_member(target_member_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.members m
+    where m.id = target_member_id
+      and m.studio_id = public.current_studio_id()
+      and (
+        public.is_owner()
+        or (public.is_trainer() and m.trainer_profile_id = public.current_profile_id())
+        or (public.is_member() and m.profile_id = public.current_profile_id())
+      )
+  );
+$$;
+
+create or replace function public.can_manage_member(target_member_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.members m
+    where m.id = target_member_id
+      and m.studio_id = public.current_studio_id()
+      and (
+        public.is_owner()
+        or (public.is_trainer() and m.trainer_profile_id = public.current_profile_id())
+      )
+  );
+$$;
+
+create or replace function public.can_access_program(target_program_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.programs p
+    where p.id = target_program_id
+      and p.studio_id = public.current_studio_id()
+      and (
+        public.is_owner()
+        or public.is_trainer()
+        or exists (
+          select 1
+          from public.member_program_selections s
+          join public.members m on m.id = s.member_id
+          where s.program_id = p.id
+            and m.profile_id = public.current_profile_id()
+        )
+      )
+  );
+$$;
+
+create or replace function public.can_access_profile(target_profile_id uuid, target_auth_user_id uuid, target_studio_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    target_auth_user_id = auth.uid()
+    or (public.is_owner() and target_studio_id = public.current_studio_id())
+    or (public.is_trainer() and target_profile_id = public.current_profile_id())
+    or (
+      public.is_member()
+      and exists (
+        select 1
+        from public.members m
+        where m.profile_id = public.current_profile_id()
+          and m.trainer_profile_id = target_profile_id
+      )
+    );
+$$;
+
 drop policy if exists "profiles_select_same_studio" on public.profiles;
 create policy "profiles_select_same_studio"
 on public.profiles
 for select
 to authenticated
-using (studio_id = public.current_studio_id() or auth_user_id = auth.uid());
+using (public.can_access_profile(id, auth_user_id, studio_id));
 
 drop policy if exists "profiles_owner_insert_same_studio" on public.profiles;
 create policy "profiles_owner_insert_same_studio"
@@ -143,22 +230,47 @@ create policy "members_select_same_studio"
 on public.members
 for select
 to authenticated
-using (studio_id = public.current_studio_id());
+using (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id())
+    or (public.is_member() and profile_id = public.current_profile_id())
+  )
+);
 
 drop policy if exists "members_owner_trainer_insert_same_studio" on public.members;
 create policy "members_owner_trainer_insert_same_studio"
 on public.members
 for insert
 to authenticated
-with check ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id());
+with check (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id())
+  )
+);
 
 drop policy if exists "members_owner_trainer_update_same_studio" on public.members;
 create policy "members_owner_trainer_update_same_studio"
 on public.members
 for update
 to authenticated
-using ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id())
-with check ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id());
+using (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id())
+  )
+)
+with check (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id())
+  )
+);
 
 drop policy if exists "members_owner_delete_same_studio" on public.members;
 create policy "members_owner_delete_same_studio"
@@ -172,7 +284,7 @@ create policy "programs_select_same_studio"
 on public.programs
 for select
 to authenticated
-using (studio_id = public.current_studio_id());
+using (public.can_access_program(id));
 
 drop policy if exists "programs_owner_trainer_write_same_studio" on public.programs;
 create policy "programs_owner_trainer_write_same_studio"
@@ -187,15 +299,34 @@ create policy "sessions_select_same_studio"
 on public.sessions
 for select
 to authenticated
-using (studio_id = public.current_studio_id());
+using (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id())
+    or public.can_access_member(member_id)
+  )
+);
 
 drop policy if exists "sessions_owner_trainer_write_same_studio" on public.sessions;
 create policy "sessions_owner_trainer_write_same_studio"
 on public.sessions
 for all
 to authenticated
-using ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id())
-with check ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id());
+using (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id() and public.can_manage_member(member_id))
+  )
+)
+with check (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or (public.is_trainer() and trainer_profile_id = public.current_profile_id() and public.can_manage_member(member_id))
+  )
+);
 
 drop policy if exists "finance_owner_only_same_studio" on public.finance_entries;
 create policy "finance_owner_only_same_studio"
@@ -210,28 +341,34 @@ create policy "signatures_select_same_studio"
 on public.signatures
 for select
 to authenticated
-using (studio_id = public.current_studio_id());
+using (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or public.can_access_member(member_id)
+  )
+);
 
 drop policy if exists "signatures_owner_trainer_insert_same_studio" on public.signatures;
 create policy "signatures_owner_trainer_insert_same_studio"
 on public.signatures
 for insert
 to authenticated
-with check ((public.is_owner() or public.is_trainer()) and studio_id = public.current_studio_id());
+with check (
+  studio_id = public.current_studio_id()
+  and (
+    public.is_owner()
+    or public.can_manage_member(member_id)
+    or public.can_access_member(member_id)
+  )
+);
 
 drop policy if exists "member_program_select_same_studio" on public.member_program_selections;
 create policy "member_program_select_same_studio"
 on public.member_program_selections
 for select
 to authenticated
-using (
-  exists (
-    select 1
-    from public.members m
-    where m.id = member_id
-      and m.studio_id = public.current_studio_id()
-  )
-);
+using (public.can_access_member(member_id));
 
 drop policy if exists "member_program_write_same_studio" on public.member_program_selections;
 create policy "member_program_write_same_studio"
@@ -239,12 +376,7 @@ on public.member_program_selections
 for all
 to authenticated
 using (
-  exists (
-    select 1
-    from public.members m
-    where m.id = member_id
-      and m.studio_id = public.current_studio_id()
-  )
+  public.can_access_member(member_id)
 )
 with check (
   exists (
@@ -254,6 +386,11 @@ with check (
     where m.id = member_id
       and m.studio_id = public.current_studio_id()
       and p.studio_id = public.current_studio_id()
+      and (
+        public.is_owner()
+        or (public.is_trainer() and m.trainer_profile_id = public.current_profile_id())
+        or (public.is_member() and m.profile_id = public.current_profile_id())
+      )
   )
 );
 

@@ -56,4 +56,6 @@ Gerçek antrenör/üye girişleri için ayrıca `supabase/role-accounts.sql` dos
 
 Antrenörün üyeye antrenman görevi, takip görevi veya beslenme notu göndermesi için `supabase/member-tasks.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
+`supabase/policies.sql` işletmeciyi üst yetkili bırakır: işletmeci tüm stüdyo verisini görebilir/yönetebilir; antrenör kendi üyeleriyle, üye de kendi verileriyle sınırlandırılır.
+
 Supabase bilgileri GitHub’a yazılmaz; tarayıcıda saklanır. Anon key public kullanıma uygundur, veri güvenliği RLS politikalarıyla sağlanır.

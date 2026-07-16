@@ -33,7 +33,10 @@ Bu dosya:
 
 - `profiles.auth_user_id` kolonunu ekler
 - Kullanıcının stüdyosunu bulan helper fonksiyonları oluşturur
-- Owner / trainer / member rollerine göre temel RLS politikalarını açar
+- Owner / trainer / member rollerine göre RLS politikalarını açar
+- İşletmeciye aynı stüdyodaki tüm verileri görme/yönetme yetkisi verir
+- Antrenör erişimini kendi üyeleri, seansları ve görevleriyle sınırlar
+- Üye erişimini kendi programı, seansı, imzası ve görevleriyle sınırlar
 - Finans verisini sadece owner rolüne sınırlar
 
 ## 4. Örnek veriyi ekle
