@@ -10,6 +10,7 @@ const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
+const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -181,6 +182,8 @@ const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
 const studioBrandModal = document.querySelector('#studioBrandModal');
 const studioBrandForm = document.querySelector('#studioBrandForm');
+const onboardingModal = document.querySelector('#onboardingModal');
+const onboardingForm = document.querySelector('#onboardingForm');
 const supabaseModal = document.querySelector('#supabaseModal');
 const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
@@ -194,6 +197,7 @@ const loginRoleTabs = document.querySelectorAll('[data-login-role]');
 let signaturePadReady = false;
 let signatureDrawing = false;
 let selectedLoginRole = localStorage.getItem('formera_login_role') || 'owner';
+let onboardingStep = 0;
 
 function makeId(){
   return crypto?.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -2023,7 +2027,7 @@ function studioPublicCard(note='İşletme bilgileri'){
 
 function pilotPage(){
   const payload = backupPayload();
-  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div>
+  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
     ${metric('Seans',String(payload.sessions.length),'takvim','□')}
@@ -2035,6 +2039,7 @@ function pilotPage(){
       <div class="card-title"><div><h2>Veri işlemleri</h2><p>Ücretsiz pilot için tarayıcı verisini güvenceye al</p></div><span class="badge">JSON</span></div>
       <div class="pilot-actions">
         <button class="primary" data-action="customize-studio">Logo / renk ayarla</button>
+        <button class="primary" data-action="start-onboarding">İlk kurulum sihirbazı</button>
         <button class="primary" data-action="export-full-backup">Tüm veriyi indir</button>
         <button class="secondary" data-action="import-full-backup">Yedeği geri yükle</button>
         <button class="secondary danger-action" data-action="reset-demo-data">Demo verisini sıfırla</button>
@@ -2403,6 +2408,158 @@ function confirmResetDemoData(){
   showToast('Demo verisi sıfırlandı.');
 }
 
+function updateOnboardingStep(){
+  if(!onboardingModal) return;
+  onboardingForm?.querySelectorAll('.onboarding-step').forEach((step,index)=>{
+    step.classList.toggle('active', index === onboardingStep);
+  });
+  onboardingForm?.querySelectorAll('.onboarding-progress span').forEach((dot,index)=>{
+    dot.classList.toggle('active', index <= onboardingStep);
+  });
+  const back = document.querySelector('#onboardingBack');
+  const next = document.querySelector('#onboardingNext');
+  const finish = document.querySelector('#onboardingFinish');
+  const copy = document.querySelector('#onboardingCopyInvites');
+  if(back) back.style.display = onboardingStep === 0 ? 'none' : '';
+  if(next) next.style.display = onboardingStep >= 4 ? 'none' : '';
+  if(finish) finish.style.display = onboardingStep >= 4 ? '' : 'none';
+  if(copy) copy.style.display = onboardingStep >= 4 ? '' : 'none';
+}
+
+function prefillOnboarding(){
+  if(!onboardingForm) return;
+  const studio = activeStudio();
+  const trainer = state.team[0] || {};
+  const member = state.members[0] || {};
+  const program = state.programs[0] || {};
+  onboardingForm.elements.studioName.value = studio.name || '';
+  onboardingForm.elements.studioLocation.value = studio.location || '';
+  onboardingForm.elements.studioPhone.value = studio.phone || '';
+  onboardingForm.elements.studioAddress.value = studio.address || '';
+  onboardingForm.elements.studioInstagram.value = studio.instagram || '';
+  onboardingForm.elements.trainerName.value = trainer.name || '';
+  onboardingForm.elements.trainerEmail.value = trainer.email || '';
+  onboardingForm.elements.trainerPhone.value = trainer.phone || '';
+  onboardingForm.elements.trainerSpecialty.value = trainer.specialty || '';
+  onboardingForm.elements.memberName.value = member.name || '';
+  onboardingForm.elements.memberEmail.value = member.email || '';
+  onboardingForm.elements.memberPhone.value = member.phone || '';
+  onboardingForm.elements.memberPackage.value = `${parseSessions(member.sessions || '0 / 12').total} Seans`;
+  onboardingForm.elements.programTitle.value = program.title || '';
+  onboardingForm.elements.programGoal.value = program.goal || '';
+  onboardingForm.elements.programDuration.value = program.duration || 45;
+  onboardingForm.elements.programExercises.value = Array.isArray(program.exercises) ? program.exercises.join('\n') : '';
+}
+
+function openOnboardingModal({fresh=false}={}){
+  if(!onboardingModal || !onboardingForm) return;
+  if(fresh) onboardingForm.reset();
+  else prefillOnboarding();
+  onboardingStep = 0;
+  updateOnboardingStep();
+  onboardingModal.showModal();
+}
+
+async function copyOnboardingInvites(){
+  if(!onboardingForm) return;
+  const data = new FormData(onboardingForm);
+  const trainerEmail = data.get('trainerEmail')?.trim();
+  const memberEmail = data.get('memberEmail')?.trim();
+  const studioName = data.get('studioName')?.trim() || activeStudio().name;
+  const invites = [];
+  if(trainerEmail){
+    invites.push(inviteText({name:data.get('trainerName')?.trim() || 'Antrenör', email:trainerEmail}, 'antrenör').replace(activeStudio().name, studioName));
+  }
+  if(memberEmail){
+    invites.push(inviteText({name:data.get('memberName')?.trim() || 'Üye', email:memberEmail}, 'üye').replace(activeStudio().name, studioName));
+  }
+  if(!invites.length){
+    showToast('Davet kopyalamak için antrenör veya üye e-postası gir.');
+    return;
+  }
+  try{
+    await navigator.clipboard?.writeText(invites.join('\n\n---\n\n'));
+    showToast('Antrenör/üye davet metinleri kopyalandı.');
+  }catch(e){
+    showToast('Davet metinleri kopyalanamadı. Tarayıcı izin vermedi.');
+  }
+}
+
+async function completeOnboarding(form){
+  const data = new FormData(form);
+  const studio = activeStudio();
+  const studioName = data.get('studioName').trim();
+  const logoFile = data.get('studioLogo');
+  const logoDataUrl = logoFile?.size ? await imageFileToDataUrl(logoFile, 520) : studio.logoDataUrl;
+  const trainerName = data.get('trainerName').trim();
+  const trainerEmail = data.get('trainerEmail').trim().toLocaleLowerCase('tr');
+  const memberName = data.get('memberName').trim();
+  const memberEmail = data.get('memberEmail').trim().toLocaleLowerCase('tr');
+  const total = parsePackageTotal(data.get('memberPackage'));
+  const programTitle = data.get('programTitle').trim();
+
+  const updatedStudio = normalizeStudio({
+    ...studio,
+    name: studioName,
+    initials: initialsFromName(studioName),
+    location: data.get('studioLocation').trim() || 'Konum eklenmedi',
+    phone: data.get('studioPhone').trim(),
+    address: data.get('studioAddress').trim(),
+    instagram: data.get('studioInstagram').trim(),
+    logoDataUrl,
+    status: 'Kurulum tamamlandı'
+  });
+
+  const trainer = normalizeTrainer({
+    id: makeId(),
+    profileId: makeId(),
+    name: trainerName,
+    role: 'PT Coach',
+    specialty: data.get('trainerSpecialty').trim() || 'Genel fitness',
+    phone: data.get('trainerPhone').trim(),
+    commission: 15,
+    email: trainerEmail
+  });
+
+  const member = normalizeMember({
+    id: makeId(),
+    profileId: memberEmail ? makeId() : null,
+    name: memberName,
+    initials: initialsFromName(memberName),
+    trainer: trainer.name,
+    trainerProfileId: trainer.profileId,
+    phone: data.get('memberPhone').trim(),
+    email: memberEmail,
+    sessions: `0 / ${total}`,
+    status: 'Yeni',
+    type: 'warn',
+    last: 'Henüz gelmedi'
+  });
+
+  const program = normalizeProgram({
+    id: makeId(),
+    title: programTitle,
+    goal: data.get('programGoal').trim() || 'Genel fitness',
+    duration: data.get('programDuration') || 45,
+    level: 'Başlangıç',
+    assigned: member.name,
+    exercises: data.get('programExercises')
+  });
+
+  state.studios = state.studios.map(item=>item.id === studio.id ? updatedStudio : item);
+  state.team = [trainer, ...state.team.filter(item=>item.name !== trainer.name)];
+  state.members = [member, ...state.members.filter(item=>item.name !== member.name)];
+  state.programs = [program, ...state.programs.filter(item=>item.title !== program.title)];
+  state.programSelections[member.name] = program.id;
+  state.page = 'dashboard';
+  localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+  persistAllData();
+  onboardingModal.close();
+  form.reset();
+  render();
+  showToast('İlk kurulum tamamlandı. Davetleri üye ve ekip kartlarından kopyalayabilirsin.');
+}
+
 function openStudioBrandModal(){
   const studio = activeStudio();
   studioBrandForm.reset();
@@ -2546,6 +2703,7 @@ function bind(){
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
+    if(action==='start-onboarding') return openOnboardingModal();
     if(action==='export-full-backup') return exportFullBackup();
     if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
     if(action==='reset-demo-data') return confirmResetDemoData();
@@ -2878,6 +3036,33 @@ document.querySelector('#switchSupabaseAccount')?.addEventListener('click', even
   event.preventDefault();
   switchSupabaseAccount();
 });
+document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
+  event.preventDefault();
+  localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+  onboardingModal?.close();
+  showToast('İlk kurulum daha sonra Pilot araçlarından açılabilir.');
+});
+document.querySelector('#onboardingBack')?.addEventListener('click', event=>{
+  event.preventDefault();
+  onboardingStep = Math.max(0, onboardingStep - 1);
+  updateOnboardingStep();
+});
+document.querySelector('#onboardingNext')?.addEventListener('click', event=>{
+  event.preventDefault();
+  const currentStep = onboardingForm?.querySelector(`.onboarding-step[data-step="${onboardingStep}"]`);
+  const requiredFields = [...(currentStep?.querySelectorAll('[required]') || [])];
+  const invalid = requiredFields.find(field=>!field.checkValidity());
+  if(invalid){
+    invalid.reportValidity();
+    return;
+  }
+  onboardingStep = Math.min(4, onboardingStep + 1);
+  updateOnboardingStep();
+});
+document.querySelector('#onboardingCopyInvites')?.addEventListener('click', event=>{
+  event.preventDefault();
+  copyOnboardingInvites();
+});
 togglePasswordButton?.addEventListener('click', event=>{
   event.preventDefault();
   const input = supabaseAuthForm?.elements.password;
@@ -2916,6 +3101,15 @@ supabaseAuthForm?.addEventListener('submit', async event=>{
   await signInSupabase(data.get('email'), data.get('password'));
 });
 
+onboardingForm?.addEventListener('submit', async event=>{
+  event.preventDefault();
+  if(!onboardingForm.reportValidity()) return;
+  await completeOnboarding(onboardingForm);
+});
+
 setLoginRole(selectedLoginRole);
 render();
 initSupabase();
+if(!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !readSupabaseConfig()){
+  setTimeout(()=>openOnboardingModal(), 450);
+}

@@ -73,11 +73,25 @@
 .task-type{width:34px;height:34px;border-radius:11px;background:#edf7ee;color:var(--green);display:grid;place-items:center;font-weight:800}
 .task-type.nutrition{background:#fff5e5;color:#9c641d}
 .task-type.followup{background:#fff0ed;color:var(--red)}
+.onboarding-modal{width:min(760px,calc(100% - 32px))}
+.onboarding-progress{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:-6px 0 18px}
+.onboarding-progress span{height:8px;border-radius:99px;background:#e8eadf;color:transparent}
+.onboarding-progress span.active{background:var(--acid)}
+.onboarding-step{display:none}
+.onboarding-step.active{display:block}
+.onboarding-step h3{font:800 20px Manrope;margin:0 0 4px}
+.setup-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.setup-summary div{border:1px solid var(--line);background:#f8f9f4;border-radius:13px;padding:13px}
+.setup-summary span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--acid);font-weight:800;margin-bottom:10px}
+.setup-summary strong,.setup-summary small{display:block}
+.setup-summary small{color:var(--muted);font-size:11px;margin-top:4px}
+#onboardingFinish,#onboardingCopyInvites{display:none}
 .invite-note{background:#f8f9f4;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:11px;line-height:1.45;margin:8px 0 0;padding:10px}
 .account-line{display:block;color:var(--muted);font-size:11px;margin-top:5px}
 .team-badges{display:flex;gap:6px;align-items:flex-end;flex-direction:column}
 .member-row{grid-template-columns:1.35fr .65fr .65fr auto auto auto auto}
 @media(max-width:760px){.task-row{grid-template-columns:1fr auto}.task-row .row-actions{grid-column:1 / -1}}
+@media(max-width:760px){.setup-summary{grid-template-columns:1fr}.onboarding-actions{justify-content:flex-start;flex-wrap:wrap}}
 @media(max-width:760px){.team-badges{align-items:flex-start;flex-direction:row;grid-column:1 / -1}.member-row .status{justify-self:start}}
 @media(max-width:760px){.welcome-actions{justify-content:flex-start;margin-top:14px}.task-row.member-task{grid-template-columns:auto 1fr}.task-row.member-task>.status{grid-column:1 / -1;justify-self:start}}
 

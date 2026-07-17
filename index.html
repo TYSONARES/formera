@@ -156,6 +156,58 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Markayı kaydet</button></div>
     </form>
   </dialog>
+  <dialog class="modal onboarding-modal" id="onboardingModal">
+    <form method="dialog" id="onboardingForm">
+      <div class="modal-head">
+        <div><span class="eyebrow">İLK KURULUM</span><h2>Salonunu 5 adımda hazırla</h2></div>
+        <button value="cancel" class="modal-close" aria-label="Kapat">×</button>
+      </div>
+      <div class="onboarding-progress" aria-label="Kurulum adımları">
+        <span class="active">1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+      </div>
+      <section class="onboarding-step active" data-step="0">
+        <h3>İşletme bilgileri</h3>
+        <label>Salon adı<input name="studioName" required placeholder="Örn. NorthFit Studio"></label>
+        <div class="form-grid"><label>Kısa konum<input name="studioLocation" placeholder="Kadıköy · İstanbul"></label><label>Telefon<input name="studioPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Adres<textarea name="studioAddress" rows="3" placeholder="Cadde, sokak, bina no, ilçe / şehir"></textarea></label>
+        <div class="form-grid"><label>Instagram<input name="studioInstagram" placeholder="@studiohesabi"></label><label>Logo<input name="studioLogo" type="file" accept="image/*"></label></div>
+      </section>
+      <section class="onboarding-step" data-step="1">
+        <h3>İlk antrenör</h3>
+        <label>Ad soyad<input name="trainerName" required placeholder="Örn. Ece Yılmaz"></label>
+        <div class="form-grid"><label>E-posta<input name="trainerEmail" type="email" placeholder="antrenor@email.com"></label><label>Telefon<input name="trainerPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Uzmanlık<input name="trainerSpecialty" placeholder="Kuvvet · postür · kilo kontrol"></label>
+      </section>
+      <section class="onboarding-step" data-step="2">
+        <h3>İlk üye</h3>
+        <label>Ad soyad<input name="memberName" required placeholder="Örn. Selin Aksoy"></label>
+        <div class="form-grid"><label>E-posta<input name="memberEmail" type="email" placeholder="uye@email.com"></label><label>Telefon<input name="memberPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Paket<select name="memberPackage"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label>
+      </section>
+      <section class="onboarding-step" data-step="3">
+        <h3>İlk program</h3>
+        <label>Program adı<input name="programTitle" required placeholder="Örn. Başlangıç full body"></label>
+        <div class="form-grid"><label>Hedef<input name="programGoal" placeholder="Kuvvet ve form"></label><label>Süre / dk<input name="programDuration" inputmode="numeric" placeholder="45"></label></div>
+        <label>Egzersizler<textarea name="programExercises" required rows="5" placeholder="Goblet squat · 3 × 12&#10;TRX row · 3 × 10&#10;Dead bug · 3 × 12"></textarea></label>
+      </section>
+      <section class="onboarding-step" data-step="4">
+        <h3>Hazırız</h3>
+        <p class="modal-note">Kurulumu bitirdiğinde işletme bilgileri güncellenecek, ilk antrenör/üye/program oluşturulacak ve davet metinlerini listelerden kopyalayabileceksin.</p>
+        <div class="setup-summary">
+          <div><span>1</span><strong>İşletme profili</strong><small>Logo, adres ve iletişim</small></div>
+          <div><span>2</span><strong>Ekip + üye</strong><small>Giriş e-postalarıyla hazır</small></div>
+          <div><span>3</span><strong>İlk program</strong><small>Üye ekranına atanır</small></div>
+        </div>
+      </section>
+      <div class="modal-actions onboarding-actions">
+        <button type="button" class="secondary" id="onboardingSkip">Sonra yap</button>
+        <button type="button" class="secondary" id="onboardingBack">Geri</button>
+        <button type="button" class="secondary" id="onboardingCopyInvites">Davetleri kopyala</button>
+        <button type="button" class="primary" id="onboardingNext">İleri</button>
+        <button type="submit" class="primary" id="onboardingFinish">Kur ve panele geç</button>
+      </div>
+    </form>
+  </dialog>
   <dialog class="modal" id="supabaseModal">
     <div class="modal-panel">
       <div class="modal-head"><div><span class="eyebrow">HESAP</span><h2>Giriş ve hesap değiştir</h2></div><button class="modal-close" id="closeSupabaseModal" aria-label="Kapat">×</button></div>

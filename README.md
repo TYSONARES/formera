@@ -26,6 +26,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Program seçimi ve program takibi
 - Üye/antrenör giriş e-postası ve davet metni kopyalama
 - İşletme / antrenör / üye sekmeli giriş ekranı
+- İlk kurulum sihirbazı: işletme, ilk antrenör, ilk üye ve ilk program
 - Antrenörün üyeye antrenman görevi / beslenme notu göndermesi
 - Dijital imza alma
 - Takvim ve seans planlama
