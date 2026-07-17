@@ -1,0 +1,36 @@
+{
+  "name": "Formera — Stüdyo Yönetimi",
+  "short_name": "Formera",
+  "description": "PT stüdyoları için işletmeci, antrenör ve üye arayüzlü operasyon platformu.",
+  "lang": "tr",
+  "start_url": "./dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "portrait",
+  "background_color": "#090b08",
+  "theme_color": "#11130f",
+  "categories": ["business", "health", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Panel",
+      "description": "Formera yönetim panelini aç",
+      "url": "./dashboard.html"
+    },
+    {
+      "name": "Tanıtım",
+      "short_name": "Tanıtım",
+      "description": "Formera ön tanıtım sayfasını aç",
+      "url": "./"
+    }
+  ]
+}

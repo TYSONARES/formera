@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Formera uygulama ikonu</title>
+  <desc id="desc">Koyu zemin üzerinde neon renk geçişli Formera F harfi</desc>
+  <defs>
+    <radialGradient id="glow" cx="32%" cy="24%" r="80%">
+      <stop offset="0%" stop-color="#d9ff64"/>
+      <stop offset="45%" stop-color="#7ecf8f"/>
+      <stop offset="100%" stop-color="#090b08"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8ffe8"/>
+      <stop offset="42%" stop-color="#d9ff64"/>
+      <stop offset="76%" stop-color="#ff7ab6"/>
+      <stop offset="100%" stop-color="#9ee8ff"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity=".35"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#d9ff64" flood-opacity=".36"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#090b08"/>
+  <circle cx="160" cy="112" r="210" fill="url(#glow)" opacity=".58"/>
+  <path d="M143 117c0-27 22-49 49-49h202v80H223v71h143v77H223v148h-80V117Z" fill="url(#mark)" filter="url(#softShadow)"/>
+  <path d="M330 384c42-18 67-51 76-98" fill="none" stroke="#d9ff64" stroke-width="18" stroke-linecap="round" opacity=".78"/>
+</svg>
