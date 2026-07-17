@@ -32,6 +32,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - İlk kurulum sihirbazı: işletme, ilk antrenör, ilk üye ve ilk program
 - Antrenörün üyeye antrenman görevi / beslenme notu göndermesi
 - Mikrofonla yazıya döküm: görev, program ve not alanlarında tarayıcı destekliyse sesli dikte
+- Studio AI paket alanı: AI Asistan penceresi, kredi görünümü ve rol bazlı demo öneriler
 - Dijital imza alma
 - Takvim ve seans planlama
 - Finans / gelir-gider takibi

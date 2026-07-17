@@ -184,6 +184,8 @@ const studioBrandModal = document.querySelector('#studioBrandModal');
 const studioBrandForm = document.querySelector('#studioBrandForm');
 const onboardingModal = document.querySelector('#onboardingModal');
 const onboardingForm = document.querySelector('#onboardingForm');
+const aiAssistantModal = document.querySelector('#aiAssistantModal');
+const aiAssistantBody = document.querySelector('#aiAssistantBody');
 const supabaseModal = document.querySelector('#supabaseModal');
 const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
@@ -1631,6 +1633,80 @@ function aiPlanItems(){
   return items;
 }
 
+function aiCreditUsage(){
+  const used = Math.min(100, 22 + state.trainerTasks.length * 3 + state.memberTasks.length * 2 + state.programs.length);
+  return {used, total:100, remaining:Math.max(0, 100 - used)};
+}
+
+function aiAssistantSuggestions(){
+  const finance = financeSummary();
+  const risky = state.members.filter(member=>member.type !== 'good');
+  const sessions = sessionSummary();
+  if(state.role === 'trainer'){
+    const clients = state.members.filter(member=>member.trainer === state.trainerName);
+    const riskyClients = clients.filter(member=>member.type !== 'good');
+    const openActions = currentTrainerMemberTasks().filter(task=>task.status === 'open');
+    return [
+      `${riskyClients[0]?.name || clients[0]?.name || 'İlk danışanın'} için bugün kısa motivasyon ve program uyum notu gönder.`,
+      `${openActions.length || 1} açık üye aksiyonunu gün sonunda tamamlandı / takipte olarak işaretle.`,
+      'Beslenme notlarında tıbbi iddia yerine davranış odaklı net komut kullan: su, öğün düzeni, protein kaynağı gibi.'
+    ];
+  }
+  if(state.role === 'member'){
+    const member = currentMember();
+    const program = selectedProgramForMember(member.name);
+    return [
+      `${program.title} programında bugün formu koru; ağırlık artırmak yerine tekrar kalitesine odaklan.`,
+      'Antrenöründen gelen açık görevleri tamamladığında işaretle; haftalık uyum daha doğru hesaplanır.',
+      'Beslenme notlarını genel takip olarak kullan; özel diyet/tıbbi karar için uzmanına danış.'
+    ];
+  }
+  return [
+    finance.pending > 0 ? `${formatCurrency(finance.pending)} bekleyen tahsilat için bugün kısa ödeme hatırlatma akışı başlat.` : 'Tahsilat temiz görünüyor; bugün yeni üye aktivasyonu ve seans doluluğuna odaklan.',
+    risky.length ? `${risky.slice(0,3).map(member=>member.name).join(', ')} için yenileme riski takip listesi oluştur.` : 'Riskli üye düşük; memnun üyelerden referans istemek için iyi gün.',
+    sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğunda kapasite sıkışıyor; bir antrenör bloğu daha açmayı test et.` : 'Bugünkü takvim dengeli; boş saatleri deneme dersi veya ölçüm randevusu için kullan.'
+  ];
+}
+
+function aiAssistantCapabilities(){
+  return [
+    ['🎙️','Sesli asistan','İşletmeci ve antrenör isterse konuşarak öneri alır.'],
+    ['✦','Haftalık özet','Gelir, seans, görev ve riskleri kısa aksiyon listesine dönüştürür.'],
+    ['▤','Program taslağı','Antrenörün komutundan program veya beslenme notu taslağı çıkarır.']
+  ];
+}
+
+function openAiAssistant(){
+  if(!aiAssistantModal || !aiAssistantBody) return;
+  const usage = aiCreditUsage();
+  const meta = roleMeta();
+  aiAssistantBody.innerHTML = `
+    <div class="ai-package-hero">
+      <div>
+        <span class="ai-package-badge">Studio AI paket özelliği</span>
+        <h3>${meta.label} için akıllı öneriler</h3>
+        <p>Bu ekran şimdilik demo öneriler üretir. Canlı AI API bağlandığında sesli asistan, haftalık özet ve program taslakları kredi/limit ile çalışacak.</p>
+      </div>
+      <div class="ai-credit-ring" style="--usage:${usage.used}%"><strong>${usage.remaining}</strong><small>AI kredi kaldı</small></div>
+    </div>
+    <div class="ai-capability-grid">
+      ${aiAssistantCapabilities().map(item=>`<div><b>${item[0]}</b><strong>${item[1]}</strong><small>${item[2]}</small></div>`).join('')}
+    </div>
+    <div class="ai-suggestion-list">
+      <div class="card-title"><div><h2>Bugünkü öneriler</h2><p>Rol, görev, üye ve finans verilerine göre demo çıktılar</p></div><span class="badge">Demo AI</span></div>
+      ${aiAssistantSuggestions().map((item,index)=>`<div class="insight ai-light"><span>${index+1}</span><div><strong>${item}</strong><small>Canlı AI paketinde sesli ve yazılı üretilecek</small></div></div>`).join('')}
+    </div>
+    <div class="ai-upgrade-note">
+      <strong>Paket notu:</strong> Mikrofonla yazıya döküm Studio paketinde, gerçek sesli AI asistan ve otomatik öneriler Studio AI paketinde limitli krediyle sunulmalı.
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" data-action="voice-ai-demo">Sesli asistan demo</button>
+      <button type="button" class="primary" data-action="ai-plan">Haftalık öneri üret</button>
+    </div>`;
+  aiAssistantModal.showModal();
+  bind();
+}
+
 function financePage(){
   const finance = financeSummary();
   return `<div class="welcome"><div><span class="eyebrow">FİNANS</span><h1>Gelir & gider</h1><p>Tahsilatları, giderleri ve haftalık net kârı hızlıca takip et.</p></div><button class="primary" data-action="add-finance">+ İşlem ekle</button></div>
@@ -2683,6 +2759,8 @@ function bind(){
     if(action==='add-finance') return openFinanceModal();
     if(action==='delete-finance') return deleteFinanceEntry(b.dataset.financeId);
     if(action==='ai-plan') return showAiPlan();
+    if(action==='ai-assistant') return openAiAssistant();
+    if(action==='voice-ai-demo') return showToast('Sesli AI asistan Studio AI paketinde canlı API ile aktif edilecek.');
     if(action==='add-program') return openProgramModal();
     if(action==='delete-program') return deleteProgram(b.dataset.programId);
     if(action==='assign-program') return assignProgram(b.dataset.programId);

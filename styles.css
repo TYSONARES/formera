@@ -24,6 +24,9 @@
 @media(max-width:760px){.member-row{grid-template-columns:1fr auto}.signature-pad-wrap canvas{height:180px}}
 
 .backend-pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;font:800 11px "DM Sans";color:var(--muted);cursor:pointer;white-space:nowrap}
+.ai-top-button{border:1px solid #dceab2;background:#151712;color:#fff;border-radius:999px;padding:8px 13px;font:800 11px "DM Sans";display:flex;align-items:flex-end;gap:7px;cursor:pointer;box-shadow:0 10px 28px rgba(29,35,21,.12)}
+.ai-top-button span{color:var(--acid)}
+.ai-top-button small{color:#aeb4a7;font-size:9px;font-weight:800}
 .backend-pill.connected{background:#edf7ee;border-color:#c7e4ca;color:var(--green)}
 .backend-pill.warning{background:#fff5e5;border-color:#f0d5a9;color:#9c641d}
 .role-switch.locked{cursor:not-allowed;opacity:.78}
@@ -40,6 +43,25 @@
 .account-alert.warning{background:#fff5e5;border:1px solid #f0d5a9;color:#9c641d}
 .account-alert.success{background:#edf7ee;border:1px solid #c7e4ca;color:var(--green)}
 .account-alert.info{background:#f0f3e8;border:1px solid var(--line);color:var(--ink)}
+.ai-assistant-modal{width:min(760px,calc(100% - 32px))}
+.ai-package-hero{display:grid;grid-template-columns:1fr 132px;gap:18px;align-items:center;background:#171a14;color:#fff;border-radius:18px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.ai-package-hero:after{content:"";position:absolute;width:180px;height:180px;right:-60px;top:-70px;background:var(--acid);filter:blur(80px);opacity:.18}
+.ai-package-badge{display:inline-flex;border:1px solid rgba(217,255,100,.28);background:rgba(217,255,100,.12);color:var(--acid);border-radius:999px;padding:6px 9px;font:800 10px "DM Sans";letter-spacing:.4px}
+.ai-package-hero h3{font:800 26px Manrope;margin:12px 0 8px}
+.ai-package-hero p{color:#b7bdae;font-size:12px;line-height:1.6;margin:0}
+.ai-credit-ring{position:relative;z-index:1;width:112px;height:112px;border-radius:50%;display:grid;place-items:center;text-align:center;background:conic-gradient(var(--acid) var(--usage),#30342a 0);color:#fff}
+.ai-credit-ring:before{content:"";position:absolute;inset:8px;border-radius:50%;background:#171a14}
+.ai-credit-ring strong,.ai-credit-ring small{position:relative;display:block}
+.ai-credit-ring strong{font:900 26px Manrope;color:var(--acid)}
+.ai-credit-ring small{font-size:10px;color:#aeb4a7;width:70px}
+.ai-capability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.ai-capability-grid div{border:1px solid var(--line);background:#f8f9f4;border-radius:14px;padding:13px}
+.ai-capability-grid b{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--acid);margin-bottom:9px}
+.ai-capability-grid strong,.ai-capability-grid small{display:block}
+.ai-capability-grid small{color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
+.ai-suggestion-list{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}
+.ai-light{background:#f8f9f4!important;border-color:#eef0e8!important}
+.ai-upgrade-note{background:#fff5e5;border:1px solid #f0d5a9;color:#7b531c;border-radius:13px;padding:12px;margin-top:13px;font-size:12px;line-height:1.5}
 .login-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#f8f9f4;border:1px solid var(--line);border-radius:14px;padding:6px;margin:-4px 0 16px}
 .login-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 8px;font:800 12px "DM Sans";color:var(--muted);cursor:pointer}
 .login-tabs button.active{background:#151712;color:#fff;box-shadow:0 8px 18px rgba(15,17,12,.12)}
@@ -95,6 +117,7 @@
 @media(max-width:760px){.setup-summary{grid-template-columns:1fr}.onboarding-actions{justify-content:flex-start;flex-wrap:wrap}}
 @media(max-width:760px){.team-badges{align-items:flex-start;flex-direction:row;grid-column:1 / -1}.member-row .status{justify-self:start}}
 @media(max-width:760px){.welcome-actions{justify-content:flex-start;margin-top:14px}.task-row.member-task{grid-template-columns:auto 1fr}.task-row.member-task>.status{grid-column:1 / -1;justify-self:start}}
+@media(max-width:760px){.ai-top-button small{display:none}.ai-package-hero,.ai-capability-grid{grid-template-columns:1fr}.ai-credit-ring{width:96px;height:96px}}
 
 .sidebar,.app-shell,main{transition:.25s ease}
 .sidebar-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:1px solid #30342a;background:#22251e;color:#fff;border-radius:9px;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}

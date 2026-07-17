@@ -45,6 +45,7 @@
         <button class="mobile-menu" aria-label="Menüyü aç">☰</button>
         <label class="search"><span>⌕</span><input placeholder="Üye, program veya işlem ara..." /></label>
         <div class="top-actions">
+          <button class="ai-top-button" data-action="ai-assistant" type="button"><span>✦ AI Asistan</span><small>Studio AI</small></button>
           <button class="backend-pill" id="backendStatus" type="button">Demo mod</button>
           <button class="icon-button" aria-label="Bildirimler">♢<i></i></button>
           <button class="role-switch" id="roleSwitch"><span>İşletmeci</span><small>Üye görünümü</small></button>
@@ -57,6 +58,15 @@
   </div>
 
   <div class="toast" id="toast" role="status"></div>
+  <dialog class="modal ai-assistant-modal" id="aiAssistantModal">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <div><span class="eyebrow">STUDIO AI</span><h2>Sesli AI asistan</h2></div>
+        <button class="modal-close" aria-label="Kapat">×</button>
+      </div>
+      <div id="aiAssistantBody"></div>
+    </div>
+  </dialog>
   <dialog class="modal" id="memberModal">
     <form method="dialog" id="memberForm">
       <div class="modal-head"><div><span class="eyebrow" id="memberModalEyebrow">YENİ KAYIT</span><h2 id="memberModalTitle">Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
