@@ -2063,6 +2063,44 @@ function pilotChecklist(){
   ].map((item,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${item.title}</strong><small>${item.note}</small></div></div>`).join('');
 }
 
+function pilotActivationScore(){
+  const hasTrainer = state.team.length > 0;
+  const hasMembers = state.members.length >= 3;
+  const hasProgram = state.programs.length > 0;
+  const hasTasks = state.trainerTasks.length + state.memberTasks.length > 0;
+  const hasBranding = Boolean(activeStudio().phone || activeStudio().instagram || activeStudio().logoDataUrl);
+  const done = [hasTrainer, hasMembers, hasProgram, hasTasks, hasBranding].filter(Boolean).length;
+  return Math.round((done / 5) * 100);
+}
+
+function pilotTimeline(){
+  const steps = [
+    ['Gün 0', 'Kurulum', 'İşletme bilgisi, ilk antrenör, ilk 3 üye ve ilk programı gir.'],
+    ['Gün 1', 'Aktivasyon', 'Antrenöre 1 görev, üyeye 1 program/beslenme notu gönder.'],
+    ['Gün 7', 'İlk ölçüm', 'Kaç görev, kaç seans, kaç program güncellendi raporla.'],
+    ['Gün 14', 'Alışkanlık', 'Antrenörlerden gerçek kullanım yorumu al, eksikleri listele.'],
+    ['Gün 30', 'Dönüşüm', 'Zaman kazancı, takip görünürlüğü ve fiyat teklifini konuş.']
+  ];
+  return steps.map(([day,title,note],index)=>`<div class="pilot-step">
+    <span>${day}</span>
+    <div><strong>${title}</strong><small>${note}</small></div>
+    <b>${index+1}</b>
+  </div>`).join('');
+}
+
+function pilotSuccessRows(){
+  const score = pilotActivationScore();
+  const openTasks = state.trainerTasks.filter(task=>task.status === 'open').length + state.memberTasks.filter(task=>task.status === 'open').length;
+  const sessions = sessionSummary();
+  const finance = financeSummary();
+  return [
+    ['Aktivasyon skoru', `%${score}`, score >= 70 ? 'Satış görüşmesine yakın' : 'Kurulum adımları tamamlanmalı'],
+    ['Açık takip', String(openTasks), openTasks ? 'Gün sonunda kapatılacak aksiyon var' : 'Açık takip yok'],
+    ['Bugünkü seans', String(sessions.total), `${sessions.done} tamamlandı, ${sessions.scheduled} planlı`],
+    ['Bekleyen tahsilat', formatCurrency(finance.pending), finance.pending ? 'Satış değerini finans takibiyle göster' : 'Tahsilat riski düşük']
+  ].map(row=>`<div><span>${row[0]}</span><strong>${row[1]}</strong><small>${row[2]}</small></div>`).join('');
+}
+
 function studioContactRows(){
   const studio = activeStudio();
   const instagram = studio.instagram ? (studio.instagram.startsWith('@') ? studio.instagram : `@${studio.instagram}`) : '';
@@ -2103,14 +2141,23 @@ function studioPublicCard(note='İşletme bilgileri'){
 
 function pilotPage(){
   const payload = backupPayload();
+  const activationScore = pilotActivationScore();
   return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
     ${metric('Seans',String(payload.sessions.length),'takvim','□')}
     ${metric('Finans kaydı',String(payload.finance.length),'gelir/gider','₺')}
-    ${metric('Stüdyo',String(payload.studios.length),'pilot alanı','⚑')}
+    ${metric('Pilot skor',`%${activationScore}`,activationScore >= 70 ? 'satışa yakın' : 'kurulum sürüyor','⚑',activationScore < 70)}
   </section>
   <section class="dashboard-grid">
+    <article class="card pilot-plan-card">
+      <div class="card-title"><div><h2>30 günlük pilot planı</h2><p>Başvuru gelen salonu ödeme görüşmesine taşıyan takip akışı</p></div><span class="badge">${payload.studios.length} stüdyo</span></div>
+      <div class="pilot-timeline">${pilotTimeline()}</div>
+    </article>
+    <article class="card">
+      <div class="card-title"><div><h2>Pilot başarı kriterleri</h2><p>Satış konuşmasında kullanılacak kanıtlar</p></div><span class="badge">%${activationScore}</span></div>
+      <div class="pilot-success-grid">${pilotSuccessRows()}</div>
+    </article>
     <article class="card">
       <div class="card-title"><div><h2>Veri işlemleri</h2><p>Ücretsiz pilot için tarayıcı verisini güvenceye al</p></div><span class="badge">JSON</span></div>
       <div class="pilot-actions">

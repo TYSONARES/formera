@@ -41,6 +41,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Haftalık raporlar
 - Ekip / antrenör performansı
 - 4 stüdyo pilot seçici
+- 30 günlük pilot takip planı ve aktivasyon skoru
 - JSON yedekleme ve geri yükleme
 
 ## Backend hazırlığı
