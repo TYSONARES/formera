@@ -2186,6 +2186,7 @@ function pilotLeadRows(){
       <div><strong>${formatCurrency(lead.value)}</strong><small>${escapeAttr(lead.goal)}</small></div>
       <div><strong>Sonraki</strong><small>${escapeAttr(lead.nextAction)}</small></div>
       <div class="row-actions">
+        <button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>
         ${['won','lost'].includes(lead.stage) ? '' : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button>`}
         <button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>
       </div>
@@ -2917,6 +2918,39 @@ function deletePilotLead(id){
   showToast(`${lead.studio} CRM listesinden silindi.`);
 }
 
+function pilotOfferText(lead){
+  const price = formatCurrency(lead.value);
+  const packageName = lead.value >= 2400 ? 'Studio AI' : lead.value >= 1400 ? 'Studio' : 'Starter';
+  return [
+    `Merhaba ${lead.name},`,
+    '',
+    `${lead.studio} için Formera kurucu pilot teklifini özetliyorum:`,
+    '',
+    `• Paket önerisi: ${packageName}`,
+    `• Kurucu pilot fiyatı: ${price} / ay`,
+    '• Pilot süre: 30 gün',
+    '• Kurulum: işletme profili, ilk antrenör, ilk üyeler ve ilk program akışı',
+    '• Kapsam: işletmeci paneli, antrenör görevleri, üye program takibi, mikrofonla yazıya döküm ve pilot raporu',
+    '• Hedef: 30 gün sonunda zaman kazancı, ekip görünürlüğü ve üye takip düzenini birlikte ölçmek',
+    '',
+    `Öncelik olarak not aldığım konu: ${lead.goal}.`,
+    `Sonraki adım: ${lead.nextAction}.`,
+    '',
+    'Uygunsa kısa bir kurulum görüşmesi planlayalım.'
+  ].join('\n');
+}
+
+async function copyPilotOffer(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  try{
+    await navigator.clipboard?.writeText(pilotOfferText(lead));
+    showToast(`${lead.studio} için teklif metni kopyalandı.`);
+  }catch(error){
+    showToast('Teklif metni kopyalanamadı. Tarayıcı izin vermedi.');
+  }
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -2952,6 +2986,7 @@ function bind(){
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='add-pilot-lead') return openPilotLeadModal();
     if(action==='advance-pilot-lead') return advancePilotLead(b.dataset.leadId);
+    if(action==='copy-pilot-offer') return copyPilotOffer(b.dataset.leadId);
     if(action==='delete-pilot-lead') return deletePilotLead(b.dataset.leadId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
