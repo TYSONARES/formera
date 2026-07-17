@@ -25,6 +25,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 ## Pilot kapsamı
 
 - Premium funnel / ön tanıtım sayfası
+- Kurucu pilot başvuru formu: form verisini WhatsApp mesajına dönüştüren ücretsiz lead akışı
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
 - Üye yönetimi
 - Program seçimi ve program takibi

@@ -178,7 +178,19 @@
         <span>Kurucu pilot teklifi</span>
         <h3>30 günlük yönlendirmeli pilot</h3>
         <p>İlk 4 stüdyo için düşük maliyetli kurulum, düzenli geri bildirim ve referans ortaklığı.</p>
-        <a class="primary full" href="https://wa.me/?text=Formera%20kurucu%20pilot%20program%C4%B1%20hakk%C4%B1nda%20g%C3%B6r%C3%BC%C5%9Fmek%20istiyorum.">WhatsApp’tan görüş</a>
+        <form class="lead-form" id="pilotLeadForm">
+          <label>Ad soyad<input name="name" required placeholder="Örn. Ömer Yıldız"></label>
+          <label>Stüdyo adı<input name="studio" required placeholder="Örn. NorthFit Studio"></label>
+          <div class="lead-grid">
+            <label>Şehir<input name="city" placeholder="İstanbul"></label>
+            <label>Üye sayısı<select name="members"><option>0–50</option><option>51–150</option><option>151–300</option><option>300+</option></select></label>
+          </div>
+          <label>Telefon / WhatsApp<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
+          <label>Öncelik<select name="goal"><option>Operasyonu toparlamak</option><option>Antrenör takibini görünür yapmak</option><option>Üye program takibini artırmak</option><option>Gelir-gider ve raporları izlemek</option><option>AI destekli pilot denemek</option></select></label>
+          <button class="primary full" type="submit">Pilot başvurusunu WhatsApp’ta aç</button>
+          <button class="secondary full" type="button" id="copyLeadMessage">Mesajı kopyala</button>
+          <p class="lead-status" id="leadStatus" role="status"></p>
+        </form>
         <a class="secondary full" href="dashboard.html">Dashboard’u incele</a>
       </aside>
     </section>
@@ -215,6 +227,7 @@
       <a href="#pilot">Kurucu pilot</a>
     </div>
   </footer>
+  <script src="landing.js"></script>
   <script src="pwa.js"></script>
 </body>
 </html>
