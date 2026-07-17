@@ -2734,6 +2734,111 @@ function bind(){
 function navigate(page){state.page=page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));if(isMobileSidebar()) closeSidebar();render()}
 function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)}
 
+const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+let activeDictation = null;
+
+function isVoiceFieldCandidate(field){
+  if(!field || field.dataset.voiceReady === 'true') return false;
+  if(field.closest('#supabaseModal') || field.closest('.password-field')) return false;
+  if(field.matches('[readonly], [disabled], [type="file"], [type="email"], [type="password"], [type="date"], [type="time"], [type="color"], [type="hidden"], [type="url"]')) return false;
+  if(field.tagName === 'TEXTAREA') return true;
+  if(field.tagName !== 'INPUT') return false;
+  const type = (field.getAttribute('type') || 'text').toLowerCase();
+  const inputMode = (field.getAttribute('inputmode') || '').toLowerCase();
+  if(['numeric','decimal','tel'].includes(inputMode)) return false;
+  return ['text','search'].includes(type);
+}
+
+function setFieldValueFromVoice(field, baseValue, transcript){
+  const cleanTranscript = String(transcript || '').replace(/\s+/g, ' ').trim();
+  const cleanBase = String(baseValue || '');
+  const separator = cleanBase && !/[\s\n]$/.test(cleanBase) ? (field.tagName === 'TEXTAREA' ? '\n' : ' ') : '';
+  field.value = `${cleanBase}${separator}${cleanTranscript}`;
+  field.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+function stopDictation(){
+  if(!activeDictation) return;
+  activeDictation.button.classList.remove('recording');
+  activeDictation.button.textContent = '🎙';
+  activeDictation.button.setAttribute('aria-label', 'Mikrofonla yaz');
+  try{ activeDictation.recognition.stop(); }catch(error){}
+  activeDictation = null;
+}
+
+function startDictation(field, button){
+  if(!SpeechRecognitionApi){
+    showToast('Bu tarayıcı mikrofonla yazıya dökümü desteklemiyor. Chrome veya Edge ile deneyebilirsin.');
+    return;
+  }
+  if(activeDictation?.button === button){
+    stopDictation();
+    return;
+  }
+  stopDictation();
+  const recognition = new SpeechRecognitionApi();
+  const baseValue = field.value;
+  recognition.lang = 'tr-TR';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+  activeDictation = {recognition, button, field, baseValue};
+  button.classList.add('recording');
+  button.textContent = '●';
+  button.setAttribute('aria-label', 'Dinlemeyi durdur');
+  recognition.onresult = event=>{
+    const transcript = [...event.results].map(result=>result[0]?.transcript || '').join(' ');
+    setFieldValueFromVoice(field, baseValue, transcript);
+  };
+  recognition.onerror = event=>{
+    const messages = {
+      'not-allowed':'Mikrofon izni verilmedi. Tarayıcı adres çubuğundan mikrofon iznini açabilirsin.',
+      'no-speech':'Ses algılanmadı. Tekrar deneyebilirsin.',
+      'audio-capture':'Mikrofon bulunamadı veya kullanılamıyor.',
+      network:'Ses tanıma servisine ulaşılamadı.'
+    };
+    showToast(messages[event.error] || 'Mikrofonla yazıya döküm başlatılamadı.');
+  };
+  recognition.onend = ()=>{
+    if(activeDictation?.recognition === recognition){
+      button.classList.remove('recording');
+      button.textContent = '🎙';
+      button.setAttribute('aria-label', 'Mikrofonla yaz');
+      activeDictation = null;
+    }
+  };
+  try{
+    field.focus();
+    recognition.start();
+    showToast('Dinliyorum... Konuşman yazıya dönüşecek.');
+  }catch(error){
+    stopDictation();
+    showToast('Mikrofon başlatılamadı. Tarayıcı izinlerini kontrol et.');
+  }
+}
+
+function enhanceVoiceFields(){
+  const fields = [...document.querySelectorAll('.modal form input, .modal form textarea')].filter(isVoiceFieldCandidate);
+  fields.forEach(field=>{
+    const shell = document.createElement('span');
+    shell.className = `voice-field ${field.tagName === 'TEXTAREA' ? 'voice-field-textarea' : ''}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'voice-button';
+    button.textContent = '🎙';
+    button.setAttribute('aria-label', 'Mikrofonla yaz');
+    button.title = 'Mikrofonla yaz';
+    field.parentNode.insertBefore(shell, field);
+    shell.appendChild(field);
+    shell.appendChild(button);
+    field.dataset.voiceReady = 'true';
+    button.addEventListener('click', event=>{
+      event.preventDefault();
+      startDictation(field, button);
+    });
+  });
+}
+
 const appShell = document.querySelector('.app-shell');
 const sidebar = document.querySelector('.sidebar');
 const sidebarBackdrop = document.querySelector('.sidebar-backdrop');
@@ -3107,6 +3212,7 @@ onboardingForm?.addEventListener('submit', async event=>{
   await completeOnboarding(onboardingForm);
 });
 
+enhanceVoiceFields();
 setLoginRole(selectedLoginRole);
 render();
 initSupabase();

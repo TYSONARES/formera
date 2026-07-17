@@ -31,6 +31,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - İşletme / antrenör / üye sekmeli giriş ekranı
 - İlk kurulum sihirbazı: işletme, ilk antrenör, ilk üye ve ilk program
 - Antrenörün üyeye antrenman görevi / beslenme notu göndermesi
+- Mikrofonla yazıya döküm: görev, program ve not alanlarında tarayıcı destekliyse sesli dikte
 - Dijital imza alma
 - Takvim ve seans planlama
 - Finans / gelir-gider takibi
