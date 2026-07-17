@@ -146,6 +146,18 @@
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeye gönder</button></div>
     </form>
   </dialog>
+  <dialog class="modal" id="pilotLeadModal">
+    <form method="dialog" id="pilotLeadForm">
+      <div class="modal-head"><div><span class="eyebrow">PİLOT CRM</span><h2>Kurucu pilot başvurusu ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Yetkili adı<input name="name" required placeholder="Örn. Ayhan Demir"></label>
+      <label>Stüdyo adı<input name="studio" required placeholder="Örn. CoreLab PT"></label>
+      <div class="form-grid"><label>Şehir<input name="city" placeholder="İstanbul"></label><label>Telefon / WhatsApp<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+      <div class="form-grid"><label>Üye sayısı<select name="members"><option>0–50</option><option>51–150</option><option>151–300</option><option>300+</option></select></label><label>Aşama<select name="stage"><option value="lead">Başvuru</option><option value="demo">Demo</option><option value="pilot">Pilot</option><option value="proposal">Teklif</option><option value="won">Kazandı</option><option value="lost">Kaybedildi</option></select></label></div>
+      <label>Öncelik / ihtiyaç<input name="goal" placeholder="Örn. Antrenör takibini görünür yapmak"></label>
+      <div class="form-grid"><label>Sonraki aksiyon<input name="nextAction" placeholder="Örn. Demo tarihi belirle"></label><label>Aylık teklif / TL<input name="value" inputmode="numeric" placeholder="1490"></label></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Lead’i kaydet</button></div>
+    </form>
+  </dialog>
   <dialog class="modal signature-modal" id="signatureModal">
     <form method="dialog" id="signatureForm">
       <div class="modal-head"><div><span class="eyebrow">İMZA</span><h2>Dijital onay al</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>

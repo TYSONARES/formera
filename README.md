@@ -26,6 +26,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 
 - Premium funnel / ön tanıtım sayfası
 - Kurucu pilot başvuru formu: form verisini WhatsApp mesajına dönüştüren ücretsiz lead akışı
+- Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
 - Üye yönetimi
 - Program seçimi ve program takibi

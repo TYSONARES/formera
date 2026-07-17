@@ -9,6 +9,7 @@ const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
+const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
 
@@ -66,6 +67,12 @@ const starterStudios = [
   {id:'studio_4', name:'Forma PT', initials:'FP', location:'Bakırköy · İstanbul', status:'Pilot aktif'}
 ];
 
+const starterPilotLeads = [
+  {id:'lead_1', name:'Ayhan Demir', studio:'CoreLab PT', city:'İstanbul', phone:'0532 400 40 40', members:'51–150', goal:'Antrenör takibini görünür yapmak', stage:'pilot', nextAction:'Gün 7 kullanım raporunu paylaş', value:1490},
+  {id:'lead_2', name:'Ebru Kaan', studio:'Pulse Studio', city:'İstanbul', phone:'0532 500 50 50', members:'0–50', goal:'Üye program takibini artırmak', stage:'demo', nextAction:'Demo sonrası 3 üye eklet', value:990},
+  {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2490}
+];
+
 const state = {
   role: 'owner',
   trainerName: 'Ece',
@@ -78,6 +85,7 @@ const state = {
   team: starterTeam.map(normalizeTrainer),
   trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
   memberTasks: starterMemberTasks.map(normalizeMemberTask),
+  pilotLeads: starterPilotLeads.map(normalizePilotLead),
   studios: starterStudios.map(normalizeStudio),
   activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
   signatures: [],
@@ -140,6 +148,12 @@ if(savedMemberTasks){
   catch(e){ console.warn('Kayıtlı üye aksiyonları okunamadı.'); }
 }
 
+const savedPilotLeads = localStorage.getItem(PILOT_LEAD_STORAGE_KEY);
+if(savedPilotLeads){
+  try{ state.pilotLeads = JSON.parse(savedPilotLeads).map(normalizePilotLead); }
+  catch(e){ console.warn('Kayıtlı pilot leadleri okunamadı.'); }
+}
+
 const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
 if(savedStudios){
   try{ state.studios = JSON.parse(savedStudios).map(normalizeStudio); }
@@ -177,6 +191,8 @@ const trainerTaskModal = document.querySelector('#trainerTaskModal');
 const trainerTaskForm = document.querySelector('#trainerTaskForm');
 const memberTaskModal = document.querySelector('#memberTaskModal');
 const memberTaskForm = document.querySelector('#memberTaskForm');
+const pilotLeadModal = document.querySelector('#pilotLeadModal');
+const pilotLeadForm = document.querySelector('#pilotLeadForm');
 const signatureModal = document.querySelector('#signatureModal');
 const signatureForm = document.querySelector('#signatureForm');
 const signatureCanvas = document.querySelector('#signatureCanvas');
@@ -434,6 +450,26 @@ function saveMemberTasks(){
   syncMemberTasksToSupabase();
 }
 
+function normalizePilotLead(lead){
+  return {
+    id: lead.id || makeId(),
+    name: lead.name || 'Yeni başvuru',
+    studio: lead.studio || 'Stüdyo adı yok',
+    city: lead.city || 'Şehir yok',
+    phone: lead.phone || '',
+    members: lead.members || '0–50',
+    goal: lead.goal || 'Operasyonu toparlamak',
+    stage: ['lead','demo','pilot','proposal','won','lost'].includes(lead.stage) ? lead.stage : 'lead',
+    nextAction: lead.nextAction || lead.next_action || 'İlk görüşmeyi planla',
+    value: Number(lead.value) || 990,
+    createdAt: lead.createdAt || lead.created_at || new Date().toISOString()
+  };
+}
+
+function savePilotLeads(){
+  localStorage.setItem(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
+}
+
 function trainerStats(trainerName){
   const todaySessions = sessionsForDate().filter(session=>session.trainer === trainerName);
   const done = todaySessions.filter(session=>session.status === 'done').length;
@@ -528,6 +564,7 @@ function persistAllData(){
   saveTeam();
   saveTrainerTasks();
   saveMemberTasks();
+  savePilotLeads();
   saveStudios();
   saveActiveStudio();
   saveSignatures();
@@ -547,6 +584,7 @@ function backupPayload(){
     team:state.team,
     trainerTasks:state.trainerTasks,
     memberTasks:state.memberTasks,
+    pilotLeads:state.pilotLeads,
     studios:state.studios,
     signatures:state.signatures,
     programSelections:state.programSelections
@@ -562,6 +600,7 @@ function applyBackupPayload(payload){
   state.team = (payload.team || []).map(normalizeTrainer);
   state.trainerTasks = (payload.trainerTasks || []).map(normalizeTrainerTask);
   state.memberTasks = (payload.memberTasks || []).map(normalizeMemberTask);
+  state.pilotLeads = (payload.pilotLeads || []).map(normalizePilotLead);
   state.studios = (payload.studios || []).map(normalizeStudio);
   state.signatures = (payload.signatures || []).map(normalizeSignature);
   state.programSelections = payload.programSelections || {};
@@ -577,6 +616,7 @@ function resetDemoData(){
   state.team = starterTeam.map(normalizeTrainer);
   state.trainerTasks = starterTrainerTasks.map(normalizeTrainerTask);
   state.memberTasks = starterMemberTasks.map(normalizeMemberTask);
+  state.pilotLeads = starterPilotLeads.map(normalizePilotLead);
   state.studios = starterStudios.map(normalizeStudio);
   state.signatures = [];
   state.programSelections = {};
@@ -2101,6 +2141,57 @@ function pilotSuccessRows(){
   ].map(row=>`<div><span>${row[0]}</span><strong>${row[1]}</strong><small>${row[2]}</small></div>`).join('');
 }
 
+function pilotStageLabel(stage){
+  return {
+    lead:'Başvuru',
+    demo:'Demo',
+    pilot:'Pilot',
+    proposal:'Teklif',
+    won:'Kazandı',
+    lost:'Kaybedildi'
+  }[stage] || 'Başvuru';
+}
+
+function pilotStageClass(stage){
+  return {
+    lead:'warn',
+    demo:'warn',
+    pilot:'good',
+    proposal:'good',
+    won:'good',
+    lost:'risk'
+  }[stage] || 'warn';
+}
+
+function nextPilotStage(stage){
+  return {lead:'demo', demo:'pilot', pilot:'proposal', proposal:'won', won:'won', lost:'lost'}[stage] || 'demo';
+}
+
+function pilotFunnelSummary(){
+  const active = state.pilotLeads.filter(lead=>!['won','lost'].includes(lead.stage)).length;
+  const won = state.pilotLeads.filter(lead=>lead.stage === 'won').length;
+  const pipeline = state.pilotLeads
+    .filter(lead=>!['lost'].includes(lead.stage))
+    .reduce((sum,lead)=>sum + lead.value, 0);
+  return {active, won, pipeline};
+}
+
+function pilotLeadRows(){
+  return state.pilotLeads
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt) - new Date(a.createdAt))
+    .map(lead=>`<div class="pilot-lead-row">
+      <div><strong>${escapeAttr(lead.studio)}</strong><small>${escapeAttr(lead.name)} · ${escapeAttr(lead.city)} · ${escapeAttr(lead.members)} üye</small></div>
+      <span class="status ${pilotStageClass(lead.stage)}">${pilotStageLabel(lead.stage)}</span>
+      <div><strong>${formatCurrency(lead.value)}</strong><small>${escapeAttr(lead.goal)}</small></div>
+      <div><strong>Sonraki</strong><small>${escapeAttr(lead.nextAction)}</small></div>
+      <div class="row-actions">
+        ${['won','lost'].includes(lead.stage) ? '' : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button>`}
+        <button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>
+      </div>
+    </div>`).join('') || `<div class="empty-mini">Henüz kurucu pilot lead’i yok.</div>`;
+}
+
 function studioContactRows(){
   const studio = activeStudio();
   const instagram = studio.instagram ? (studio.instagram.startsWith('@') ? studio.instagram : `@${studio.instagram}`) : '';
@@ -2142,14 +2233,19 @@ function studioPublicCard(note='İşletme bilgileri'){
 function pilotPage(){
   const payload = backupPayload();
   const activationScore = pilotActivationScore();
+  const funnel = pilotFunnelSummary();
   return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
-    ${metric('Seans',String(payload.sessions.length),'takvim','□')}
-    ${metric('Finans kaydı',String(payload.finance.length),'gelir/gider','₺')}
+    ${metric('Aktif lead',String(funnel.active),`${funnel.won} kazandı`,'◌')}
+    ${metric('Pipeline',formatCurrency(funnel.pipeline),'aylık potansiyel','₺')}
     ${metric('Pilot skor',`%${activationScore}`,activationScore >= 70 ? 'satışa yakın' : 'kurulum sürüyor','⚑',activationScore < 70)}
   </section>
   <section class="dashboard-grid">
+    <article class="card pilot-crm-card">
+      <div class="card-title"><div><h2>Kurucu pilot CRM</h2><p>Başvuru → demo → pilot → teklif akışını takip et</p></div><button class="secondary" data-action="add-pilot-lead">+ Lead ekle</button></div>
+      <div class="pilot-lead-list">${pilotLeadRows()}</div>
+    </article>
     <article class="card pilot-plan-card">
       <div class="card-title"><div><h2>30 günlük pilot planı</h2><p>Başvuru gelen salonu ödeme görüşmesine taşıyan takip akışı</p></div><span class="badge">${payload.studios.length} stüdyo</span></div>
       <div class="pilot-timeline">${pilotTimeline()}</div>
@@ -2793,6 +2889,34 @@ function cycleStudio(){
   if(next) selectStudio(next.id);
 }
 
+function openPilotLeadModal(){
+  pilotLeadForm?.reset();
+  pilotLeadModal?.showModal();
+}
+
+function advancePilotLead(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  lead.stage = nextPilotStage(lead.stage);
+  lead.nextAction = lead.stage === 'demo' ? 'Demo tarihini netleştir'
+    : lead.stage === 'pilot' ? 'Gün 7 kullanım raporunu paylaş'
+    : lead.stage === 'proposal' ? 'Kurucu fiyat teklifini gönder'
+    : lead.stage === 'won' ? 'Ödeme ve canlı kurulum adımını başlat'
+    : lead.nextAction;
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} aşaması ${pilotStageLabel(lead.stage)} olarak güncellendi.`);
+}
+
+function deletePilotLead(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead || !confirm(`${lead.studio} pilot lead'i silinsin mi?`)) return;
+  state.pilotLeads = state.pilotLeads.filter(item=>item.id !== id);
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} CRM listesinden silindi.`);
+}
+
 function bind(){
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
     const action = b.dataset.action;
@@ -2826,6 +2950,9 @@ function bind(){
     if(action==='complete-member-task') return completeMemberTask(b.dataset.memberTaskId);
     if(action==='delete-member-task') return deleteMemberTask(b.dataset.memberTaskId);
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
+    if(action==='add-pilot-lead') return openPilotLeadModal();
+    if(action==='advance-pilot-lead') return advancePilotLead(b.dataset.leadId);
+    if(action==='delete-pilot-lead') return deletePilotLead(b.dataset.leadId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
     if(action==='start-onboarding') return openOnboardingModal();
@@ -3199,6 +3326,29 @@ memberTaskForm.onsubmit=e=>{
   e.currentTarget.reset();
   render();
   showToast(`${task.member} için ${memberTaskTypeLabel(task.type).toLocaleLowerCase('tr')} aksiyonu gönderildi.`);
+};
+
+pilotLeadForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const lead = normalizePilotLead({
+    id: makeId(),
+    name: data.get('name').trim(),
+    studio: data.get('studio').trim(),
+    city: data.get('city').trim(),
+    phone: data.get('phone').trim(),
+    members: data.get('members'),
+    goal: data.get('goal').trim(),
+    stage: data.get('stage'),
+    nextAction: data.get('nextAction').trim() || 'İlk görüşmeyi planla',
+    value: Number(String(data.get('value')).replaceAll('.','').replace(',','.')) || 990
+  });
+  state.pilotLeads.unshift(lead);
+  savePilotLeads();
+  pilotLeadModal.close();
+  e.currentTarget.reset();
+  render();
+  showToast(`${lead.studio} pilot CRM listesine eklendi.`);
 };
 
 studioBrandForm.onsubmit=async e=>{
