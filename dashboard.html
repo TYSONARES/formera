@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11130f" />
+  <title>Formera — Stüdyo Yönetimi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <button class="sidebar-close" type="button" aria-label="Sol menüyü kapat">×</button>
+      <a class="brand" href="#" aria-label="Formera ana sayfa">
+        <span class="brand-mark">F</span>
+        <span>formera</span>
+      </a>
+
+      <nav class="nav" aria-label="Ana menü">
+        <p class="nav-label">Çalışma alanı</p>
+        <button class="nav-item active" data-page="dashboard"><span>⌂</span> Genel bakış</button>
+        <button class="nav-item" data-page="members"><span>♙</span> Üyeler <b id="memberCount">48</b></button>
+        <button class="nav-item" data-page="programs"><span>▤</span> Programlar</button>
+        <button class="nav-item" data-page="calendar"><span>□</span> Takvim</button>
+        <p class="nav-label">İşletme</p>
+        <button class="nav-item" data-page="finance"><span>◒</span> Finans</button>
+        <button class="nav-item" data-page="reports"><span>↗</span> Raporlar</button>
+        <button class="nav-item" data-page="team"><span>♧</span> Ekip</button>
+        <button class="nav-item" data-page="pilot"><span>⚑</span> Pilot araçları</button>
+      </nav>
+
+      <div class="studio-card">
+        <span class="studio-avatar" id="studioAvatar">NF</span>
+        <div><strong id="studioName">NorthFit Studio</strong><small id="studioLocation">Kadıköy · İstanbul</small></div>
+        <button aria-label="Stüdyo değiştir" data-action="cycle-studio">↻</button>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+    <main>
+      <header class="topbar">
+        <button class="mobile-menu" aria-label="Menüyü aç">☰</button>
+        <label class="search"><span>⌕</span><input placeholder="Üye, program veya işlem ara..." /></label>
+        <div class="top-actions">
+          <button class="backend-pill" id="backendStatus" type="button">Demo mod</button>
+          <button class="icon-button" aria-label="Bildirimler">♢<i></i></button>
+          <button class="role-switch" id="roleSwitch"><span>İşletmeci</span><small>Üye görünümü</small></button>
+          <span class="user-avatar">OY</span>
+        </div>
+      </header>
+
+      <section class="content" id="appContent"></section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <dialog class="modal" id="memberModal">
+    <form method="dialog" id="memberForm">
+      <div class="modal-head"><div><span class="eyebrow" id="memberModalEyebrow">YENİ KAYIT</span><h2 id="memberModalTitle">Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
+      <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
+      <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
+      <label>Giriş e-postası<input name="email" type="email" placeholder="uye@email.com"></label>
+      <p class="invite-note">Bu e-posta üyenin giriş kimliği olur. Üye aynı e-postayla hesap oluşturunca otomatik üye ekranına düşer.</p>
+      <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeyi kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="financeModal">
+    <form method="dialog" id="financeForm">
+      <div class="modal-head"><div><span class="eyebrow">FİNANS</span><h2>Gelir / gider ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>İşlem adı<input name="title" required placeholder="Örn. 12 seans paket satışı"></label>
+      <div class="form-grid"><label>Tip<select name="type"><option value="income">Gelir</option><option value="expense">Gider</option></select></label><label>Tutar<input name="amount" required inputmode="numeric" placeholder="9600"></label></div>
+      <div class="form-grid"><label>Kategori<input name="category" placeholder="Paket satışı"></label><label>Tarih<input name="date" type="date"></label></div>
+      <label>Durum<select name="status"><option value="paid">Ödendi</option><option value="pending">Bekliyor</option></select></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İşlemi kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="programModal">
+    <form method="dialog" id="programForm">
+      <div class="modal-head"><div><span class="eyebrow">PROGRAM</span><h2>Program oluştur</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Program adı<input name="title" required placeholder="Örn. Alt vücut güç"></label>
+      <div class="form-grid"><label>Hedef<input name="goal" placeholder="Kuvvet ve form"></label><label>Seviye<select name="level"><option>Başlangıç</option><option>Orta</option><option>İleri</option><option>Herkes</option></select></label></div>
+      <div class="form-grid"><label>Süre / dk<input name="duration" inputmode="numeric" placeholder="45"></label><label>Atanan üye<input name="assigned" placeholder="Selin Aksoy"></label></div>
+      <label>Egzersizler<textarea name="exercises" required rows="5" placeholder="Goblet squat · 4 × 10&#10;Romanian deadlift · 3 × 12"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Programı kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="sessionModal">
+    <form method="dialog" id="sessionForm">
+      <div class="modal-head"><div><span class="eyebrow">TAKVİM</span><h2>Seans ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="form-grid"><label>Tarih<input name="date" type="date" required></label><label>Saat<input name="time" type="time" required></label></div>
+      <div class="form-grid"><label>Üye<input name="member" required placeholder="Selin Aksoy"></label><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label></div>
+      <div class="form-grid"><label>Program<input name="program" placeholder="Alt vücut güç"></label><label>Salon<select name="room"><option>Salon A</option><option>Salon B</option><option>Online</option></select></label></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Seansı kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="trainerModal">
+    <form method="dialog" id="trainerForm">
+      <div class="modal-head"><div><span class="eyebrow">EKİP</span><h2>Antrenör ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Ad<input name="name" required placeholder="Örn. Derya"></label>
+      <div class="form-grid"><label>Rol<input name="role" placeholder="PT Coach"></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
+      <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>Prim %<input name="commission" inputmode="numeric" placeholder="15"></label></div>
+      <label>Giriş e-postası<input name="email" type="email" placeholder="antrenor@email.com"></label>
+      <p class="invite-note">Bu e-posta antrenörün giriş kimliği olur. Antrenör aynı e-postayla hesap oluşturunca otomatik antrenör paneli açılır.</p>
+      <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="trainerTaskModal">
+    <form method="dialog" id="trainerTaskForm">
+      <div class="modal-head"><div><span class="eyebrow">GÖREV</span><h2>Antrenöre görev / öneri ver</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Antrenör<select name="trainer"></select></label>
+      <label>Görev başlığı<input name="title" required placeholder="Örn. Riskli üyeleri ara"></label>
+      <div class="form-grid"><label>Öncelik<select name="priority"><option value="medium">Normal</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
+      <label>Not / öneri<textarea name="note" rows="4" placeholder="Kısa açıklama, öneri veya takip notu"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Görevi gönder</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="memberTaskModal">
+    <form method="dialog" id="memberTaskForm">
+      <div class="modal-head"><div><span class="eyebrow">ÜYE AKSİYONU</span><h2>Üyeye program, görev veya beslenme notu ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="form-grid"><label>Üye<select name="member"></select></label><label>Tür<select name="type"><option value="workout">Antrenman görevi</option><option value="nutrition">Beslenme notu</option><option value="followup">Genel takip görevi</option></select></label></div>
+      <label>Başlık<input name="title" required placeholder="Örn. Protein takibi"></label>
+      <div class="form-grid"><label>Antrenör<select name="trainer"></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
+      <label>Komut / açıklama<textarea name="note" rows="5" required placeholder="Üyenin göreceği net talimatı yaz. Örn. Bugün her ana öğünde protein kaynağı ekle."></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeye gönder</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal signature-modal" id="signatureModal">
+    <form method="dialog" id="signatureForm">
+      <div class="modal-head"><div><span class="eyebrow">İMZA</span><h2>Dijital onay al</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Üye<input name="member" required placeholder="Selin Aksoy"></label>
+      <label>Onay tipi<select name="type"><option>Aydınlatma ve üyelik onayı</option><option>PT paket sözleşmesi</option><option>Ölçüm ve takip onayı</option><option>Seans katılım onayı</option></select></label>
+      <div class="signature-pad-wrap">
+        <canvas id="signatureCanvas" width="620" height="220" aria-label="İmza alanı"></canvas>
+        <small>Üye parmağıyla veya mouse ile imza atabilir.</small>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" data-action="clear-signature">Temizle</button><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">İmzayı kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="studioBrandModal">
+    <form method="dialog" id="studioBrandForm">
+      <div class="modal-head"><div><span class="eyebrow">MARKA</span><h2>Sayfayı özelleştir</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>İşletme adı<input name="name" required placeholder="NorthFit Studio"></label>
+      <label>Konum / kısa açıklama<input name="location" placeholder="Kadıköy · İstanbul"></label>
+      <label>Tam adres<textarea name="address" rows="3" placeholder="Cadde, sokak, bina no, ilçe / şehir"></textarea></label>
+      <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>WhatsApp<input name="whatsapp" inputmode="tel" placeholder="905xx xxx xx xx"></label></div>
+      <div class="form-grid"><label>Instagram<input name="instagram" placeholder="@studiohesabi"></label><label>Web sitesi<input name="website" inputmode="url" placeholder="https://..."></label></div>
+      <label>Google Maps / konum linki<input name="mapUrl" inputmode="url" placeholder="https://maps.google.com/..."></label>
+      <div class="form-grid"><label>Kısa kod<input name="initials" maxlength="4" placeholder="NF"></label><label>Vurgu rengi<input name="accentColor" type="color" value="#d9ff64"></label></div>
+      <label>Logo veya işletme avatarı<input name="logo" type="file" accept="image/*"></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Markayı kaydet</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal onboarding-modal" id="onboardingModal">
+    <form method="dialog" id="onboardingForm">
+      <div class="modal-head">
+        <div><span class="eyebrow">İLK KURULUM</span><h2>Salonunu 5 adımda hazırla</h2></div>
+        <button value="cancel" class="modal-close" aria-label="Kapat">×</button>
+      </div>
+      <div class="onboarding-progress" aria-label="Kurulum adımları">
+        <span class="active">1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+      </div>
+      <section class="onboarding-step active" data-step="0">
+        <h3>İşletme bilgileri</h3>
+        <label>Salon adı<input name="studioName" required placeholder="Örn. NorthFit Studio"></label>
+        <div class="form-grid"><label>Kısa konum<input name="studioLocation" placeholder="Kadıköy · İstanbul"></label><label>Telefon<input name="studioPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Adres<textarea name="studioAddress" rows="3" placeholder="Cadde, sokak, bina no, ilçe / şehir"></textarea></label>
+        <div class="form-grid"><label>Instagram<input name="studioInstagram" placeholder="@studiohesabi"></label><label>Logo<input name="studioLogo" type="file" accept="image/*"></label></div>
+      </section>
+      <section class="onboarding-step" data-step="1">
+        <h3>İlk antrenör</h3>
+        <label>Ad soyad<input name="trainerName" required placeholder="Örn. Ece Yılmaz"></label>
+        <div class="form-grid"><label>E-posta<input name="trainerEmail" type="email" placeholder="antrenor@email.com"></label><label>Telefon<input name="trainerPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Uzmanlık<input name="trainerSpecialty" placeholder="Kuvvet · postür · kilo kontrol"></label>
+      </section>
+      <section class="onboarding-step" data-step="2">
+        <h3>İlk üye</h3>
+        <label>Ad soyad<input name="memberName" required placeholder="Örn. Selin Aksoy"></label>
+        <div class="form-grid"><label>E-posta<input name="memberEmail" type="email" placeholder="uye@email.com"></label><label>Telefon<input name="memberPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
+        <label>Paket<select name="memberPackage"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label>
+      </section>
+      <section class="onboarding-step" data-step="3">
+        <h3>İlk program</h3>
+        <label>Program adı<input name="programTitle" required placeholder="Örn. Başlangıç full body"></label>
+        <div class="form-grid"><label>Hedef<input name="programGoal" placeholder="Kuvvet ve form"></label><label>Süre / dk<input name="programDuration" inputmode="numeric" placeholder="45"></label></div>
+        <label>Egzersizler<textarea name="programExercises" required rows="5" placeholder="Goblet squat · 3 × 12&#10;TRX row · 3 × 10&#10;Dead bug · 3 × 12"></textarea></label>
+      </section>
+      <section class="onboarding-step" data-step="4">
+        <h3>Hazırız</h3>
+        <p class="modal-note">Kurulumu bitirdiğinde işletme bilgileri güncellenecek, ilk antrenör/üye/program oluşturulacak ve davet metinlerini listelerden kopyalayabileceksin.</p>
+        <div class="setup-summary">
+          <div><span>1</span><strong>İşletme profili</strong><small>Logo, adres ve iletişim</small></div>
+          <div><span>2</span><strong>Ekip + üye</strong><small>Giriş e-postalarıyla hazır</small></div>
+          <div><span>3</span><strong>İlk program</strong><small>Üye ekranına atanır</small></div>
+        </div>
+      </section>
+      <div class="modal-actions onboarding-actions">
+        <button type="button" class="secondary" id="onboardingSkip">Sonra yap</button>
+        <button type="button" class="secondary" id="onboardingBack">Geri</button>
+        <button type="button" class="secondary" id="onboardingCopyInvites">Davetleri kopyala</button>
+        <button type="button" class="primary" id="onboardingNext">İleri</button>
+        <button type="submit" class="primary" id="onboardingFinish">Kur ve panele geç</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="supabaseModal">
+    <div class="modal-panel">
+      <div class="modal-head"><div><span class="eyebrow">HESAP</span><h2>Giriş ve hesap değiştir</h2></div><button class="modal-close" id="closeSupabaseModal" aria-label="Kapat">×</button></div>
+      <div class="account-summary" id="accountSummary">
+        <span class="avatar">?</span>
+        <div><strong>Demo mod</strong><small>Henüz canlı hesaba giriş yapılmadı.</small></div>
+      </div>
+      <div class="login-tabs" role="tablist" aria-label="Giriş tipi">
+        <button type="button" class="active" data-login-role="owner" role="tab" aria-selected="true">İşletme</button>
+        <button type="button" data-login-role="trainer" role="tab" aria-selected="false">Antrenör</button>
+        <button type="button" data-login-role="member" role="tab" aria-selected="false">Üye</button>
+      </div>
+      <p class="modal-note" id="loginRoleNote">İşletme hesabıyla tüm salon verilerini yönet.</p>
+      <form id="supabaseConfigForm">
+        <label>Project URL<input name="url" required placeholder="https://xxxxx.supabase.co"></label>
+        <label>Anon public key<textarea name="anonKey" required rows="4" placeholder="eyJhbGciOi..."></textarea></label>
+        <div class="modal-actions"><button type="button" class="secondary" id="clearSupabaseConfig">Bağlantıyı temizle</button><button type="submit" class="primary">Ayarları kaydet</button></div>
+      </form>
+      <div class="account-alert" id="accountAlert" role="status" aria-live="polite"></div>
+      <form id="supabaseAuthForm">
+        <label id="loginEmailLabel">İşletme e-postası<input name="email" type="email" required placeholder="owner@email.com"></label>
+        <label>Şifre<span class="password-field"><input name="password" type="password" required placeholder="Supabase Auth şifresi"><button type="button" id="togglePassword" aria-label="Şifreyi göster">👁</button></span></label>
+        <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="button" class="secondary" id="switchSupabaseAccount">Başka hesapla giriş yap</button><button type="button" class="secondary" id="signupSupabase">Hesap oluştur</button><button type="submit" class="primary">Giriş yap</button></div>
+      </form>
+    </div>
+  </dialog>
+  <input id="fullBackupImport" type="file" accept="application/json" hidden>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

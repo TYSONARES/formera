@@ -2,7 +2,9 @@
 
 PT stüdyoları için işletmeci, antrenör ve üye arayüzü prototipi.
 
-Canlı demo: https://tysonares.github.io/formera/
+Canlı tanıtım sayfası: https://tysonares.github.io/formera/
+
+Demo dashboard: https://tysonares.github.io/formera/dashboard.html
 
 ## Çalıştırma
 
@@ -12,7 +14,7 @@ Klasörde şu komutu çalıştırın:
 npx serve .
 ```
 
-Alternatif olarak `index.html` dosyasını doğrudan tarayıcıda açabilirsiniz.
+Alternatif olarak `index.html` dosyasını doğrudan tarayıcıda açabilirsiniz. Uygulama paneli için `dashboard.html` dosyasını açın.
 
 Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 
@@ -22,6 +24,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 
 ## Pilot kapsamı
 
+- Premium funnel / ön tanıtım sayfası
 - Üye yönetimi
 - Program seçimi ve program takibi
 - Üye/antrenör giriş e-postası ve davet metni kopyalama
