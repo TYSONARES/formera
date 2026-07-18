@@ -25,6 +25,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 ## Pilot kapsamı
 
 - Premium funnel / ön tanıtım sayfası
+- Yeni Formera logo/favikon sistemi ve markaya ait sinematik fotoğraf/video kullanımı
 - Kurucu pilot başvuru formu: form verisini WhatsApp mesajına dönüştüren ücretsiz lead akışı
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama

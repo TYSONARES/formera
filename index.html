@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — PT Stüdyoları İçin Operasyon Asistanı</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="icon" href="assets/formera-favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/formera-favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,7 @@
   <div class="noise" aria-hidden="true"></div>
   <header class="site-header">
     <a class="brand" href="#" aria-label="Formera">
-      <span class="brand-mark">F</span>
-      <span class="brand-name"><span>form</span><em>era</em></span>
+      <img class="brand-logo" src="assets/formera-logo.svg" alt="Formera" height="28" />
     </a>
     <nav aria-label="Tanıtım menüsü">
       <a href="#platform">Platform</a>
@@ -52,6 +51,11 @@
       </div>
 
       <div class="hero-stage" aria-label="Formera ürün sahnesi">
+        <div class="hero-media" aria-hidden="true">
+          <video autoplay muted loop playsinline preload="metadata" poster="assets/kettlebell-stage.png">
+            <source src="assets/formera-hero.mp4" type="video/mp4">
+          </video>
+        </div>
         <div class="light-orb orb-one"></div>
         <div class="light-orb orb-two"></div>
         <div class="motion-strip strip-one" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
@@ -87,26 +91,19 @@
 
     <section class="visual-story" aria-label="Formera görsel hikaye alanı">
       <article class="visual-card studio-still">
-        <div class="illustration studio-illustration" aria-hidden="true">
-          <span class="sun"></span>
-          <span class="floor"></span>
-          <span class="trainer-shape"></span>
-          <span class="member-shape"></span>
-          <span class="barbell"></span>
-        </div>
+        <figure class="visual-photo">
+          <img src="assets/studio-flow.png" alt="Antrenör eşliğinde butik stüdyo antrenmanı" loading="lazy">
+        </figure>
         <div>
           <span class="eyebrow">SİNEMATİK STÜDYO HİSSİ</span>
           <h3>Butik salonun temposu, film karesi gibi okunur.</h3>
-          <p>Formera ana sayfası stok fotoğraf kalabalığı yerine markaya ait soyut stüdyo sahneleriyle premium ve sade kalır.</p>
+          <p>Formera ana sayfası artık markaya ait gerçek sahnelerle premium, sakin ve güven veren bir ilk izlenim kurar.</p>
         </div>
       </article>
       <article class="visual-card phone-still">
-        <div class="phone-mock" aria-hidden="true">
-          <div class="phone-speaker"></div>
-          <div class="phone-card glow"></div>
-          <div class="phone-card short"></div>
-          <div class="phone-wave"><i></i><i></i><i></i><i></i></div>
-        </div>
+        <figure class="visual-photo portrait">
+          <img src="assets/member-app.png" alt="Üye mobil uygulama deneyimini gösteriyor" loading="lazy">
+        </figure>
         <div>
           <span class="eyebrow">MOBİL ÖNCE</span>
           <h3>Üye, antrenör ve işletmeci aynı ritimde.</h3>
@@ -120,6 +117,24 @@
       <div><span>02</span>Üye programı ve görevleri tek yerden takip eder.</div>
       <div><span>03</span>İşletmeci haftalık özeti beklemeden görür.</div>
       <div><span>04</span>Gelir, görev, ekip ve takip aynı hikâyeye bağlanır.</div>
+    </section>
+
+    <section class="brand-gallery" aria-label="Formera marka atmosferi">
+      <article class="gallery-card large">
+        <img src="assets/app-split.png" alt="Mobil uygulama ve antrenman akışı" loading="lazy">
+        <span>Üye deneyimi</span>
+        <h3>Program, görev ve seans takibi tek mobil ritimde.</h3>
+      </article>
+      <article class="gallery-card">
+        <img src="assets/coach-session.png" alt="Antrenörün üyeyi yönlendirdiği stüdyo sahnesi" loading="lazy">
+        <span>Antrenör akışı</span>
+        <h3>Her not, görev veya plan işletmecinin görüş alanına girer.</h3>
+      </article>
+      <article class="gallery-card">
+        <img src="assets/kettlebell-spot.png" alt="Spot ışığında kettlebell" loading="lazy">
+        <span>Premium odak</span>
+        <h3>Formera, stüdyonun karmaşasını tek ışık altında toplar.</h3>
+      </article>
     </section>
 
     <section class="section" id="platform">
@@ -217,8 +232,7 @@
   <footer class="site-footer">
     <div>
       <a class="brand" href="#" aria-label="Formera">
-        <span class="brand-mark">F</span>
-        <span class="brand-name"><span>form</span><em>era</em></span>
+        <img class="brand-logo" src="assets/formera-logo.svg" alt="Formera" height="24" />
       </a>
       <p>PT stüdyoları için premium operasyon asistanı.</p>
     </div>

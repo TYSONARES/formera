@@ -68,6 +68,7 @@
 .login-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 8px;font:800 12px "DM Sans";color:var(--muted);cursor:pointer}
 .login-tabs button.active{background:#151712;color:#fff;box-shadow:0 8px 18px rgba(15,17,12,.12)}
 .avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
+.dashboard-brand-logo{display:block;width:112px;height:32px;object-fit:contain;filter:drop-shadow(0 0 16px rgba(217,255,100,.14))}
 .studio-public-card{background:linear-gradient(135deg,#fff 0%,#f8faef 100%)}
 .studio-public-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .studio-public-logo{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;background:var(--acid);background-size:cover;background-position:center;color:#263016;font:800 18px Manrope;flex:0 0 auto}
@@ -128,6 +129,7 @@
 .app-shell.sidebar-collapsed .sidebar{width:76px;padding:27px 10px 18px;overflow:hidden}
 .app-shell.sidebar-collapsed .brand{justify-content:center;margin-left:0;margin-right:0}
 .app-shell.sidebar-collapsed .brand span:last-child,
+.app-shell.sidebar-collapsed .dashboard-brand-logo,
 .app-shell.sidebar-collapsed .nav-label,
 .app-shell.sidebar-collapsed .nav-item:not(.active)::after,
 .app-shell.sidebar-collapsed .nav-item b,
@@ -143,6 +145,7 @@
   .app-shell.sidebar-collapsed{grid-template-columns:1fr}
   .app-shell.sidebar-collapsed .sidebar{width:250px;padding:27px 18px 18px}
   .app-shell.sidebar-collapsed .brand span:last-child,
+  .app-shell.sidebar-collapsed .dashboard-brand-logo,
   .app-shell.sidebar-collapsed .nav-label,
   .app-shell.sidebar-collapsed .nav-item b,
   .app-shell.sidebar-collapsed .studio-card div,
@@ -160,6 +163,7 @@
   .sidebar-close{display:none!important}
   .brand{justify-content:center;margin:0 0 38px!important}
   .brand span:last-child,
+  .dashboard-brand-logo,
   .nav-label,
   .nav-item b,
   .studio-card div,
@@ -170,6 +174,7 @@
   .app-shell.sidebar-expanded .sidebar{width:244px!important;padding:27px 18px 18px!important;box-shadow:18px 0 42px rgba(12,14,10,.16)}
   .app-shell.sidebar-expanded .brand{justify-content:flex-start;margin:0 8px 38px!important}
   .app-shell.sidebar-expanded .brand span:last-child,
+  .app-shell.sidebar-expanded .dashboard-brand-logo,
   .app-shell.sidebar-expanded .nav-label,
   .app-shell.sidebar-expanded .nav-item b,
   .app-shell.sidebar-expanded .studio-card div,
@@ -188,6 +193,7 @@
   .sidebar-close{display:grid!important}
   .brand{justify-content:flex-start;margin:0 8px 38px!important}
   .brand span:last-child,
+  .dashboard-brand-logo,
   .nav-label,
   .nav-item b,
   .studio-card div,
