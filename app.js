@@ -346,6 +346,12 @@ function todayISO(){
   return new Date().toISOString().slice(0,10);
 }
 
+function addDaysISO(days){
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0,10);
+}
+
 function normalizeSession(session){
   return {
     id: session.id || makeId(),
@@ -468,6 +474,7 @@ function normalizePilotLead(lead){
     goal: lead.goal || 'Operasyonu toparlamak',
     stage: ['lead','demo','pilot','proposal','won','lost'].includes(lead.stage) ? lead.stage : 'lead',
     nextAction: lead.nextAction || lead.next_action || 'İlk görüşmeyi planla',
+    followUpDate: lead.followUpDate || lead.follow_up_date || todayISO(),
     value: Number(lead.value) || 990,
     createdAt: lead.createdAt || lead.created_at || new Date().toISOString()
   };
@@ -2178,6 +2185,7 @@ function pilotFunnelSummary(){
   const active = state.pilotLeads.filter(lead=>!['won','lost'].includes(lead.stage)).length;
   const won = state.pilotLeads.filter(lead=>lead.stage === 'won').length;
   const lost = state.pilotLeads.filter(lead=>lead.stage === 'lost').length;
+  const dueToday = state.pilotLeads.filter(lead=>!['won','lost'].includes(lead.stage) && lead.followUpDate <= todayISO()).length;
   const pipeline = state.pilotLeads
     .filter(lead=>!['lost'].includes(lead.stage))
     .reduce((sum,lead)=>sum + lead.value, 0);
@@ -2187,7 +2195,7 @@ function pilotFunnelSummary(){
   const total = state.pilotLeads.length;
   const closed = won + lost;
   const conversion = closed ? Math.round((won / closed) * 100) : Math.round((won / Math.max(total, 1)) * 100);
-  return {active, won, lost, pipeline, proposal, total, conversion};
+  return {active, won, lost, dueToday, pipeline, proposal, total, conversion};
 }
 
 function pilotStageWeight(stage){
@@ -2198,7 +2206,21 @@ function pilotLeadHeat(lead){
   const memberBonus = lead.members === '300+' ? 8 : lead.members === '151–300' ? 6 : lead.members === '51–150' ? 4 : 2;
   const aiBonus = /ai|yapay|öneri|rapor/i.test(lead.goal || '') ? 5 : 0;
   const valueBonus = lead.value >= 2400 ? 6 : lead.value >= 1400 ? 4 : 2;
-  return Math.min(100, pilotStageWeight(lead.stage) + memberBonus + aiBonus + valueBonus);
+  const followUpBonus = lead.followUpDate <= todayISO() && !['won','lost'].includes(lead.stage) ? 7 : 0;
+  return Math.min(100, pilotStageWeight(lead.stage) + memberBonus + aiBonus + valueBonus + followUpBonus);
+}
+
+function pilotFollowUpLabel(lead){
+  if(['won','lost'].includes(lead.stage)) return lead.stage === 'won' ? 'Kazanıldı' : 'Kaybedildi';
+  if(lead.followUpDate < todayISO()) return `Gecikti · ${formatDateTR(lead.followUpDate)}`;
+  if(lead.followUpDate === todayISO()) return 'Bugün takip et';
+  return `Planlı · ${formatDateTR(lead.followUpDate)}`;
+}
+
+function pilotFollowUpClass(lead){
+  if(['won','lost'].includes(lead.stage)) return lead.stage === 'won' ? 'good' : 'risk';
+  if(lead.followUpDate <= todayISO()) return 'warn';
+  return 'good';
 }
 
 function pilotSuggestedPackage(lead){
@@ -2243,11 +2265,13 @@ function pilotNextMoveCard(){
       <div><span>Aşama</span><strong>${pilotStageLabel(lead.stage)}</strong></div>
       <div><span>Paket</span><strong>${pilotSuggestedPackage(lead)}</strong></div>
       <div><span>Aylık değer</span><strong>${formatCurrency(lead.value)}</strong></div>
+      <div><span>Takip</span><strong>${pilotFollowUpLabel(lead)}</strong></div>
     </div>
     <p class="pilot-next-action">${escapeAttr(lead.nextAction)}</p>
     <div class="row-actions">
       <button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklifi kopyala</button>
       <button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">Aşamayı ilerlet</button>
+      <button class="mini-button" data-action="snooze-pilot-lead" data-lead-id="${lead.id}">2 gün ertele</button>
     </div>
   </div>`;
 }
@@ -2262,7 +2286,7 @@ function pilotLeadActionButtons(lead){
   const linkedStudioId = pilotLeadStudioId(lead);
   const stageActions = ['won','lost'].includes(lead.stage)
     ? ''
-    : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button><button class="mini-button" data-action="mark-pilot-lost" data-lead-id="${lead.id}">Kaybet</button>`;
+    : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button><button class="mini-button" data-action="snooze-pilot-lead" data-lead-id="${lead.id}">Ertele</button><button class="mini-button" data-action="mark-pilot-lost" data-lead-id="${lead.id}">Kaybet</button>`;
   const wonAction = lead.stage === 'won'
     ? linkedStudioId
       ? `<button class="mini-button" data-action="select-studio" data-studio-id="${linkedStudioId}">Stüdyoyu aç</button>`
@@ -2280,7 +2304,7 @@ function pilotLeadRows(){
       <span class="status ${pilotStageClass(lead.stage)}">${pilotStageLabel(lead.stage)}</span>
       <div><strong>${formatCurrency(lead.value)}</strong><small>${pilotSuggestedPackage(lead)} · ${escapeAttr(lead.goal)}</small></div>
       <div class="pilot-lead-score"><strong>%${pilotLeadHeat(lead)}</strong><small>Sıcaklık</small></div>
-      <div><strong>Sonraki</strong><small>${escapeAttr(lead.nextAction)}</small></div>
+      <div><strong>${escapeAttr(pilotFollowUpLabel(lead))}</strong><small>${escapeAttr(lead.nextAction)}</small></div>
       <div class="row-actions">
         ${pilotLeadActionButtons(lead)}
       </div>
@@ -2333,6 +2357,7 @@ function pilotPage(){
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
     ${metric('Aktif lead',String(funnel.active),`${funnel.won} kazandı`,'◌')}
+    ${metric('Bugünkü takip',String(funnel.dueToday),'aranacak / DM','!',funnel.dueToday > 0)}
     ${metric('Pipeline',formatCurrency(funnel.pipeline),'aylık potansiyel','₺')}
     ${metric('Dönüşüm',`%${funnel.conversion}`,`${funnel.proposal ? formatCurrency(funnel.proposal) : 'teklif bekliyor'}`,'↗',funnel.conversion < 30)}
   </section>
@@ -3015,9 +3040,19 @@ function advancePilotLead(id){
     : lead.stage === 'proposal' ? 'Kurucu fiyat teklifini gönder'
     : lead.stage === 'won' ? 'Ödeme ve canlı kurulum adımını başlat'
     : lead.nextAction;
+  lead.followUpDate = lead.stage === 'won' ? addDaysISO(1) : addDaysISO(2);
   savePilotLeads();
   render();
   showToast(`${lead.studio} aşaması ${pilotStageLabel(lead.stage)} olarak güncellendi.`);
+}
+
+function snoozePilotLead(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  lead.followUpDate = addDaysISO(2);
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} takibi 2 gün ertelendi.`);
 }
 
 function markPilotLeadLost(id){
@@ -3025,6 +3060,7 @@ function markPilotLeadLost(id){
   if(!lead) return;
   lead.stage = 'lost';
   lead.nextAction = 'Kayıp nedeni not edildi; 30 gün sonra tekrar temas et';
+  lead.followUpDate = addDaysISO(30);
   savePilotLeads();
   render();
   showToast(`${lead.studio} kaybedildi olarak işaretlendi.`);
@@ -3051,6 +3087,7 @@ function convertPilotLeadToStudio(id){
   state.studios.unshift(studio);
   state.activeStudioId = studio.id;
   lead.nextAction = 'Stüdyo kurulumu başlatıldı; ilk antrenör ve üyeleri ekle';
+  lead.followUpDate = addDaysISO(1);
   saveStudios();
   saveActiveStudio();
   savePilotLeads();
@@ -3135,6 +3172,7 @@ function bind(){
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='add-pilot-lead') return openPilotLeadModal();
     if(action==='advance-pilot-lead') return advancePilotLead(b.dataset.leadId);
+    if(action==='snooze-pilot-lead') return snoozePilotLead(b.dataset.leadId);
     if(action==='mark-pilot-lost') return markPilotLeadLost(b.dataset.leadId);
     if(action==='convert-pilot-lead') return convertPilotLeadToStudio(b.dataset.leadId);
     if(action==='copy-pilot-offer') return copyPilotOffer(b.dataset.leadId);
@@ -3534,6 +3572,7 @@ pilotLeadForm.onsubmit=e=>{
     goal: data.get('goal').trim(),
     stage: data.get('stage'),
     nextAction: data.get('nextAction').trim() || 'İlk görüşmeyi planla',
+    followUpDate: data.get('followUpDate') || todayISO(),
     value: Number(String(data.get('value')).replaceAll('.','').replace(',','.')) || 990
   });
   state.pilotLeads.unshift(lead);

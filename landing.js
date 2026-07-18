@@ -36,6 +36,7 @@
       stage: 'lead',
       nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme mesajı gönder' : 'WhatsApp görüşmesini planla',
       value: leadValueForPackage(packageName),
+      followUpDate: new Date().toISOString().slice(0,10),
       createdAt: new Date().toISOString(),
       source: 'landing'
     };

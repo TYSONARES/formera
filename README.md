@@ -30,6 +30,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Landing başvurusu aynı tarayıcıda Dashboard Pilot CRM’e otomatik lead olarak düşer
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - Kazanılan pilot lead’i tek tuşla stüdyo seçiciye aktarma ve kaybedilen lead’i silmeden işaretleme
+- Pilot CRM takip tarihi: bugün/geciken lead metrikleri ve 2 gün erteleme aksiyonu
 - Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
