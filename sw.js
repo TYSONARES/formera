@@ -11,7 +11,7 @@ const CORE_ASSETS = [
   './icon.svg',
   './assets/formera-logo.svg',
   './assets/formera-favicon.svg',
-  './assets/kettlebell-stage.png',
+  './assets/kettlebell-stage.jpg',
   './404.html'
 ];
 
