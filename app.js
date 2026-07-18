@@ -73,10 +73,17 @@ const starterPilotLeads = [
   {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2490}
 ];
 
+function initialPageFromUrl(){
+  const allowedPages = ['dashboard','members','programs','calendar','finance','reports','team','pilot'];
+  const params = new URLSearchParams(window.location.search);
+  const requestedPage = params.get('page') || window.location.hash.replace('#', '');
+  return allowedPages.includes(requestedPage) ? requestedPage : 'dashboard';
+}
+
 const state = {
   role: 'owner',
   trainerName: 'Ece',
-  page: 'dashboard',
+  page: initialPageFromUrl(),
   calendarDate: todayISO(),
   members: starterMembers.map(normalizeMember),
   finance: starterFinance.map(normalizeFinanceEntry),
@@ -2398,9 +2405,16 @@ function memberDashboard(){
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
+function syncNavState(){
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === state.page);
+  });
+}
+
 function render(){
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
+  syncNavState();
   updateStudioShell();
   updateRoleShell();
   updateBackendShell();

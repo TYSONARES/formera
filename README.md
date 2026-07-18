@@ -27,6 +27,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Premium funnel / ön tanıtım sayfası
 - Yeni Formera logo/favikon sistemi ve optimize edilmiş sinematik fotoğraf/video kullanımı
 - Kurucu pilot başvuru formu: canlı başvuru özeti ve profesyonel WhatsApp mesajına dönüşen ücretsiz lead akışı
+- Landing başvurusu aynı tarayıcıda Dashboard Pilot CRM’e otomatik lead olarak düşer
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama

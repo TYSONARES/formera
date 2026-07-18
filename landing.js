@@ -1,4 +1,5 @@
 (function setupFormeraLeadFunnel(){
+  const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
   const form = document.querySelector('#pilotLeadForm');
   const copyButton = document.querySelector('#copyLeadMessage');
   const status = document.querySelector('#leadStatus');
@@ -9,6 +10,59 @@
   function field(name, fallback='-'){
     const value = new FormData(form).get(name);
     return String(value || '').trim() || fallback;
+  }
+
+  function leadValueForPackage(packageName){
+    if(packageName === 'Studio AI') return 2490;
+    if(packageName === 'Starter') return 790;
+    return 1490;
+  }
+
+  function normalizedPhone(value){
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  function leadPayload(){
+    const packageName = field('package', 'Studio');
+    const timeline = field('timeline', 'Bu hafta');
+    return {
+      id: `landing_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      name: field('name', 'Yeni başvuru'),
+      studio: field('studio', 'Stüdyo adı yok'),
+      city: field('city', 'Şehir yok'),
+      phone: field('phone', ''),
+      members: field('members', '0–50'),
+      goal: `${field('goal', 'Operasyonu toparlamak')} · ${packageName} · ${timeline}`,
+      stage: 'lead',
+      nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme mesajı gönder' : 'WhatsApp görüşmesini planla',
+      value: leadValueForPackage(packageName),
+      createdAt: new Date().toISOString(),
+      source: 'landing'
+    };
+  }
+
+  function saveLeadToDashboard(){
+    const lead = leadPayload();
+    try{
+      const savedLeads = JSON.parse(localStorage.getItem(PILOT_LEAD_STORAGE_KEY) || '[]');
+      const leadPhone = normalizedPhone(lead.phone);
+      const leadStudio = lead.studio.toLocaleLowerCase('tr');
+      const duplicateIndex = savedLeads.findIndex(item => {
+        const samePhone = leadPhone && normalizedPhone(item.phone) === leadPhone;
+        const sameStudio = String(item.studio || '').toLocaleLowerCase('tr') === leadStudio;
+        return samePhone || sameStudio;
+      });
+      if(duplicateIndex >= 0){
+        savedLeads[duplicateIndex] = {...savedLeads[duplicateIndex], ...lead, id: savedLeads[duplicateIndex].id || lead.id};
+      }else{
+        savedLeads.unshift(lead);
+      }
+      localStorage.setItem(PILOT_LEAD_STORAGE_KEY, JSON.stringify(savedLeads));
+      return true;
+    }catch(error){
+      console.warn('Lead dashboard CRM’e kaydedilemedi.', error);
+      return false;
+    }
   }
 
   function leadMessage(){
@@ -54,7 +108,8 @@
     if(!form.reportValidity()) return;
     const message = leadMessage();
     const encodedMessage = encodeURIComponent(message);
-    setStatus('WhatsApp mesajı hazırlandı. Yeni pencerede açılıyor...', 'success');
+    const saved = saveLeadToDashboard();
+    setStatus(saved ? 'WhatsApp mesajı hazırlandı. Lead Dashboard Pilot CRM’e de eklendi.' : 'WhatsApp mesajı hazırlandı. CRM kaydı için Dashboard’u açabilirsin.', 'success');
     try{ navigator.clipboard?.writeText(message); }catch(error){}
     window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
   });
@@ -64,7 +119,8 @@
     const message = leadMessage();
     try{
       await navigator.clipboard.writeText(message);
-      setStatus('Başvuru mesajı kopyalandı. WhatsApp veya DM içinde yapıştırabilirsin.', 'success');
+      const saved = saveLeadToDashboard();
+      setStatus(saved ? 'Başvuru mesajı kopyalandı ve lead Dashboard Pilot CRM’e eklendi.' : 'Başvuru mesajı kopyalandı. WhatsApp veya DM içinde yapıştırabilirsin.', 'success');
     }catch(error){
       setStatus('Kopyalama olmadı. WhatsApp butonunu kullanabilirsin.', 'warning');
     }
