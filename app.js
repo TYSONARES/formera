@@ -2252,6 +2252,25 @@ function pilotNextMoveCard(){
   </div>`;
 }
 
+function pilotLeadStudioId(lead){
+  const studioName = String(lead?.studio || '').toLocaleLowerCase('tr');
+  const existingStudio = state.studios.find(studio => studio.name.toLocaleLowerCase('tr') === studioName);
+  return existingStudio?.id || '';
+}
+
+function pilotLeadActionButtons(lead){
+  const linkedStudioId = pilotLeadStudioId(lead);
+  const stageActions = ['won','lost'].includes(lead.stage)
+    ? ''
+    : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button><button class="mini-button" data-action="mark-pilot-lost" data-lead-id="${lead.id}">Kaybet</button>`;
+  const wonAction = lead.stage === 'won'
+    ? linkedStudioId
+      ? `<button class="mini-button" data-action="select-studio" data-studio-id="${linkedStudioId}">Stüdyoyu aç</button>`
+      : `<button class="mini-button" data-action="convert-pilot-lead" data-lead-id="${lead.id}">Stüdyoya aktar</button>`
+    : '';
+  return `<button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>${stageActions}${wonAction}<button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>`;
+}
+
 function pilotLeadRows(){
   return state.pilotLeads
     .slice()
@@ -2263,9 +2282,7 @@ function pilotLeadRows(){
       <div class="pilot-lead-score"><strong>%${pilotLeadHeat(lead)}</strong><small>Sıcaklık</small></div>
       <div><strong>Sonraki</strong><small>${escapeAttr(lead.nextAction)}</small></div>
       <div class="row-actions">
-        <button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>
-        ${['won','lost'].includes(lead.stage) ? '' : `<button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">İlerle</button>`}
-        <button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>
+        ${pilotLeadActionButtons(lead)}
       </div>
     </div>`).join('') || `<div class="empty-mini">Henüz kurucu pilot lead’i yok.</div>`;
 }
@@ -3003,6 +3020,44 @@ function advancePilotLead(id){
   showToast(`${lead.studio} aşaması ${pilotStageLabel(lead.stage)} olarak güncellendi.`);
 }
 
+function markPilotLeadLost(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  lead.stage = 'lost';
+  lead.nextAction = 'Kayıp nedeni not edildi; 30 gün sonra tekrar temas et';
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} kaybedildi olarak işaretlendi.`);
+}
+
+function convertPilotLeadToStudio(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  const existingStudioId = pilotLeadStudioId(lead);
+  if(existingStudioId){
+    selectStudio(existingStudioId);
+    showToast(`${lead.studio} zaten pilot stüdyo listesinde.`);
+    return;
+  }
+  const studio = normalizeStudio({
+    id: makeId(),
+    name: lead.studio,
+    initials: initialsFromName(lead.studio),
+    location: lead.city ? `${lead.city} · Türkiye` : 'Konum eklenmedi',
+    status: 'Kurulum',
+    phone: lead.phone,
+    whatsapp: lead.phone
+  });
+  state.studios.unshift(studio);
+  state.activeStudioId = studio.id;
+  lead.nextAction = 'Stüdyo kurulumu başlatıldı; ilk antrenör ve üyeleri ekle';
+  saveStudios();
+  saveActiveStudio();
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} pilot stüdyo listesine aktarıldı.`);
+}
+
 function deletePilotLead(id){
   const lead = state.pilotLeads.find(item=>item.id === id);
   if(!lead || !confirm(`${lead.studio} pilot lead'i silinsin mi?`)) return;
@@ -3080,6 +3135,8 @@ function bind(){
     if(action==='select-studio') return selectStudio(b.dataset.studioId);
     if(action==='add-pilot-lead') return openPilotLeadModal();
     if(action==='advance-pilot-lead') return advancePilotLead(b.dataset.leadId);
+    if(action==='mark-pilot-lost') return markPilotLeadLost(b.dataset.leadId);
+    if(action==='convert-pilot-lead') return convertPilotLeadToStudio(b.dataset.leadId);
     if(action==='copy-pilot-offer') return copyPilotOffer(b.dataset.leadId);
     if(action==='delete-pilot-lead') return deletePilotLead(b.dataset.leadId);
     if(action==='cycle-studio') return cycleStudio();
