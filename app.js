@@ -3158,6 +3158,14 @@ function toggleSidebar(){
   openSidebar();
 }
 
+document.addEventListener('click', event=>{
+  const trigger = event.target?.closest?.('[data-action="toggle-sidebar"]');
+  if(!trigger) return;
+  event.preventDefault();
+  event.stopPropagation();
+  toggleSidebar();
+}, true);
+
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
 document.querySelector('#roleSwitch').onclick=()=>{
   if(state.backend.connected){
@@ -3167,7 +3175,6 @@ document.querySelector('#roleSwitch').onclick=()=>{
   state.role = state.role === 'owner' ? 'trainer' : state.role === 'trainer' ? 'member' : 'owner';
   render();
 };
-document.querySelector('.mobile-menu').onclick=toggleSidebar;
 document.querySelector('.sidebar-close')?.addEventListener('click', closeSidebar);
 sidebar?.addEventListener('mouseenter', ()=>{
   if(!isMobileSidebar()) openSidebar();
