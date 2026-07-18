@@ -2170,10 +2170,79 @@ function nextPilotStage(stage){
 function pilotFunnelSummary(){
   const active = state.pilotLeads.filter(lead=>!['won','lost'].includes(lead.stage)).length;
   const won = state.pilotLeads.filter(lead=>lead.stage === 'won').length;
+  const lost = state.pilotLeads.filter(lead=>lead.stage === 'lost').length;
   const pipeline = state.pilotLeads
     .filter(lead=>!['lost'].includes(lead.stage))
     .reduce((sum,lead)=>sum + lead.value, 0);
-  return {active, won, pipeline};
+  const proposal = state.pilotLeads
+    .filter(lead=>lead.stage === 'proposal')
+    .reduce((sum,lead)=>sum + lead.value, 0);
+  const total = state.pilotLeads.length;
+  const closed = won + lost;
+  const conversion = closed ? Math.round((won / closed) * 100) : Math.round((won / Math.max(total, 1)) * 100);
+  return {active, won, lost, pipeline, proposal, total, conversion};
+}
+
+function pilotStageWeight(stage){
+  return {lead:12, demo:30, pilot:56, proposal:78, won:100, lost:0}[stage] || 12;
+}
+
+function pilotLeadHeat(lead){
+  const memberBonus = lead.members === '300+' ? 8 : lead.members === '151–300' ? 6 : lead.members === '51–150' ? 4 : 2;
+  const aiBonus = /ai|yapay|öneri|rapor/i.test(lead.goal || '') ? 5 : 0;
+  const valueBonus = lead.value >= 2400 ? 6 : lead.value >= 1400 ? 4 : 2;
+  return Math.min(100, pilotStageWeight(lead.stage) + memberBonus + aiBonus + valueBonus);
+}
+
+function pilotSuggestedPackage(lead){
+  if(lead.value >= 2400 || lead.members === '151–300' || lead.members === '300+' || /ai|yapay|öneri|rapor/i.test(lead.goal || '')) return 'Studio AI';
+  if(lead.value >= 1400 || lead.members === '51–150') return 'Studio';
+  return 'Starter';
+}
+
+function pilotFunnelRows(){
+  const stages = ['lead','demo','pilot','proposal','won'];
+  const maxCount = Math.max(1, ...stages.map(stage=>state.pilotLeads.filter(lead=>lead.stage === stage).length));
+  return stages.map(stage=>{
+    const leads = state.pilotLeads.filter(lead=>lead.stage === stage);
+    const value = leads.reduce((sum,lead)=>sum + lead.value, 0);
+    const width = Math.max(10, Math.round((leads.length / maxCount) * 100));
+    return `<div class="pilot-funnel-row">
+      <div><strong>${pilotStageLabel(stage)}</strong><small>${leads.length} salon · ${formatCurrency(value)}</small></div>
+      <span class="pilot-funnel-track"><i style="width:${width}%"></i></span>
+    </div>`;
+  }).join('');
+}
+
+function hotPilotLead(){
+  return state.pilotLeads
+    .filter(lead=>!['won','lost'].includes(lead.stage))
+    .slice()
+    .sort((a,b)=>pilotLeadHeat(b) - pilotLeadHeat(a) || b.value - a.value || new Date(b.createdAt) - new Date(a.createdAt))[0];
+}
+
+function pilotNextMoveCard(){
+  const lead = hotPilotLead();
+  if(!lead){
+    return `<div class="pilot-next-empty"><strong>Aktif takip kalmadı.</strong><small>Yeni kurucu pilot başvurusu ekleyerek funnel’ı tekrar doldur.</small></div>`;
+  }
+  const heat = pilotLeadHeat(lead);
+  return `<div class="pilot-next-lead">
+    <div class="pilot-next-head">
+      <div><span class="eyebrow">EN SICAK FIRSAT</span><h3>${escapeAttr(lead.studio)}</h3><p>${escapeAttr(lead.name)} · ${escapeAttr(lead.city)} · ${escapeAttr(lead.members)} üye</p></div>
+      <strong>%${heat}</strong>
+    </div>
+    <div class="pilot-next-grid">
+      <div><span>Aşama</span><strong>${pilotStageLabel(lead.stage)}</strong></div>
+      <div><span>Paket</span><strong>${pilotSuggestedPackage(lead)}</strong></div>
+      <div><span>Aylık değer</span><strong>${formatCurrency(lead.value)}</strong></div>
+    </div>
+    <p class="pilot-next-action">${escapeAttr(lead.nextAction)}</p>
+    <div class="row-actions">
+      <button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklifi kopyala</button>
+      <button class="mini-button" data-action="advance-pilot-lead" data-lead-id="${lead.id}">Aşamayı ilerlet</button>
+    </div>
+  </div>`;
 }
 
 function pilotLeadRows(){
@@ -2183,7 +2252,8 @@ function pilotLeadRows(){
     .map(lead=>`<div class="pilot-lead-row">
       <div><strong>${escapeAttr(lead.studio)}</strong><small>${escapeAttr(lead.name)} · ${escapeAttr(lead.city)} · ${escapeAttr(lead.members)} üye</small></div>
       <span class="status ${pilotStageClass(lead.stage)}">${pilotStageLabel(lead.stage)}</span>
-      <div><strong>${formatCurrency(lead.value)}</strong><small>${escapeAttr(lead.goal)}</small></div>
+      <div><strong>${formatCurrency(lead.value)}</strong><small>${pilotSuggestedPackage(lead)} · ${escapeAttr(lead.goal)}</small></div>
+      <div class="pilot-lead-score"><strong>%${pilotLeadHeat(lead)}</strong><small>Sıcaklık</small></div>
       <div><strong>Sonraki</strong><small>${escapeAttr(lead.nextAction)}</small></div>
       <div class="row-actions">
         <button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>
@@ -2235,12 +2305,22 @@ function pilotPage(){
   const payload = backupPayload();
   const activationScore = pilotActivationScore();
   const funnel = pilotFunnelSummary();
-  return `<div class="welcome"><div><span class="eyebrow">PİLOT ARAÇLARI</span><h1>Yedekleme & demo kontrolü</h1><p>4 salon pilotunda veriyi güvenli taşı, geri yükle ve demo ortamını sıfırla.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
+  return `<div class="welcome"><div><span class="eyebrow">PİLOT SATIŞ ODASI</span><h1>Kurucu pilotları gelire çevir</h1><p>Başvuru, demo, pilot ve teklif aşamalarını tek ekranda takip et; en sıcak fırsata bir sonraki hamleyi uygula.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
     ${metric('Aktif lead',String(funnel.active),`${funnel.won} kazandı`,'◌')}
     ${metric('Pipeline',formatCurrency(funnel.pipeline),'aylık potansiyel','₺')}
-    ${metric('Pilot skor',`%${activationScore}`,activationScore >= 70 ? 'satışa yakın' : 'kurulum sürüyor','⚑',activationScore < 70)}
+    ${metric('Dönüşüm',`%${funnel.conversion}`,`${funnel.proposal ? formatCurrency(funnel.proposal) : 'teklif bekliyor'}`,'↗',funnel.conversion < 30)}
+  </section>
+  <section class="pilot-command-grid">
+    <article class="card pilot-funnel-card">
+      <div class="card-title"><div><h2>Funnel görünümü</h2><p>Başvurudan kazanıma kadar aylık potansiyel</p></div><span class="badge">${funnel.total} lead</span></div>
+      <div class="pilot-funnel-list">${pilotFunnelRows()}</div>
+    </article>
+    <article class="card pilot-next-card">
+      <div class="card-title"><div><h2>Sıradaki satış hamlesi</h2><p>Önceliği en yüksek pilot fırsatı</p></div><span class="badge">%${activationScore} pilot skor</span></div>
+      ${pilotNextMoveCard()}
+    </article>
   </section>
   <section class="dashboard-grid">
     <article class="card pilot-crm-card">

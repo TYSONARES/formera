@@ -28,6 +28,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Yeni Formera logo/favikon sistemi ve optimize edilmiş sinematik fotoğraf/video kullanımı
 - Kurucu pilot başvuru formu: form verisini WhatsApp mesajına dönüştüren ücretsiz lead akışı
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
+- Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
 - Üye yönetimi
