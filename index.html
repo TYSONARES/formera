@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — PT Stüdyoları İçin Operasyon Asistanı</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260718-4" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260718-5" />
   <link rel="icon" href="assets/formera-favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/formera-favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="landing.css?v=20260718-4" />
+  <link rel="stylesheet" href="landing.css?v=20260718-5" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -193,6 +193,11 @@
         <span>Kurucu pilot teklifi</span>
         <h3>30 günlük yönlendirmeli pilot</h3>
         <p>İlk 4 stüdyo için düşük maliyetli kurulum, düzenli geri bildirim ve referans ortaklığı.</p>
+        <div class="pilot-benefits" aria-label="Pilot kazanımları">
+          <div><strong>24 saat</strong><small>İlk kurulum hedefi</small></div>
+          <div><strong>3 rol</strong><small>İşletmeci, PT, üye</small></div>
+          <div><strong>30 gün</strong><small>Ölçülebilir pilot</small></div>
+        </div>
         <form class="lead-form" id="pilotLeadForm">
           <label>Ad soyad<input name="name" required placeholder="Örn. Ömer Yıldız"></label>
           <label>Stüdyo adı<input name="studio" required placeholder="Örn. NorthFit Studio"></label>
@@ -202,7 +207,16 @@
           </div>
           <label>Telefon / WhatsApp<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
           <label>Öncelik<select name="goal"><option>Operasyonu toparlamak</option><option>Antrenör takibini görünür yapmak</option><option>Üye program takibini artırmak</option><option>Gelir-gider ve raporları izlemek</option><option>AI destekli pilot denemek</option></select></label>
-          <button class="primary full" type="submit">Pilot başvurusunu WhatsApp’ta aç</button>
+          <div class="lead-grid">
+            <label>Paket ilgisi<select name="package"><option>Studio</option><option>Starter</option><option>Studio AI</option><option>Emin değilim</option></select></label>
+            <label>Başlama zamanı<select name="timeline"><option>Bu hafta</option><option>1–2 hafta içinde</option><option>Bu ay</option><option>Sadece bilgi almak istiyorum</option></select></label>
+          </div>
+          <div class="lead-preview" aria-live="polite">
+            <span>Başvuru özeti</span>
+            <strong id="leadPreviewTitle">Stüdyo bilgilerini gir, pilot mesajını hazırlayalım.</strong>
+            <small id="leadPreviewMeta">WhatsApp mesajı otomatik profesyonel metne dönüşür.</small>
+          </div>
+          <button class="primary full" type="submit">WhatsApp görüşmesini başlat</button>
           <button class="secondary full" type="button" id="copyLeadMessage">Mesajı kopyala</button>
           <p class="lead-status" id="leadStatus" role="status"></p>
         </form>
@@ -257,7 +271,7 @@
       <a href="#pilot">Kurucu pilot</a>
     </div>
   </footer>
-  <script src="landing.js?v=20260718-4"></script>
-  <script src="pwa.js?v=20260718-4"></script>
+  <script src="landing.js?v=20260718-5"></script>
+  <script src="pwa.js?v=20260718-5"></script>
 </body>
 </html>
