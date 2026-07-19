@@ -251,6 +251,8 @@ const accountSummary = document.querySelector('#accountSummary');
 const accountAlert = document.querySelector('#accountAlert');
 const supabaseModalTitle = document.querySelector('#supabaseModalTitle');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
+const logoutSupabaseButton = document.querySelector('#logoutSupabase');
+const switchSupabaseAccountButton = document.querySelector('#switchSupabaseAccount');
 const togglePasswordButton = document.querySelector('#togglePassword');
 const loginRoleNote = document.querySelector('#loginRoleNote');
 const loginEmailLabel = document.querySelector('#loginEmailLabel');
@@ -1540,6 +1542,9 @@ function updateSupabaseModalMode(){
   if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Giriş ve hesap değiştir';
   if(loginTabs) loginTabs.hidden = adminMode;
   if(supabaseConfigForm) supabaseConfigForm.hidden = !setupMode;
+  if(signupSupabaseButton) signupSupabaseButton.hidden = adminMode;
+  if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
+  if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
     selectedLoginRole = 'owner';
     loginRoleTabs.forEach(tab=>{
