@@ -8,13 +8,13 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — Stüdyo Yönetimi</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260719-3" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260719-4" />
   <link rel="icon" href="assets/formera-favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/formera-favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260719-3" />
+  <link rel="stylesheet" href="styles.css?v=20260719-4" />
 </head>
 <body>
   <div class="app-shell">
@@ -26,16 +26,17 @@
       </a>
 
       <nav class="nav" aria-label="Ana menü">
-        <p class="nav-label">Çalışma alanı</p>
-        <button class="nav-item active" data-page="dashboard"><span>⌂</span> Genel bakış</button>
-        <button class="nav-item" data-page="members"><span>♙</span> Üyeler <b id="memberCount">48</b></button>
-        <button class="nav-item" data-page="programs"><span>▤</span> Programlar</button>
-        <button class="nav-item" data-page="calendar"><span>□</span> Takvim</button>
-        <p class="nav-label">İşletme</p>
-        <button class="nav-item" data-page="finance"><span>◒</span> Finans</button>
-        <button class="nav-item" data-page="reports"><span>↗</span> Raporlar</button>
-        <button class="nav-item" data-page="team"><span>♧</span> Ekip</button>
-        <button class="nav-item" data-page="pilot"><span>⚑</span> Pilot araçları</button>
+        <p class="nav-label" data-studio-nav>Çalışma alanı</p>
+        <button class="nav-item active" data-page="dashboard" data-studio-nav><span>⌂</span> Genel bakış</button>
+        <button class="nav-item" data-page="members" data-studio-nav><span>♙</span> Üyeler <b id="memberCount">48</b></button>
+        <button class="nav-item" data-page="programs" data-studio-nav><span>▤</span> Programlar</button>
+        <button class="nav-item" data-page="calendar" data-studio-nav><span>□</span> Takvim</button>
+        <p class="nav-label" data-studio-nav>İşletme</p>
+        <button class="nav-item" data-page="finance" data-studio-nav><span>◒</span> Finans</button>
+        <button class="nav-item" data-page="reports" data-studio-nav><span>↗</span> Raporlar</button>
+        <button class="nav-item" data-page="team" data-studio-nav><span>♧</span> Ekip</button>
+        <p class="nav-label" data-admin-nav>Formera</p>
+        <button class="nav-item" data-page="pilot" data-admin-nav><span>⚑</span> Admin · Pilot CRM</button>
       </nav>
 
       <div class="studio-card">
@@ -52,6 +53,7 @@
         <label class="search"><span>⌕</span><input placeholder="Üye, program veya işlem ara..." /></label>
         <div class="top-actions">
           <button class="ai-top-button" data-action="ai-assistant" type="button"><span>✦ AI Asistan</span><small>Studio AI</small></button>
+          <button class="backend-pill workspace-pill" id="workspaceSwitch" type="button">Salon paneli</button>
           <button class="backend-pill" id="backendStatus" type="button">Demo mod</button>
           <button class="icon-button" aria-label="Bildirimler">♢<i></i></button>
           <button class="role-switch" id="roleSwitch"><span>İşletmeci</span><small>Üye görünümü</small></button>
@@ -265,7 +267,7 @@
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="pwa.js?v=20260719-3"></script>
-  <script src="app.js?v=20260719-3"></script>
+  <script src="pwa.js?v=20260719-4"></script>
+  <script src="app.js?v=20260719-4"></script>
 </body>
 </html>

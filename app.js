@@ -12,6 +12,7 @@ const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
+const WORKSPACE_MODE_STORAGE_KEY = 'formera_workspace_mode';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -80,10 +81,19 @@ function initialPageFromUrl(){
   return allowedPages.includes(requestedPage) ? requestedPage : 'dashboard';
 }
 
+function initialWorkspaceFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const requestedWorkspace = params.get('workspace');
+  if(requestedWorkspace === 'admin' || params.get('page') === 'pilot') return 'formera';
+  const savedWorkspace = localStorage.getItem(WORKSPACE_MODE_STORAGE_KEY);
+  return savedWorkspace === 'formera' ? 'formera' : 'studio';
+}
+
 const state = {
   role: 'owner',
   trainerName: 'Ece',
   page: initialPageFromUrl(),
+  workspace: initialWorkspaceFromUrl(),
   calendarDate: todayISO(),
   members: starterMembers.map(normalizeMember),
   finance: starterFinance.map(normalizeFinanceEntry),
@@ -1410,6 +1420,9 @@ function updateStudioShell(){
 }
 
 function roleMeta(){
+  if(isFormeraAdmin()){
+    return {label:'Formera Admin', next:'Salon paneli', avatar:'F', avatarImage:''};
+  }
   if(state.role === 'trainer'){
     const trainer = trainerByName(state.trainerName);
     return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName), avatarImage:trainer?.avatarDataUrl || ''};
@@ -1423,6 +1436,7 @@ function roleMeta(){
 }
 
 function roleLabel(role=state.role){
+  if(isFormeraAdmin()) return 'Formera Admin';
   return {owner:'İşletmeci', trainer:'Antrenör', member:'Üye'}[role] || 'Kullanıcı';
 }
 
@@ -1500,17 +1514,23 @@ function updateRoleShell(){
   const meta = roleMeta();
   const roleButton = document.querySelector('#roleSwitch');
   const avatar = document.querySelector('.user-avatar');
+  const workspaceButton = document.querySelector('#workspaceSwitch');
   if(roleButton){
     roleButton.querySelector('span').textContent = meta.label;
-    roleButton.querySelector('small').textContent = state.backend.connected ? 'Canlı rol' : meta.next;
-    roleButton.classList.toggle('locked', state.backend.connected);
-    roleButton.title = state.backend.connected ? 'Canlı modda rol giriş yapan hesaba göre belirlenir.' : 'Demo rolünü değiştir';
+    roleButton.querySelector('small').textContent = isFormeraAdmin() ? 'Satış / pilot kontrolü' : state.backend.connected ? 'Canlı rol' : meta.next;
+    roleButton.classList.toggle('locked', state.backend.connected || isFormeraAdmin());
+    roleButton.title = isFormeraAdmin() ? 'Formera Admin modunda salon rolü kilitlenir.' : state.backend.connected ? 'Canlı modda rol giriş yapan hesaba göre belirlenir.' : 'Demo rolünü değiştir';
+  }
+  if(workspaceButton){
+    workspaceButton.textContent = isFormeraAdmin() ? 'Formera Admin' : 'Salon paneli';
+    workspaceButton.classList.toggle('connected', isFormeraAdmin());
+    workspaceButton.title = isFormeraAdmin() ? 'Formera satış, funnel ve pilot CRM alanı' : 'Salon işletmecisi, antrenör ve üye operasyon alanı';
   }
   setAvatarElement(avatar, meta.avatar, meta.avatarImage);
   const sidebar = document.querySelector('.sidebar');
   const main = document.querySelector('main');
-  if(sidebar) sidebar.style.display = state.role === 'owner' ? '' : 'none';
-  if(main) main.style.gridColumn = state.role === 'owner' ? '' : '1 / -1';
+  if(sidebar) sidebar.style.display = state.role === 'owner' || isFormeraAdmin() ? '' : 'none';
+  if(main) main.style.gridColumn = state.role === 'owner' || isFormeraAdmin() ? '' : '1 / -1';
 }
 
 function metric(title, value, delta, icon, down=false){
@@ -2507,7 +2527,29 @@ function memberDashboard(){
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
+function isFormeraAdmin(){
+  return state.workspace === 'formera';
+}
+
+function normalizeWorkspacePage(){
+  if(isFormeraAdmin()){
+    state.page = 'pilot';
+    return;
+  }
+  if(state.page === 'pilot') state.page = 'dashboard';
+}
+
+function updateWorkspaceNav(){
+  const isAdmin = isFormeraAdmin();
+  document.querySelectorAll('[data-studio-nav]').forEach(item=>item.hidden = isAdmin);
+  document.querySelectorAll('[data-admin-nav]').forEach(item=>item.hidden = !isAdmin);
+  const studioCard = document.querySelector('.studio-card');
+  if(studioCard) studioCard.hidden = isAdmin;
+}
+
 function syncNavState(){
+  normalizeWorkspacePage();
+  updateWorkspaceNav();
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === state.page);
   });
@@ -2521,6 +2563,7 @@ function render(){
   updateRoleShell();
   updateBackendShell();
   updateAccountSummary();
+  if(isFormeraAdmin()){app.innerHTML=pilotPage();return bind()}
   if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
@@ -3268,7 +3311,15 @@ function bind(){
   if(fullBackupImport) fullBackupImport.onchange=e=>importFullBackup(e.target.files[0]);
 }
 
-function navigate(page){state.page=page;document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));if(isMobileSidebar()) closeSidebar();render()}
+function navigate(page){
+  if(page === 'pilot') state.workspace = 'formera';
+  else if(isFormeraAdmin()) state.workspace = 'studio';
+  localStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace);
+  state.page=page;
+  syncNavState();
+  if(isMobileSidebar()) closeSidebar();
+  render();
+}
 function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)}
 
 const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -3418,6 +3469,10 @@ document.addEventListener('click', event=>{
 
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
 document.querySelector('#roleSwitch').onclick=()=>{
+  if(isFormeraAdmin()){
+    showToast('Formera Admin modunda rol değil, satış/pilot kontrol paneli açıktır.');
+    return;
+  }
   if(state.backend.connected){
     showToast('Canlı modda rol, giriş yapan hesaba göre otomatik belirlenir.');
     return;
@@ -3425,6 +3480,13 @@ document.querySelector('#roleSwitch').onclick=()=>{
   state.role = state.role === 'owner' ? 'trainer' : state.role === 'trainer' ? 'member' : 'owner';
   render();
 };
+document.querySelector('#workspaceSwitch')?.addEventListener('click', ()=>{
+  state.workspace = isFormeraAdmin() ? 'studio' : 'formera';
+  state.page = isFormeraAdmin() ? 'pilot' : 'dashboard';
+  localStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace);
+  render();
+  showToast(isFormeraAdmin() ? 'Formera Admin paneli açıldı.' : 'Salon işletmeci paneline dönüldü.');
+});
 document.querySelector('.sidebar-close')?.addEventListener('click', closeSidebar);
 sidebar?.addEventListener('mouseenter', ()=>{
   if(!isMobileSidebar()) openSidebar();
