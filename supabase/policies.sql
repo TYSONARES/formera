@@ -16,7 +16,8 @@ grant select, insert, update, delete on
   public.finance_entries,
   public.signatures,
   public.trainer_tasks,
-  public.member_tasks
+  public.member_tasks,
+  public.pilot_leads
 to authenticated;
 
 create or replace function public.current_profile()
@@ -494,3 +495,11 @@ with check (
       and m.profile_id = public.current_profile_id()
   )
 );
+
+drop policy if exists "pilot_leads_owner_all_same_studio" on public.pilot_leads;
+create policy "pilot_leads_owner_all_same_studio"
+on public.pilot_leads
+for all
+to authenticated
+using (public.is_owner() and studio_id = public.current_studio_id())
+with check (public.is_owner() and studio_id = public.current_studio_id());

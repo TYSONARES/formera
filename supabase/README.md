@@ -24,6 +24,7 @@ Bu işlem şu tabloları oluşturur:
 - signatures
 - trainer_tasks
 - member_tasks
+- pilot_leads
 
 ## 3. RLS politikalarını çalıştır
 
@@ -72,6 +73,10 @@ SQL Editor → New query → `trainer-tasks.sql` içeriğini yapıştır → Run
 Antrenörün üyeye program/görev/beslenme notu göndermesi için:
 
 SQL Editor → New query → `member-tasks.sql` içeriğini yapıştır → Run.
+
+Landing ve Dashboard Pilot CRM lead’lerini canlı hesaba taşımak için:
+
+SQL Editor → New query → `pilot-leads.sql` içeriğini yapıştır → Run.
 
 ## 6. Güvenlik notu
 

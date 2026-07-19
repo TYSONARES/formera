@@ -109,7 +109,8 @@ const state = {
     brandingReady: false,
     accountsReady: false,
     trainerTasksReady: false,
-    memberTasksReady: false
+    memberTasksReady: false,
+    pilotLeadsReady: false
   }
 };
 
@@ -476,12 +477,17 @@ function normalizePilotLead(lead){
     nextAction: lead.nextAction || lead.next_action || 'İlk görüşmeyi planla',
     followUpDate: lead.followUpDate || lead.follow_up_date || todayISO(),
     value: Number(lead.value) || 990,
+    source: lead.source || 'dashboard',
     createdAt: lead.createdAt || lead.created_at || new Date().toISOString()
   };
 }
 
 function savePilotLeads(){
+  state.pilotLeads.forEach(lead=>{
+    if(!isUuid(lead.id)) lead.id = makeId();
+  });
   localStorage.setItem(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
+  syncPilotLeadsToSupabase();
 }
 
 function trainerStats(trainerName){
@@ -883,6 +889,25 @@ function mapRemoteMemberTask(task){
   });
 }
 
+function mapRemotePilotLead(lead){
+  return normalizePilotLead({
+    id: lead.id,
+    studioId: lead.studio_id,
+    name: lead.contact_name,
+    studio: lead.studio_name,
+    city: lead.city,
+    phone: lead.phone,
+    members: lead.members,
+    goal: lead.goal,
+    stage: lead.stage,
+    nextAction: lead.next_action,
+    followUpDate: lead.follow_up_date,
+    value: Number(lead.value),
+    source: lead.source,
+    createdAt: lead.created_at
+  });
+}
+
 async function initSupabase(){
   const config = readSupabaseConfig();
   state.backend.configured = Boolean(config);
@@ -927,6 +952,7 @@ async function loadRemoteData(){
   state.backend.profile = profile;
   state.backend.studioId = profile.studio_id;
   const studioId = profile.studio_id;
+  const localPilotLeads = state.pilotLeads.slice();
 
   const [
     studiosResult,
@@ -938,7 +964,8 @@ async function loadRemoteData(){
     financeResult,
     signaturesResult,
     trainerTasksResult,
-    memberTasksResult
+    memberTasksResult,
+    pilotLeadsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -949,14 +976,17 @@ async function loadRemoteData(){
     db.from('finance_entries').select('*').eq('studio_id', studioId).order('entry_date', {ascending:false}),
     db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false}),
     db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
-    db.from('member_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
+    db.from('member_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('pilot_leads').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
   const memberTaskTableMissing = Boolean(memberTasksResult.error && (memberTasksResult.error.code === '42P01' || String(memberTasksResult.error.message || '').includes('member_tasks')));
+  const pilotLeadTableMissing = Boolean(pilotLeadsResult.error && (pilotLeadsResult.error.code === '42P01' || String(pilotLeadsResult.error.message || '').includes('pilot_leads')));
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult].filter(Boolean).find(result=>result.error);
+  state.backend.pilotLeadsReady = !pilotLeadTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
@@ -990,6 +1020,8 @@ async function loadRemoteData(){
   state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
   state.trainerTasks = taskTableMissing ? state.trainerTasks : (trainerTasksResult.data || []).map(mapRemoteTrainerTask);
   state.memberTasks = memberTaskTableMissing ? state.memberTasks : (memberTasksResult.data || []).map(mapRemoteMemberTask);
+  const remotePilotLeads = (pilotLeadsResult.data || []).map(mapRemotePilotLead);
+  state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length ? remotePilotLeads : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
   if(profile.role === 'member') state.page = 'dashboard';
@@ -1309,6 +1341,27 @@ function syncMemberTasksToSupabase(){
     due_date: task.dueDate,
     status: task.status,
     completed_at: task.completedAt
+  })));
+}
+
+function syncPilotLeadsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.pilotLeadsReady)) return;
+  syncRemote('pilot_leads', state.pilotLeads.map(lead=>({
+    id: lead.id,
+    studio_id: studioId,
+    contact_name: lead.name,
+    studio_name: lead.studio,
+    city: lead.city,
+    phone: lead.phone || null,
+    members: lead.members,
+    goal: lead.goal,
+    stage: lead.stage,
+    next_action: lead.nextAction,
+    follow_up_date: lead.followUpDate,
+    value: lead.value,
+    source: lead.source || 'dashboard',
+    created_at: lead.createdAt
   })));
 }
 
@@ -3098,6 +3151,7 @@ function convertPilotLeadToStudio(id){
 function deletePilotLead(id){
   const lead = state.pilotLeads.find(item=>item.id === id);
   if(!lead || !confirm(`${lead.studio} pilot lead'i silinsin mi?`)) return;
+  deleteRemoteRow('pilot_leads', id);
   state.pilotLeads = state.pilotLeads.filter(item=>item.id !== id);
   savePilotLeads();
   render();

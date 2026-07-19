@@ -32,6 +32,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - Kazanılan pilot lead’i tek tuşla stüdyo seçiciye aktarma ve kaybedilen lead’i silmeden işaretleme
 - Pilot CRM takip tarihi: bugün/geciken lead metrikleri ve 2 gün erteleme aksiyonu
+- Pilot CRM Supabase hazırlığı: canlı hesapta owner’a özel lead senkronizasyonu
 - Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
@@ -76,6 +77,8 @@ Gerçek antrenör/üye girişleri için ayrıca `supabase/role-accounts.sql` dos
 İşletmecinin antrenörlere görev/öneri göndermesi ve antrenörlerin kendi görevlerini tamamlandı işaretlemesi için `supabase/trainer-tasks.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
 Antrenörün üyeye antrenman görevi, takip görevi veya beslenme notu göndermesi için `supabase/member-tasks.sql` dosyasını SQL Editor’da bir kez çalıştırın.
+
+Landing ve Dashboard Pilot CRM başvurularını canlı hesapta saklamak için `supabase/pilot-leads.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
 `supabase/policies.sql` işletmeciyi üst yetkili bırakır: işletmeci tüm stüdyo verisini görebilir/yönetebilir; antrenör kendi üyeleriyle, üye de kendi verileriyle sınırlandırılır.
 

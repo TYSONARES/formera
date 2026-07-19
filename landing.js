@@ -46,7 +46,7 @@
     const packageName = selectedPackage();
     const timeline = field('timeline', 'Bu hafta');
     return {
-      id: `landing_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `landing_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       name: field('name', 'Yeni başvuru'),
       studio: field('studio', 'Stüdyo adı yok'),
       city: field('city', 'Şehir yok'),
