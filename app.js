@@ -2364,6 +2364,12 @@ function pilotLeadRows(){
     </div>`).join('') || `<div class="empty-mini">Henüz kurucu pilot lead’i yok.</div>`;
 }
 
+function pilotCrmMode(){
+  if(!state.backend.connected) return {label:'Tarayıcı kaydı', note:'Demo modda lead’ler bu cihazda saklanır.'};
+  if(state.backend.pilotLeadsReady) return {label:'Canlı CRM', note:'Lead’ler Supabase pilot_leads tablosuna senkronlanır.'};
+  return {label:'SQL bekliyor', note:'Canlı CRM için supabase/pilot-leads.sql dosyasını çalıştır.'};
+}
+
 function studioContactRows(){
   const studio = activeStudio();
   const instagram = studio.instagram ? (studio.instagram.startsWith('@') ? studio.instagram : `@${studio.instagram}`) : '';
@@ -2406,6 +2412,7 @@ function pilotPage(){
   const payload = backupPayload();
   const activationScore = pilotActivationScore();
   const funnel = pilotFunnelSummary();
+  const crmMode = pilotCrmMode();
   return `<div class="welcome"><div><span class="eyebrow">PİLOT SATIŞ ODASI</span><h1>Kurucu pilotları gelire çevir</h1><p>Başvuru, demo, pilot ve teklif aşamalarını tek ekranda takip et; en sıcak fırsata bir sonraki hamleyi uygula.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
@@ -2426,7 +2433,7 @@ function pilotPage(){
   </section>
   <section class="dashboard-grid">
     <article class="card pilot-crm-card">
-      <div class="card-title"><div><h2>Kurucu pilot CRM</h2><p>Başvuru → demo → pilot → teklif akışını takip et</p></div><button class="secondary" data-action="add-pilot-lead">+ Lead ekle</button></div>
+      <div class="card-title"><div><h2>Kurucu pilot CRM</h2><p>Başvuru → demo → pilot → teklif akışını takip et · ${crmMode.note}</p></div><div class="row-actions"><span class="badge">${crmMode.label}</span><button class="secondary" data-action="add-pilot-lead">+ Lead ekle</button></div></div>
       <div class="pilot-lead-list">${pilotLeadRows()}</div>
     </article>
     <article class="card pilot-plan-card">
