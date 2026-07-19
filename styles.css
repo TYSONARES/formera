@@ -65,6 +65,7 @@
 .ai-suggestion-list{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}
 .ai-light{background:#f8f9f4!important;border-color:#eef0e8!important}
 .ai-upgrade-note{background:#fff5e5;border:1px solid #f0d5a9;color:#7b531c;border-radius:13px;padding:12px;margin-top:13px;font-size:12px;line-height:1.5}
+[hidden]{display:none!important}
 .login-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#f8f9f4;border:1px solid var(--line);border-radius:14px;padding:6px;margin:-4px 0 16px}
 .login-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 8px;font:800 12px "DM Sans";color:var(--muted);cursor:pointer}
 .login-tabs button.active{background:#151712;color:#fff;box-shadow:0 8px 18px rgba(15,17,12,.12)}

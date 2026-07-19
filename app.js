@@ -88,6 +88,11 @@ function requestedAdminAccess(){
   return params.get('formera_admin') === '1' || window.location.hash === '#formera-admin';
 }
 
+function requestedSupabaseSetup(){
+  const params = new URLSearchParams(window.location.search);
+  return canAccessFormeraAdmin() && (params.get('formera_setup') === '1' || window.location.hash === '#formera-setup');
+}
+
 function canAccessFormeraAdmin(){
   try{
     if(requestedAdminAccess()){
@@ -724,9 +729,9 @@ function setSupabaseClientFromConfig(config){
 
 async function ensureSupabaseClient(){
   if(state.backend.client) return true;
-  const config = currentSupabaseConfigFromForm() || readSupabaseConfig();
+  const config = readSupabaseConfig() || (requestedSupabaseSetup() ? currentSupabaseConfigFromForm() : null);
   if(!config){
-    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
+    notify('Canlı giriş bağlantısı henüz hazırlanmadı. Kurucu teknik ayar linkinden bağlantıyı bir kez kaydet.', 'warning');
     return false;
   }
   return setSupabaseClientFromConfig(config);
@@ -1531,8 +1536,10 @@ function setLoginRole(role){
 
 function updateSupabaseModalMode(){
   const adminMode = isFormeraAdmin();
+  const setupMode = requestedSupabaseSetup();
   if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Giriş ve hesap değiştir';
   if(loginTabs) loginTabs.hidden = adminMode;
+  if(supabaseConfigForm) supabaseConfigForm.hidden = !setupMode;
   if(adminMode){
     selectedLoginRole = 'owner';
     loginRoleTabs.forEach(tab=>{
@@ -1541,11 +1548,15 @@ function updateSupabaseModalMode(){
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     if(loginRoleNote) loginRoleNote.textContent = 'Bu giriş sadece kurucu/admin ekibi içindir. Salon müşterileri bu panele normal akışta erişmez.';
+    if(setupMode && loginRoleNote) loginRoleNote.textContent = 'Kurucu teknik kurulum modu açık. Bağlantıyı bir kez kaydettikten sonra normal gizli admin linkinden giriş yap.';
     if(loginEmailLabel){
       const input = loginEmailLabel.querySelector('input');
       loginEmailLabel.childNodes[0].nodeValue = 'Formera admin e-postası';
       if(input) input.placeholder = 'admin@email.com';
     }
+  }else if(loginRoleNote){
+    const meta = loginRoleMeta();
+    loginRoleNote.textContent = meta.note;
   }
 }
 
@@ -3840,6 +3851,10 @@ document.querySelectorAll('.modal').forEach(modal=>{
 });
 document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async event=>{
   event.preventDefault();
+  if(!requestedSupabaseSetup()){
+    notify('Bağlantı ayarı sadece kurucu teknik kurulum linkinden değiştirilebilir.', 'warning');
+    return;
+  }
   localStorage.removeItem(SUPABASE_CONFIG_STORAGE_KEY);
   await signOutSupabase();
   state.backend.configured = false;
@@ -3910,6 +3925,10 @@ document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
 
 supabaseConfigForm?.addEventListener('submit', async event=>{
   event.preventDefault();
+  if(!requestedSupabaseSetup()){
+    notify('Bağlantı ayarı sadece kurucu teknik kurulum linkinden değiştirilebilir.', 'warning');
+    return;
+  }
   const config = currentSupabaseConfigFromForm();
   if(!config){
     notify('Supabase URL ve anon key alanlarını doldur.', 'warning');

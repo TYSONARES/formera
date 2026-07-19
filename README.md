@@ -38,6 +38,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Formera Admin kapısı public arayüzden gizlendi; sadece özel admin URL oturumunda görünür
 - Admin giriş penceresi salon girişinden ayrıldı; gizli admin oturumunda işletme/antrenör/üye sekmeleri gösterilmez
 - Supabase bağlantı kaydı sertleştirildi; giriş anında ekrandaki URL/key bilgisi de otomatik kullanılır
+- Supabase teknik bağlantı alanları normal/admin giriş ekranından kaldırıldı; sadece özel kurucu kurulum parametresiyle açılır
 - Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek
