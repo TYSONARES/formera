@@ -244,10 +244,12 @@ const supabaseConfigForm = document.querySelector('#supabaseConfigForm');
 const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
 const accountSummary = document.querySelector('#accountSummary');
 const accountAlert = document.querySelector('#accountAlert');
+const supabaseModalTitle = document.querySelector('#supabaseModalTitle');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
 const togglePasswordButton = document.querySelector('#togglePassword');
 const loginRoleNote = document.querySelector('#loginRoleNote');
 const loginEmailLabel = document.querySelector('#loginEmailLabel');
+const loginTabs = document.querySelector('#loginTabs');
 const loginRoleTabs = document.querySelectorAll('[data-login-role]');
 let signaturePadReady = false;
 let signatureDrawing = false;
@@ -685,10 +687,49 @@ function readSupabaseConfig(){
 }
 
 function writeSupabaseConfig(config){
-  localStorage.setItem(SUPABASE_CONFIG_STORAGE_KEY, JSON.stringify({
-    url: String(config.url || '').trim(),
-    anonKey: String(config.anonKey || '').trim()
-  }));
+  try{
+    localStorage.setItem(SUPABASE_CONFIG_STORAGE_KEY, JSON.stringify({
+      url: String(config.url || '').trim(),
+      anonKey: String(config.anonKey || '').trim()
+    }));
+  }catch(error){
+    console.warn('Supabase ayarı tarayıcıya kaydedilemedi.', error);
+  }
+}
+
+function currentSupabaseConfigFromForm(){
+  if(!supabaseConfigForm) return null;
+  const url = String(supabaseConfigForm.elements.url?.value || '').trim();
+  const anonKey = String(supabaseConfigForm.elements.anonKey?.value || '').trim();
+  return url && anonKey ? {url, anonKey} : null;
+}
+
+function setSupabaseClientFromConfig(config){
+  if(!config?.url || !config?.anonKey) return false;
+  if(!window.supabase?.createClient){
+    state.backend.error = 'Supabase kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.';
+    state.backend.configured = Boolean(config);
+    updateBackendShell();
+    notify(state.backend.error, 'error');
+    return false;
+  }
+  writeSupabaseConfig(config);
+  state.backend.configured = true;
+  state.backend.error = '';
+  state.backend.client = window.supabase.createClient(config.url, config.anonKey);
+  updateBackendShell();
+  updateAccountSummary();
+  return true;
+}
+
+async function ensureSupabaseClient(){
+  if(state.backend.client) return true;
+  const config = currentSupabaseConfigFromForm() || readSupabaseConfig();
+  if(!config){
+    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
+    return false;
+  }
+  return setSupabaseClientFromConfig(config);
 }
 
 function isUuid(value){
@@ -942,12 +983,7 @@ async function initSupabase(){
   state.backend.configured = Boolean(config);
   updateBackendShell();
   if(!config) return;
-  if(!window.supabase?.createClient){
-    state.backend.error = 'Supabase kütüphanesi yüklenemedi.';
-    updateBackendShell();
-    return;
-  }
-  state.backend.client = window.supabase.createClient(config.url, config.anonKey);
+  if(!setSupabaseClientFromConfig(config)) return;
   const {data, error} = await state.backend.client.auth.getSession();
   if(error) return remoteError(error, 'Oturum okunamadı.');
   state.backend.user = data.session?.user || null;
@@ -1052,6 +1088,11 @@ async function loadRemoteData(){
   const remotePilotLeads = (pilotLeadsResult.data || []).map(mapRemotePilotLead);
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length ? remotePilotLeads : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
+  if(state.workspace === 'formera' && state.role !== 'owner'){
+    state.workspace = 'studio';
+    state.page = 'dashboard';
+    notify('Formera Admin alanı için işletme/owner yetkili hesapla giriş gerekir.', 'warning');
+  }
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
   if(profile.role === 'member') state.page = 'dashboard';
   state.backend.connected = true;
@@ -1081,7 +1122,8 @@ function updateBackendShell(){
 
 function openSupabaseModal(){
   clearAccountMessage();
-  setLoginRole(selectedLoginRole);
+  setLoginRole(isFormeraAdmin() ? 'owner' : selectedLoginRole);
+  updateSupabaseModalMode();
   const config = readSupabaseConfig();
   if(config && supabaseConfigForm){
     supabaseConfigForm.elements.url.value = config.url || '';
@@ -1096,13 +1138,7 @@ function openSupabaseModal(){
 }
 
 async function signInSupabase(email, password){
-  if(!state.backend.client){
-    await initSupabase();
-  }
-  if(!state.backend.client){
-    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
-    return;
-  }
+  if(!(await ensureSupabaseClient())) return;
   state.backend.loading = true;
   setAccountBusy(true, 'Giriş kontrol ediliyor...');
   updateBackendShell();
@@ -1122,13 +1158,7 @@ async function signInSupabase(email, password){
 }
 
 async function signUpSupabase(email, password){
-  if(!state.backend.client){
-    await initSupabase();
-  }
-  if(!state.backend.client){
-    notify('Önce Supabase URL ve anon key kaydet.', 'warning');
-    return;
-  }
+  if(!(await ensureSupabaseClient())) return;
   state.backend.loading = true;
   setAccountBusy(true, 'Hesap oluşturuluyor...');
   updateBackendShell();
@@ -1499,6 +1529,26 @@ function setLoginRole(role){
   }
 }
 
+function updateSupabaseModalMode(){
+  const adminMode = isFormeraAdmin();
+  if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Giriş ve hesap değiştir';
+  if(loginTabs) loginTabs.hidden = adminMode;
+  if(adminMode){
+    selectedLoginRole = 'owner';
+    loginRoleTabs.forEach(tab=>{
+      const active = tab.dataset.loginRole === 'owner';
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if(loginRoleNote) loginRoleNote.textContent = 'Bu giriş sadece kurucu/admin ekibi içindir. Salon müşterileri bu panele normal akışta erişmez.';
+    if(loginEmailLabel){
+      const input = loginEmailLabel.querySelector('input');
+      loginEmailLabel.childNodes[0].nodeValue = 'Formera admin e-postası';
+      if(input) input.placeholder = 'admin@email.com';
+    }
+  }
+}
+
 function accountMeta(){
   const profile = state.backend.profile;
   const email = state.backend.user?.email || profile?.email || '';
@@ -1517,7 +1567,9 @@ function accountMeta(){
   }
   return {
     title: state.backend.configured ? 'Giriş bekleniyor' : 'Demo mod',
-    detail: state.backend.configured ? 'İşletmeci, antrenör veya üye hesabıyla giriş yap.' : 'Canlı veri bağlantısı henüz ayarlanmadı.',
+    detail: isFormeraAdmin()
+      ? 'Kurucu/admin hesabıyla giriş yap.'
+      : state.backend.configured ? 'İşletmeci, antrenör veya üye hesabıyla giriş yap.' : 'Canlı veri bağlantısı henüz ayarlanmadı.',
     initials: '?',
     image: ''
   };
@@ -3792,6 +3844,9 @@ document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async 
   await signOutSupabase();
   state.backend.configured = false;
   state.backend.client = null;
+  state.backend.error = '';
+  if(supabaseConfigForm) supabaseConfigForm.reset();
+  clearAccountMessage();
   updateBackendShell();
   updateAccountSummary();
   notify('Supabase bağlantı ayarı temizlendi.', 'success');
@@ -3855,12 +3910,16 @@ document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
 
 supabaseConfigForm?.addEventListener('submit', async event=>{
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
-  writeSupabaseConfig({url:data.get('url'), anonKey:data.get('anonKey')});
+  const config = currentSupabaseConfigFromForm();
+  if(!config){
+    notify('Supabase URL ve anon key alanlarını doldur.', 'warning');
+    return;
+  }
   state.backend.client = null;
   state.backend.connected = false;
-  await initSupabase();
-  notify('Supabase ayarları kaydedildi.', 'success');
+  if(setSupabaseClientFromConfig(config)){
+    notify('Bağlantı kaydedildi. Şimdi e-posta ve şifreyle giriş yapabilirsin.', 'success');
+  }
 });
 
 supabaseAuthForm?.addEventListener('submit', async event=>{
