@@ -5,6 +5,7 @@
   const status = document.querySelector('#leadStatus');
   const previewTitle = document.querySelector('#leadPreviewTitle');
   const previewMeta = document.querySelector('#leadPreviewMeta');
+  const previewRecommendation = document.querySelector('#leadPreviewRecommendation');
   if(!form) return;
 
   function field(name, fallback='-'){
@@ -18,12 +19,31 @@
     return 1490;
   }
 
+  function recommendedPackage(){
+    const members = field('members', '0–50');
+    const goal = field('goal', 'Operasyonu toparlamak');
+    if(members === '151–300' || members === '300+' || /ai|yapay|rapor|gelir|gider/i.test(goal)) return 'Studio AI';
+    if(members === '51–150' || /antrenör|program|takip/i.test(goal)) return 'Studio';
+    return 'Starter';
+  }
+
+  function selectedPackage(){
+    const packageName = field('package', 'Studio');
+    return packageName === 'Emin değilim' ? recommendedPackage() : packageName;
+  }
+
+  function packageDecisionLabel(){
+    const packageName = field('package', 'Studio');
+    const suggested = recommendedPackage();
+    return packageName === 'Emin değilim' ? `Emin değilim · öneri: ${suggested}` : `${packageName} · öneri: ${suggested}`;
+  }
+
   function normalizedPhone(value){
     return String(value || '').replace(/\D/g, '');
   }
 
   function leadPayload(){
-    const packageName = field('package', 'Studio');
+    const packageName = selectedPackage();
     const timeline = field('timeline', 'Bu hafta');
     return {
       id: `landing_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -32,7 +52,7 @@
       city: field('city', 'Şehir yok'),
       phone: field('phone', ''),
       members: field('members', '0–50'),
-      goal: `${field('goal', 'Operasyonu toparlamak')} · ${packageName} · ${timeline}`,
+      goal: `${field('goal', 'Operasyonu toparlamak')} · ${packageDecisionLabel()} · ${timeline}`,
       stage: 'lead',
       nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme mesajı gönder' : 'WhatsApp görüşmesini planla',
       value: leadValueForPackage(packageName),
@@ -68,6 +88,8 @@
 
   function leadMessage(){
     const packageName = field('package', 'Studio');
+    const suggestedPackage = recommendedPackage();
+    const decisionPackage = selectedPackage();
     const timeline = field('timeline', 'Bu hafta');
     return [
       'Merhaba, Formera kurucu pilot programı için kısa bir görüşme talep ediyorum.',
@@ -79,10 +101,11 @@
       `Telefon / WhatsApp: ${field('phone')}`,
       `Öncelik: ${field('goal')}`,
       `Paket ilgisi: ${packageName}`,
+      `Formera önerisi: ${suggestedPackage}`,
       `Başlama zamanı: ${timeline}`,
       '',
       '30 günlük pilotta özellikle işletmeci paneli, antrenör görevleri, üye program takibi ve haftalık rapor akışını görmek istiyorum.',
-      packageName === 'Studio AI' ? 'AI öneriler ve sesli asistan katmanı hakkında da bilgi almak isterim.' : 'Uygunsa demo dashboard üzerinden kısa bir kurulum görüşmesi planlayalım.',
+      decisionPackage === 'Studio AI' ? 'AI öneriler ve sesli asistan katmanı hakkında da bilgi almak isterim.' : 'Uygunsa demo dashboard üzerinden kısa bir kurulum görüşmesi planlayalım.',
       '',
       'Kaynak: Formera ön tanıtım sayfası'
     ].join('\n');
@@ -99,9 +122,13 @@
     const studio = field('studio', 'Stüdyo adı bekleniyor');
     const members = field('members', '0–50');
     const goal = field('goal', 'Operasyonu toparlamak');
-    const packageName = field('package', 'Studio');
+    const packageName = selectedPackage();
+    const suggestedPackage = recommendedPackage();
     previewTitle.textContent = `${studio} · ${packageName} pilot ilgisi`;
     previewMeta.textContent = `${members} üye · ${goal} · ${field('timeline', 'Bu hafta')}`;
+    if(previewRecommendation){
+      previewRecommendation.textContent = `Önerilen paket: ${suggestedPackage} · tahmini kurucu fiyat: ${leadValueForPackage(suggestedPackage).toLocaleString('tr-TR')} TL / ay`;
+    }
   }
 
   form.addEventListener('submit', event => {

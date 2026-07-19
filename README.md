@@ -28,6 +28,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Yeni Formera logo/favikon sistemi ve optimize edilmiş sinematik fotoğraf/video kullanımı
 - Kurucu pilot başvuru formu: canlı başvuru özeti ve profesyonel WhatsApp mesajına dönüşen ücretsiz lead akışı
 - Landing başvurusu aynı tarayıcıda Dashboard Pilot CRM’e otomatik lead olarak düşer
+- Landing paket önerici: üye sayısı ve önceliğe göre Starter / Studio / Studio AI yönlendirmesi
 - Kurucu pilot CRM: başvuru, demo, pilot, teklif ve kazanım aşamalarını takip etme
 - Kazanılan pilot lead’i tek tuşla stüdyo seçiciye aktarma ve kaybedilen lead’i silmeden işaretleme
 - Pilot CRM takip tarihi: bugün/geciken lead metrikleri ve 2 gün erteleme aksiyonu
