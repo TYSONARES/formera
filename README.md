@@ -35,6 +35,7 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 - Pilot CRM Supabase hazırlığı: canlı hesapta owner’a özel lead senkronizasyonu
 - Pilot CRM durum etiketi: Tarayıcı kaydı / SQL bekliyor / Canlı CRM görünümü
 - Salon paneli ile Formera Admin ayrımı: işletmeci operasyon ekranı ve kurucu pilot/funnel ekranı ayrı çalışma alanları
+- Formera Admin kapısı public arayüzden gizlendi; sadece özel admin URL oturumunda görünür
 - Pilot satış odası: funnel görünümü, en sıcak lead, paket önerisi ve sonraki satış hamlesi
 - Kurucu pilot teklif metni: CRM lead'ine göre WhatsApp teklif metni kopyalama
 - PWA desteği: ana ekrana eklenebilir mobil web uygulaması, manifest ve temel offline önbellek

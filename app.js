@@ -13,6 +13,7 @@ const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
 const WORKSPACE_MODE_STORAGE_KEY = 'formera_workspace_mode';
+const ADMIN_ACCESS_STORAGE_KEY = 'formera_admin_access';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -78,15 +79,33 @@ function initialPageFromUrl(){
   const allowedPages = ['dashboard','members','programs','calendar','finance','reports','team','pilot'];
   const params = new URLSearchParams(window.location.search);
   const requestedPage = params.get('page') || window.location.hash.replace('#', '');
+  if(requestedPage === 'pilot' && !canAccessFormeraAdmin()) return 'dashboard';
   return allowedPages.includes(requestedPage) ? requestedPage : 'dashboard';
+}
+
+function requestedAdminAccess(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('formera_admin') === '1' || window.location.hash === '#formera-admin';
+}
+
+function canAccessFormeraAdmin(){
+  try{
+    if(requestedAdminAccess()){
+      sessionStorage.setItem(ADMIN_ACCESS_STORAGE_KEY, 'true');
+      return true;
+    }
+    return sessionStorage.getItem(ADMIN_ACCESS_STORAGE_KEY) === 'true';
+  }catch(error){
+    return requestedAdminAccess();
+  }
 }
 
 function initialWorkspaceFromUrl(){
   const params = new URLSearchParams(window.location.search);
   const requestedWorkspace = params.get('workspace');
-  if(requestedWorkspace === 'admin' || params.get('page') === 'pilot') return 'formera';
-  const savedWorkspace = localStorage.getItem(WORKSPACE_MODE_STORAGE_KEY);
-  return savedWorkspace === 'formera' ? 'formera' : 'studio';
+  if(canAccessFormeraAdmin() && (requestedWorkspace === 'admin' || params.get('page') === 'pilot' || requestedAdminAccess())) return 'formera';
+  try{ localStorage.removeItem(WORKSPACE_MODE_STORAGE_KEY); }catch(error){}
+  return 'studio';
 }
 
 const state = {
@@ -1522,6 +1541,7 @@ function updateRoleShell(){
     roleButton.title = isFormeraAdmin() ? 'Formera Admin modunda salon rolü kilitlenir.' : state.backend.connected ? 'Canlı modda rol giriş yapan hesaba göre belirlenir.' : 'Demo rolünü değiştir';
   }
   if(workspaceButton){
+    workspaceButton.hidden = !canAccessFormeraAdmin();
     workspaceButton.textContent = isFormeraAdmin() ? 'Formera Admin' : 'Salon paneli';
     workspaceButton.classList.toggle('connected', isFormeraAdmin());
     workspaceButton.title = isFormeraAdmin() ? 'Formera satış, funnel ve pilot CRM alanı' : 'Salon işletmecisi, antrenör ve üye operasyon alanı';
@@ -2528,10 +2548,13 @@ function memberDashboard(){
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
 function isFormeraAdmin(){
-  return state.workspace === 'formera';
+  return state.workspace === 'formera' && canAccessFormeraAdmin();
 }
 
 function normalizeWorkspacePage(){
+  if(state.workspace === 'formera' && !canAccessFormeraAdmin()){
+    state.workspace = 'studio';
+  }
   if(isFormeraAdmin()){
     state.page = 'pilot';
     return;
@@ -2542,7 +2565,7 @@ function normalizeWorkspacePage(){
 function updateWorkspaceNav(){
   const isAdmin = isFormeraAdmin();
   document.querySelectorAll('[data-studio-nav]').forEach(item=>item.hidden = isAdmin);
-  document.querySelectorAll('[data-admin-nav]').forEach(item=>item.hidden = !isAdmin);
+  document.querySelectorAll('[data-admin-nav]').forEach(item=>item.hidden = !isAdmin || !canAccessFormeraAdmin());
   const studioCard = document.querySelector('.studio-card');
   if(studioCard) studioCard.hidden = isAdmin;
 }
@@ -3312,9 +3335,15 @@ function bind(){
 }
 
 function navigate(page){
-  if(page === 'pilot') state.workspace = 'formera';
+  if(page === 'pilot' && canAccessFormeraAdmin()) state.workspace = 'formera';
+  else if(page === 'pilot'){
+    state.workspace = 'studio';
+    state.page = 'dashboard';
+    showToast('Formera Admin alanı özel erişim linkiyle açılır.');
+    return render();
+  }
   else if(isFormeraAdmin()) state.workspace = 'studio';
-  localStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace);
+  try{ sessionStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace); }catch(error){}
   state.page=page;
   syncNavState();
   if(isMobileSidebar()) closeSidebar();
@@ -3481,9 +3510,13 @@ document.querySelector('#roleSwitch').onclick=()=>{
   render();
 };
 document.querySelector('#workspaceSwitch')?.addEventListener('click', ()=>{
+  if(!canAccessFormeraAdmin()){
+    showToast('Formera Admin alanı özel erişim linkiyle açılır.');
+    return;
+  }
   state.workspace = isFormeraAdmin() ? 'studio' : 'formera';
   state.page = isFormeraAdmin() ? 'pilot' : 'dashboard';
-  localStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace);
+  try{ sessionStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, state.workspace); }catch(error){}
   render();
   showToast(isFormeraAdmin() ? 'Formera Admin paneli açıldı.' : 'Salon işletmeci paneline dönüldü.');
 });
