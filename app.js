@@ -1489,11 +1489,9 @@ async function deleteRemoteRow(table, id){
 function updateStudioShell(){
   const studio = activeStudio();
   const avatar = document.querySelector('#studioAvatar');
-  const brandMark = document.querySelector('.brand-mark');
   const name = document.querySelector('#studioName');
   const location = document.querySelector('#studioLocation');
   setAvatarElement(avatar, studio.initials, studio.logoDataUrl);
-  setAvatarElement(brandMark, 'F', studio.logoDataUrl);
   if(name) name.textContent = studio.name;
   if(location) location.textContent = studio.location;
   document.documentElement.style.setProperty('--acid', studio.accentColor || '#d9ff64');
