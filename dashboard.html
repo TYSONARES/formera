@@ -8,13 +8,13 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — Stüdyo Yönetimi</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260720-5" />
-  <link rel="icon" href="assets/formera-favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="assets/formera-favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260720-6" />
+  <link rel="icon" href="assets/formera-favicon.svg?v=20260720-6" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/formera-favicon.svg?v=20260720-6" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260720-5" />
+  <link rel="stylesheet" href="styles.css?v=20260720-6" />
 </head>
 <body>
   <div class="app-shell">
@@ -36,7 +36,7 @@
         <button class="nav-item" data-page="reports" data-studio-nav><span>↗</span> Raporlar</button>
         <button class="nav-item" data-page="team" data-studio-nav><span>♧</span> Ekip</button>
         <p class="nav-label" data-admin-nav>Formera</p>
-        <button class="nav-item" data-page="pilot" data-admin-nav><span>⚑</span> Admin · Pilot CRM</button>
+        <button class="nav-item" data-page="pilot" data-admin-nav><span>⚑</span> Admin · Pilot takibi</button>
       </nav>
 
       <div class="studio-card">
@@ -150,7 +150,7 @@
   </dialog>
   <dialog class="modal" id="pilotLeadModal">
     <form method="dialog" id="pilotLeadForm">
-      <div class="modal-head"><div><span class="eyebrow">PİLOT CRM</span><h2>Kurucu pilot başvurusu ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="modal-head"><div><span class="eyebrow">PİLOT ADAYI</span><h2>Pilot adayı ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <label>Yetkili adı<input name="name" required placeholder="Örn. Ayhan Demir"></label>
       <label>Stüdyo adı<input name="studio" required placeholder="Örn. CoreLab PT"></label>
       <div class="form-grid"><label>Şehir<input name="city" placeholder="İstanbul"></label><label>Telefon / WhatsApp<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
@@ -158,7 +158,7 @@
       <label>Öncelik / ihtiyaç<input name="goal" placeholder="Örn. Antrenör takibini görünür yapmak"></label>
       <div class="form-grid"><label>Sonraki aksiyon<input name="nextAction" placeholder="Örn. Demo tarihi belirle"></label><label>Takip tarihi<input name="followUpDate" type="date"></label></div>
       <label>Aylık teklif / TL<input name="value" inputmode="numeric" placeholder="1490"></label>
-      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Lead’i kaydet</button></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Adayı kaydet</button></div>
     </form>
   </dialog>
   <dialog class="modal signature-modal" id="signatureModal">
@@ -267,7 +267,7 @@
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="pwa.js?v=20260720-5"></script>
-  <script src="app.js?v=20260720-5"></script>
+  <script src="pwa.js?v=20260720-6"></script>
+  <script src="app.js?v=20260720-6"></script>
 </body>
 </html>

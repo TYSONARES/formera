@@ -70,7 +70,7 @@
 .login-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 8px;font:800 12px "DM Sans";color:var(--muted);cursor:pointer}
 .login-tabs button.active{background:#151712;color:#fff;box-shadow:0 8px 18px rgba(15,17,12,.12)}
 .avatar.has-image,.studio-avatar.has-image,.user-avatar.has-image,.brand-mark.has-image{background-size:cover;background-position:center;color:transparent}
-.dashboard-brand-mark{display:none;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 16px rgba(217,255,100,.18))}
+.dashboard-brand-mark{display:none;width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(217,255,100,.2))}
 .dashboard-brand-logo{display:block;width:132px;height:38px;object-fit:contain;filter:drop-shadow(0 0 16px rgba(217,255,100,.14))}
 .studio-public-card{background:linear-gradient(135deg,#fff 0%,#f8faef 100%)}
 .studio-public-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
@@ -114,6 +114,15 @@
 .setup-summary span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--acid);font-weight:800;margin-bottom:10px}
 .setup-summary strong,.setup-summary small{display:block}
 .setup-summary small{color:var(--muted);font-size:11px;margin-top:4px}
+.owner-setup-card{margin-bottom:16px;background:linear-gradient(135deg,#ffffff 0%,#f7faee 100%)}
+.owner-setup-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.owner-setup-step{border:1px solid var(--line);background:#f8f9f4;border-radius:14px;padding:13px;min-height:118px}
+.owner-setup-step span{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#eef0e8;color:#6f7568;font-weight:900;margin-bottom:11px}
+.owner-setup-step.done{border-color:#d7ecc0;background:#f3fae6}
+.owner-setup-step.done span{background:var(--acid);color:#263016}
+.owner-setup-step strong,.owner-setup-step small{display:block}
+.owner-setup-step small{color:var(--muted);font-size:11px;line-height:1.45;margin-top:5px}
+.owner-setup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 #onboardingFinish,#onboardingCopyInvites{display:none}
 .invite-note{background:#f8f9f4;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:11px;line-height:1.45;margin:8px 0 0;padding:10px}
 .account-line{display:block;color:var(--muted);font-size:11px;margin-top:5px}
@@ -121,6 +130,8 @@
 .member-row{grid-template-columns:1.35fr .65fr .65fr auto auto auto auto}
 @media(max-width:760px){.task-row{grid-template-columns:1fr auto}.task-row .row-actions{grid-column:1 / -1}}
 @media(max-width:760px){.setup-summary{grid-template-columns:1fr}.onboarding-actions{justify-content:flex-start;flex-wrap:wrap}}
+@media(max-width:1050px){.owner-setup-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.owner-setup-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.team-badges{align-items:flex-start;flex-direction:row;grid-column:1 / -1}.member-row .status{justify-self:start}}
 @media(max-width:760px){.welcome-actions{justify-content:flex-start;margin-top:14px}.task-row.member-task{grid-template-columns:auto 1fr}.task-row.member-task>.status{grid-column:1 / -1;justify-self:start}}
 @media(max-width:760px){.ai-top-button small{display:none}.ai-package-hero,.ai-capability-grid{grid-template-columns:1fr}.ai-credit-ring{width:96px;height:96px}}

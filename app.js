@@ -1634,7 +1634,7 @@ function updateRoleShell(){
     workspaceButton.hidden = !canAccessFormeraAdmin();
     workspaceButton.textContent = isFormeraAdmin() ? 'Formera Admin' : 'Salon paneli';
     workspaceButton.classList.toggle('connected', isFormeraAdmin());
-    workspaceButton.title = isFormeraAdmin() ? 'Formera satış, funnel ve pilot CRM alanı' : 'Salon işletmecisi, antrenör ve üye operasyon alanı';
+    workspaceButton.title = isFormeraAdmin() ? 'Formera satış, aday salon ve pilot takip alanı' : 'Salon işletmecisi, antrenör ve üye operasyon alanı';
   }
   setAvatarElement(avatar, meta.avatar, meta.avatarImage);
   const sidebar = document.querySelector('.sidebar');
@@ -1804,19 +1804,54 @@ function studioPilotRows(){
   </button>`).join('');
 }
 
+function ownerSetupSteps(){
+  const studio = activeStudio();
+  return [
+    {title:'İşletme bilgileri', note:'Logo, telefon, adres veya Instagram ekle', done:Boolean(studio.phone || studio.address || studio.instagram || studio.logoDataUrl), action:'customize-studio', button:'Bilgileri düzenle'},
+    {title:'İlk antrenör', note:'Ekibe giriş e-postası olan bir antrenör ekle', done:state.team.length > 0, action:'add-trainer', button:'Antrenör ekle'},
+    {title:'İlk 3 üye', note:'Pilot kullanımını gerçek üyelerle ölç', done:state.members.length >= 3, action:'new-member', button:'Üye ekle'},
+    {title:'İlk program', note:'Üye ekranında takip edilecek program oluştur', done:state.programs.length > 0, action:'add-program', button:'Program oluştur'},
+    {title:'İlk görev', note:'Antrenöre veya üyeye takip aksiyonu gönder', done:state.trainerTasks.length + state.memberTasks.length > 0, action:'add-trainer-task', button:'Görev ver'}
+  ];
+}
+
+function ownerSetupGuide(){
+  const steps = ownerSetupSteps();
+  const completed = steps.filter(step=>step.done).length;
+  const nextStep = steps.find(step=>!step.done) || {action:'customize-studio', button:'Kurulumu gözden geçir'};
+  return `<article class="card owner-setup-card">
+    <div class="card-title">
+      <div><h2>İlk kurulum rehberi</h2><p>Salon panelini satışa ve gerçek kullanıma hazır hale getiren kısa yol.</p></div>
+      <span class="badge">${completed}/${steps.length} tamam</span>
+    </div>
+    <div class="owner-setup-grid">
+      ${steps.map((step,index)=>`<div class="owner-setup-step ${step.done ? 'done' : ''}">
+        <span>${step.done ? '✓' : index + 1}</span>
+        <strong>${step.title}</strong>
+        <small>${step.note}</small>
+      </div>`).join('')}
+    </div>
+    <div class="owner-setup-actions">
+      <button class="primary" data-action="${nextStep.action}">${nextStep.button}</button>
+      <button class="secondary" data-action="start-onboarding">5 adımlı kurulum sihirbazı</button>
+    </div>
+  </article>`;
+}
+
 function dashboard(){
   const riskyCount = state.members.filter(m=>m.type !== 'good').length;
   const finance = financeSummary();
   const chartRows = weeklyChartData();
   const maxChartValue = Math.max(...chartRows.flatMap(row=>[row[1], row[2]]), 1);
   const sessions = sessionSummary();
-  return `<div class="welcome"><div><span class="eyebrow">${activeStudio().name} · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>${activeStudio().location} pilot alanı iyi ilerliyor. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
+  return `<div class="welcome"><div><span class="eyebrow">${activeStudio().name} · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>${activeStudio().location} işletme paneli hazır. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
   <section class="metrics">
     ${metric('Aktif üye',String(state.members.length),'↑ canlı veri','♙')}
     ${metric('Haftalık gelir',formatCurrency(finance.income),'canlı kayıt','₺')}
     ${metric('Bugünkü seans',String(sessions.total),`${sessions.done} tamamlandı`,'✓')}
     ${metric('Yenileme riski',String(riskyCount),'takip listesi','! ',true)}
   </section>
+  ${ownerSetupGuide()}
   <section class="dashboard-grid">
     <article class="card"><div class="card-title"><div><h2>Gelir ve gider</h2><p>Son 6 haftanın nakit hareketi</p></div><span class="badge">Net ${formatCurrency(finance.net)}</span></div><div class="chart">
       ${chartRows.map(x=>`<div class="bar-group"><i class="bar" style="height:${Math.max(8,Math.round((x[1]/maxChartValue)*92))}%"></i><i class="bar expense" style="height:${Math.max(8,Math.round((x[2]/maxChartValue)*92))}%"></i><small class="bar-label">${x[0]}</small></div>`).join('')}
@@ -1828,7 +1863,7 @@ function dashboard(){
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
     <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
-    <article class="card"><div class="card-title"><div><h2>4 salon pilotu</h2><p>Aktif demo stüdyosunu seç</p></div><span class="badge">${state.studios.length} stüdyo</span></div><div class="studio-pilot-list">${studioPilotRows()}</div></article>
+    <article class="card"><div class="card-title"><div><h2>İşletme profili</h2><p>Üye ve antrenör ekranlarında görünen bilgiler</p></div><button class="secondary" data-action="customize-studio">Düzenle</button></div><div class="report-list">${studioContactRows()}</div></article>
   </section>`;
 }
 
@@ -2436,7 +2471,7 @@ function hotPilotLead(){
 function pilotNextMoveCard(){
   const lead = hotPilotLead();
   if(!lead){
-    return `<div class="pilot-next-empty"><strong>Aktif takip kalmadı.</strong><small>Yeni kurucu pilot başvurusu ekleyerek funnel’ı tekrar doldur.</small></div>`;
+    return `<div class="pilot-next-empty"><strong>Aktif takip kalmadı.</strong><small>Yeni pilot adayı ekleyerek satış sürecini tekrar doldur.</small></div>`;
   }
   const heat = pilotLeadHeat(lead);
   return `<div class="pilot-next-lead">
@@ -2491,13 +2526,13 @@ function pilotLeadRows(){
       <div class="row-actions">
         ${pilotLeadActionButtons(lead)}
       </div>
-    </div>`).join('') || `<div class="empty-mini">Henüz kurucu pilot lead’i yok.</div>`;
+    </div>`).join('') || `<div class="empty-mini">Henüz pilot adayı yok.</div>`;
 }
 
 function pilotCrmMode(){
-  if(!state.backend.connected) return {label:'Tarayıcı kaydı', note:'Demo modda lead’ler bu cihazda saklanır.'};
-  if(state.backend.pilotLeadsReady) return {label:'Canlı CRM', note:'Lead’ler Supabase pilot_leads tablosuna senkronlanır.'};
-  return {label:'SQL bekliyor', note:'Canlı CRM için supabase/pilot-leads.sql dosyasını çalıştır.'};
+  if(!state.backend.connected) return {label:'Tarayıcı kaydı', note:'Demo modda adaylar bu cihazda saklanır.'};
+  if(state.backend.pilotLeadsReady) return {label:'Canlı takip', note:'Aday salonlar Supabase pilot_leads tablosuna senkronlanır.'};
+  return {label:'SQL bekliyor', note:'Canlı aday takibi için supabase/pilot-leads.sql dosyasını çalıştır.'};
 }
 
 function studioContactRows(){
@@ -2543,27 +2578,27 @@ function pilotPage(){
   const activationScore = pilotActivationScore();
   const funnel = pilotFunnelSummary();
   const crmMode = pilotCrmMode();
-  return `<div class="welcome"><div><span class="eyebrow">PİLOT SATIŞ ODASI</span><h1>Kurucu pilotları gelire çevir</h1><p>Başvuru, demo, pilot ve teklif aşamalarını tek ekranda takip et; en sıcak fırsata bir sonraki hamleyi uygula.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
+  return `<div class="welcome"><div><span class="eyebrow">PİLOT SATIŞ ODASI</span><h1>Pilot adaylarını satışa çevir</h1><p>Başvuru, demo, pilot ve teklif aşamalarını tek ekranda takip et; önceliği en yüksek aday için bir sonraki hamleyi uygula.</p></div><div class="welcome-actions"><button class="secondary" data-action="start-onboarding">İlk kurulum</button><button class="primary" data-action="customize-studio">Sayfayı özelleştir</button></div></div>
   <section class="metrics">
     ${metric('Üye',String(payload.members.length),'yedekte','♙')}
-    ${metric('Aktif lead',String(funnel.active),`${funnel.won} kazandı`,'◌')}
+    ${metric('Aktif aday',String(funnel.active),`${funnel.won} kazandı`,'◌')}
     ${metric('Bugünkü takip',String(funnel.dueToday),'aranacak / DM','!',funnel.dueToday > 0)}
-    ${metric('Pipeline',formatCurrency(funnel.pipeline),'aylık potansiyel','₺')}
+    ${metric('Potansiyel',formatCurrency(funnel.pipeline),'aylık gelir ihtimali','₺')}
     ${metric('Dönüşüm',`%${funnel.conversion}`,`${funnel.proposal ? formatCurrency(funnel.proposal) : 'teklif bekliyor'}`,'↗',funnel.conversion < 30)}
   </section>
   <section class="pilot-command-grid">
     <article class="card pilot-funnel-card">
-      <div class="card-title"><div><h2>Funnel görünümü</h2><p>Başvurudan kazanıma kadar aylık potansiyel</p></div><span class="badge">${funnel.total} lead</span></div>
+      <div class="card-title"><div><h2>Satış süreci</h2><p>Başvurudan kazanıma kadar aylık potansiyel</p></div><span class="badge">${funnel.total} aday</span></div>
       <div class="pilot-funnel-list">${pilotFunnelRows()}</div>
     </article>
     <article class="card pilot-next-card">
-      <div class="card-title"><div><h2>Sıradaki satış hamlesi</h2><p>Önceliği en yüksek pilot fırsatı</p></div><span class="badge">%${activationScore} pilot skor</span></div>
+      <div class="card-title"><div><h2>Sıradaki satış hamlesi</h2><p>Önceliği en yüksek pilot adayı</p></div><span class="badge">%${activationScore} pilot skor</span></div>
       ${pilotNextMoveCard()}
     </article>
   </section>
   <section class="dashboard-grid">
     <article class="card pilot-crm-card">
-      <div class="card-title"><div><h2>Kurucu pilot CRM</h2><p>Başvuru → demo → pilot → teklif akışını takip et · ${crmMode.note}</p></div><div class="row-actions"><span class="badge">${crmMode.label}</span><button class="secondary" data-action="add-pilot-lead">+ Lead ekle</button></div></div>
+      <div class="card-title"><div><h2>Pilot başvuru takibi</h2><p>Başvuru → demo → pilot → teklif akışını takip et · ${crmMode.note}</p></div><div class="row-actions"><span class="badge">${crmMode.label}</span><button class="secondary" data-action="add-pilot-lead">+ Pilot adayı ekle</button></div></div>
       <div class="pilot-lead-list">${pilotLeadRows()}</div>
     </article>
     <article class="card pilot-plan-card">
@@ -3233,7 +3268,7 @@ function selectStudio(id){
   saveActiveStudio();
   updateStudioShell();
   render();
-  showToast(`${activeStudio().name} pilot alanına geçildi.`);
+  showToast(`${activeStudio().name} işletme paneline geçildi.`);
 }
 
 function cycleStudio(){
@@ -3313,12 +3348,12 @@ function convertPilotLeadToStudio(id){
 
 function deletePilotLead(id){
   const lead = state.pilotLeads.find(item=>item.id === id);
-  if(!lead || !confirm(`${lead.studio} pilot lead'i silinsin mi?`)) return;
+  if(!lead || !confirm(`${lead.studio} pilot adayı silinsin mi?`)) return;
   deleteRemoteRow('pilot_leads', id);
   state.pilotLeads = state.pilotLeads.filter(item=>item.id !== id);
   savePilotLeads();
   render();
-  showToast(`${lead.studio} CRM listesinden silindi.`);
+  showToast(`${lead.studio} pilot aday listesinden silindi.`);
 }
 
 function pilotOfferText(lead){
@@ -3826,7 +3861,7 @@ pilotLeadForm.onsubmit=e=>{
   pilotLeadModal.close();
   e.currentTarget.reset();
   render();
-  showToast(`${lead.studio} pilot CRM listesine eklendi.`);
+  showToast(`${lead.studio} pilot aday listesine eklendi.`);
 };
 
 studioBrandForm.onsubmit=async e=>{
