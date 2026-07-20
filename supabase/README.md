@@ -78,6 +78,12 @@ Landing ve Dashboard Pilot CRM lead’lerini canlı hesaba taşımak için:
 
 SQL Editor → New query → `pilot-leads.sql` içeriğini yapıştır → Run.
 
+Formera kurucu/admin panelini müşteri işletmeci hesaplarından ayırmak için:
+
+SQL Editor → New query → `formera-admins.sql` içeriğini yapıştır → `ADMIN_EMAIL_ADRESINI_BURAYA_YAZ` alanını kendi admin e-postanla değiştir → Run.
+
+Bu tablo sadece giriş yapan kullanıcının kendi admin yetkisini okuyabileceği şekilde RLS ile korunur. Admin hesabı oluşturma yetkisi uygulama içinden müşterilere verilmez.
+
 ## 6. Güvenlik notu
 
 Şemada RLS açık gelir ve başlangıçta politika yoktur. Bu bilinçli bir tercih: canlı anahtar bağlamadan önce veri dışarı açılmaz.

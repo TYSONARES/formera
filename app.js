@@ -817,6 +817,16 @@ function readableAuthError(error, fallback){
   return `${fallback} (${message})`;
 }
 
+async function verifyFormeraAdminAccess(db){
+  const {data, error} = await db
+    .from('formera_admins')
+    .select('id, active')
+    .eq('auth_user_id', state.backend.user.id)
+    .eq('active', true)
+    .maybeSingle();
+  return {ok: Boolean(data), error};
+}
+
 function setAccountBusy(isBusy, message=''){
   [signupSupabaseButton, supabaseAuthForm?.querySelector('button[type="submit"]')].forEach(button=>{
     if(button) button.disabled = isBusy;
@@ -1095,13 +1105,27 @@ async function loadRemoteData(){
   const remotePilotLeads = (pilotLeadsResult.data || []).map(mapRemotePilotLead);
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length ? remotePilotLeads : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
+  if(state.workspace === 'formera'){
+    const adminAccess = await verifyFormeraAdminAccess(db);
+    if(adminAccess.error){
+      state.backend.loading = false;
+      state.workspace = 'studio';
+      state.page = 'dashboard';
+      return remoteError(adminAccess.error, 'Formera Admin yetkisi doğrulanamadı.');
+    }
+    if(!adminAccess.ok){
+      state.workspace = 'studio';
+      state.page = 'dashboard';
+      notify('Formera Admin alanı için kurucu admin yetkili hesap gerekir.', 'warning');
+    }
+  }
   if(state.workspace === 'formera' && state.role !== 'owner'){
     state.workspace = 'studio';
     state.page = 'dashboard';
     notify('Formera Admin alanı için işletme/owner yetkili hesapla giriş gerekir.', 'warning');
   }
   if(profile.role === 'trainer') state.trainerName = profile.full_name;
-  if(profile.role === 'member') state.page = 'dashboard';
+  if(profile.role === 'member' && !isFormeraAdmin()) state.page = 'dashboard';
   state.backend.connected = true;
   state.backend.loading = false;
   state.backend.error = '';
