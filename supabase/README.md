@@ -84,6 +84,12 @@ SQL Editor → New query → `formera-admins.sql` içeriğini yapıştır → `A
 
 Bu tablo sadece giriş yapan kullanıcının kendi admin yetkisini okuyabileceği şekilde RLS ile korunur. Admin hesabı oluşturma yetkisi uygulama içinden müşterilere verilmez.
 
+Anon/public RPC erişimini sertleştirmek için:
+
+SQL Editor → New query → `security-hardening.sql` içeriğini yapıştır → Run.
+
+Bu dosya, RLS için gerekli helper fonksiyonlarını authenticated kullanıcıda çalışır bırakır; anonim/public RPC çağrılarını kapatır. Daha ileri seviye private schema refactor’ı ayrı test planıyla yapılmalıdır.
+
 ## 6. Güvenlik notu
 
 Şemada RLS açık gelir ve başlangıçta politika yoktur. Bu bilinçli bir tercih: canlı anahtar bağlamadan önce veri dışarı açılmaz.
