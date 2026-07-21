@@ -1,4 +1,4 @@
-const CACHE_NAME = 'formera-pwa-v20';
+const CACHE_NAME = 'formera-pwa-v21';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   './pwa.js',
   './manifest.webmanifest',
   './icon.svg',
+  './favicon.svg',
   './assets/formera-logo.svg',
   './assets/formera-favicon.svg',
   './assets/kettlebell-stage.jpg',
