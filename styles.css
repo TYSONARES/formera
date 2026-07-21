@@ -57,7 +57,7 @@
 .ai-credit-ring strong,.ai-credit-ring small{position:relative;display:block}
 .ai-credit-ring strong{font:900 26px Manrope;color:var(--acid)}
 .ai-credit-ring small{font-size:10px;color:#aeb4a7;width:70px}
-.ai-capability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.ai-capability-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
 .ai-capability-grid div{border:1px solid var(--line);background:#f8f9f4;border-radius:14px;padding:13px}
 .ai-capability-grid b{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--acid);margin-bottom:9px}
 .ai-capability-grid strong,.ai-capability-grid small{display:block}
@@ -219,3 +219,23 @@
   .nav-item span{width:20px!important;font-size:19px!important}
   .studio-card{justify-content:flex-start;padding:11px!important}
 }
+
+.business-hero{display:grid;grid-template-columns:1fr 160px;gap:18px;align-items:center;margin-bottom:16px}
+.business-score{position:relative;z-index:1;display:grid;place-items:center;text-align:center;width:136px;height:136px;border-radius:34px;background:linear-gradient(135deg,rgba(217,255,100,.18),rgba(255,255,255,.05));border:1px solid rgba(217,255,100,.22);justify-self:end}
+.business-score strong{font:900 34px Manrope;color:var(--acid)}
+.business-score small{color:#aeb4a7;font-size:11px;font-weight:800}
+.business-diagnosis,.business-opportunities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.business-diagnosis div,.business-opportunities div{border:1px solid var(--line);background:#f8f9f4;border-radius:13px;padding:13px;min-width:0}
+.business-diagnosis span,.business-opportunities span{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.6px}
+.business-diagnosis strong,.business-opportunities strong{display:block;font:900 18px Manrope;margin:6px 0 4px}
+.business-diagnosis small,.business-opportunities small{display:block;color:var(--muted);font-size:11px;line-height:1.45}
+.business-diagnosis .good{border-color:#c7e4ca;background:#edf7ee}
+.business-diagnosis .warn{border-color:#f0d5a9;background:#fff5e5}
+.business-diagnosis .risk{border-color:#f0c8c1;background:#fff0ed}
+.business-plan{display:grid;gap:10px}
+.business-plan div{display:grid;grid-template-columns:34px 1fr;gap:11px;align-items:start;background:#f8f9f4;border:1px solid var(--line);border-radius:13px;padding:12px}
+.business-plan span{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--acid);color:#263016;font-weight:900}
+.business-plan strong{font-size:12px;line-height:1.45}
+.business-pricing{background:linear-gradient(135deg,#fff 0%,#f7faee 100%)}
+.business-note{margin:14px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+@media(max-width:760px){.business-hero,.business-diagnosis,.business-opportunities{grid-template-columns:1fr}.business-score{justify-self:start;width:112px;height:112px}.business-score strong{font-size:28px}}

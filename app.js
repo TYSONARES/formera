@@ -76,7 +76,7 @@ const starterPilotLeads = [
 ];
 
 function initialPageFromUrl(){
-  const allowedPages = ['dashboard','members','programs','calendar','finance','reports','team','pilot'];
+  const allowedPages = ['dashboard','members','programs','calendar','finance','reports','growth','team','pilot'];
   const params = new URLSearchParams(window.location.search);
   const requestedPage = params.get('page') || window.location.hash.replace('#', '');
   if(requestedPage === 'pilot' && !canAccessFormeraAdmin()) return 'dashboard';
@@ -1859,7 +1859,7 @@ function dashboard(){
     <article class="card ai-card"><span class="ai-label">✦ FORMA AI · HAFTALIK ÖZET</span><h2>${finance.net >= 0 ? 'Kârlı gidiyorsun' : 'Gider baskısı var'}, ${riskyCount || 1} üye dikkat istiyor.</h2><p>Bu haftanın neti ${formatCurrency(finance.net)}. Tahsilat oranı %${finance.collectionRate}; riskli ve yenilemeye yaklaşan üyeler için bugün takip aksiyonu öneriyorum.</p>
       <div class="insight"><span>↗</span><div><strong>${Math.min(3, riskyCount || 3)} üyeye bugün ulaş</strong><small>Bekleyen tahsilat: ${formatCurrency(finance.pending)}</small></div></div>
       <div class="insight"><span>◷</span><div><strong>${sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu` : 'Kapasite uygun'}</strong><small>${sessions.busiest ? `${sessions.busiest[1]} seans aynı saate yakın` : 'Bugün rahat plan görünüyor'}</small></div></div>
-      <button class="primary ai-action" data-action="ai-plan">Hafta planını hazırla →</button>
+      <button class="primary ai-action" data-page-link="growth">AI iş geliştirme paneli →</button>
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
     <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
@@ -1944,7 +1944,8 @@ function aiAssistantCapabilities(){
   return [
     ['🎙️','Sesli asistan','İşletmeci ve antrenör isterse konuşarak öneri alır.'],
     ['✦','Haftalık özet','Gelir, seans, görev ve riskleri kısa aksiyon listesine dönüştürür.'],
-    ['▤','Program taslağı','Antrenörün komutundan program veya beslenme notu taslağı çıkarır.']
+    ['▤','Program taslağı','Antrenörün komutundan program veya beslenme notu taslağı çıkarır.'],
+    ['↗','İş geliştirme','Toparlanma veya büyüme isteyen işletmeye 7 günlük plan önerir.']
   ];
 }
 
@@ -2064,6 +2065,156 @@ function calendarPage(){
       <h2>Günün operasyon notları</h2>
       <p>Seans yoğunluğu, iptal ve tamamlanma durumuna göre kısa aksiyon listesi.</p>
       ${calendarAiNotes(selectedDate).map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Takvim aksiyonu</small></div></div>`).join('')}
+    </article>
+  </section>`;
+}
+
+function businessHealth(){
+  const finance = financeSummary();
+  const risky = state.members.filter(member=>member.type !== 'good');
+  const sessions = sessionSummary();
+  let score = 72;
+  if(finance.net < 0) score -= 20;
+  if(finance.pending > 0) score -= 8;
+  score -= Math.min(18, risky.length * 5);
+  if(sessions.total >= 4) score += 6;
+  if(state.programs.length >= 3) score += 4;
+  score = Math.max(24, Math.min(96, score));
+  const mode = score < 58 || finance.net < 0 || risky.length >= 3 ? 'recovery' : 'growth';
+  return {score, mode, finance, risky, sessions};
+}
+
+function businessModeLabel(mode){
+  return mode === 'recovery' ? 'Toparlanma modu' : 'Büyüme modu';
+}
+
+function businessDiagnosisItems(){
+  const {finance, risky, sessions, mode} = businessHealth();
+  const items = [];
+  items.push({
+    label:'Kâr baskısı',
+    value:finance.net >= 0 ? formatCurrency(finance.net) : `${formatCurrency(Math.abs(finance.net))} açık`,
+    note:finance.net >= 0 ? 'Net tablo pozitif; büyüme testleri yapılabilir.' : 'Önce gider ve tahsilat kontrolü gerekir.',
+    tone:finance.net >= 0 ? 'good' : 'risk'
+  });
+  items.push({
+    label:'Üye riski',
+    value:`${risky.length} üye`,
+    note:risky.length ? `${risky.slice(0,3).map(member=>member.name).join(', ')} öncelikli takipte.` : 'Risk düşük; referans ve paket yükseltme konuşulabilir.',
+    tone:risky.length ? 'warn' : 'good'
+  });
+  items.push({
+    label:'Kapasite',
+    value:sessions.total ? `${sessions.total} seans` : 'Veri az',
+    note:sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu satış veya ekip planı için sinyal.` : 'Takvim girildikçe kapasite önerisi netleşir.',
+    tone:sessions.total >= 4 ? 'good' : 'warn'
+  });
+  items.push({
+    label:'AI modu',
+    value:businessModeLabel(mode),
+    note:mode === 'recovery' ? 'Öncelik: nakit, takip, geri kazanım.' : 'Öncelik: referans, paket yükseltme, kapasite artırımı.',
+    tone:mode === 'recovery' ? 'risk' : 'good'
+  });
+  return items;
+}
+
+function businessActionPlan(){
+  const {finance, risky, sessions, mode} = businessHealth();
+  if(mode === 'recovery'){
+    return [
+      finance.pending > 0 ? `Bugün bekleyen ${formatCurrency(finance.pending)} tahsilat için 3 aşamalı hatırlatma mesajı gönder.` : 'Son 7 günün gelir/gider kayıtlarını tamamla; gerçek nakit resmini netleştir.',
+      risky.length ? `${risky.slice(0,3).map(member=>member.name).join(', ')} için aynı gün arama + WhatsApp takip planı aç.` : 'Son 30 gün seansa gelmeyen üyeleri bul ve geri kazanım listesi çıkar.',
+      'En büyük 2 gider kalemini işaretle; bu hafta ertelenebilir/azaltılabilir olanı belirle.',
+      'Antrenörlere günlük 1 takip görevi ver: riskli üye, yenileme, seans sonrası not.',
+      '7 gün sonunda: tahsilat, seans katılımı ve riskli üye sayısını tekrar ölç.'
+    ];
+  }
+  return [
+    risky.length ? `${risky[0].name} için yenileme konuşmasını bugün başlat; kayıp olmadan satış fırsatı yarat.` : 'Memnun 3 üyeden referans iste; deneme dersi kontenjanı aç.',
+    sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu için ek PT bloğu veya premium saat fiyatı test et.` : 'Boş saatlere ölçüm/deneme dersi kampanyası yerleştir.',
+    'En iyi sonuç alan programı paket satış metnine dönüştür; antrenörlere aynı dili kullandır.',
+    'Instagram/WhatsApp için “üye dönüşümü” hikâyesi hazırla; satış konuşmasını gerçek sonuçla destekle.',
+    'Hafta sonunda yeni üyelik, yenileme ve referans sayılarını raporla.'
+  ];
+}
+
+function businessGrowthOpportunities(){
+  const {finance, risky, sessions} = businessHealth();
+  const avgRevenue = state.members.length ? Math.round(finance.income / Math.max(state.members.length, 1)) : finance.income;
+  return [
+    {title:'Paket yükseltme', value:formatCurrency(Math.max(1200, Math.round(avgRevenue * .22))), note:'Aktif üyelerde premium takip / ölçüm paketi fırsatı'},
+    {title:'Referans akışı', value:`${Math.max(2, Math.ceil(state.members.length * .25))} aday`, note:'Memnun üyelerden düşük maliyetli yeni başvuru potansiyeli'},
+    {title:'Kapasite satışı', value:sessions.busiest ? `${sessions.busiest[0]}:00` : 'Boş saatler', note:sessions.busiest ? 'Yoğun saatlerde ek blok veya fiyat testi' : 'Boş saatlere deneme dersi kampanyası'},
+    {title:'Geri kazanım', value:`${risky.length} üye`, note:'Riskli üyeyi kaybetmeden yenileme konuşmasına taşı'}
+  ];
+}
+
+function businessPlanText(){
+  const {score, mode, finance, risky} = businessHealth();
+  return [
+    `Formera AI İş Geliştirme Planı`,
+    `Stüdyo: ${activeStudio().name}`,
+    `Mod: ${businessModeLabel(mode)}`,
+    `Sağlık skoru: %${score}`,
+    `Net durum: ${formatCurrency(finance.net)} · Bekleyen tahsilat: ${formatCurrency(finance.pending)} · Riskli üye: ${risky.length}`,
+    '',
+    '7 günlük aksiyon planı:',
+    ...businessActionPlan().map((item,index)=>`${index+1}. ${item}`),
+    '',
+    'Not: Bu modül Studio AI / Business AI paketi içinde ücretli veya opsiyonel danışmanlık eklentisi olarak sunulabilir.'
+  ].join('\n');
+}
+
+async function copyBusinessPlan(){
+  const text = businessPlanText();
+  try{
+    await navigator.clipboard?.writeText(text);
+    showToast('AI iş geliştirme planı kopyalandı.');
+  }catch(error){
+    showToast('Plan kopyalanamadı. Tarayıcı izin vermedi.');
+  }
+}
+
+function growthPage(){
+  const health = businessHealth();
+  const actionPlan = businessActionPlan();
+  return `<div class="welcome"><div><span class="eyebrow">BUSINESS AI · OPSİYONEL ÜCRETLİ MODÜL</span><h1>AI İş Geliştirme</h1><p>İşleri kötü giden salon için toparlanma, büyümek isteyen salon için büyüme planı üretir.</p></div><div class="welcome-actions"><button class="secondary" data-action="copy-growth-plan">Planı kopyala</button><button class="primary" data-action="ai-assistant">AI asistana sor</button></div></div>
+  <section class="metrics">
+    ${metric('İşletme skoru',`%${health.score}`,businessModeLabel(health.mode),'✦',health.score < 58)}
+    ${metric('Net kâr',formatCurrency(health.finance.net),health.finance.net >= 0 ? 'büyüme alanı' : 'toparlanma gerekli','₺',health.finance.net < 0)}
+    ${metric('Riskli üye',String(health.risky.length),health.risky.length ? 'geri kazanım listesi' : 'referans zamanı','! ',health.risky.length > 0)}
+    ${metric('AI paket',health.mode === 'recovery' ? 'Kurtarma' : 'Büyüme','ücretli eklenti','◐')}
+  </section>
+  <section class="business-hero card ai-card">
+    <div>
+      <span class="ai-label">✦ FORMA BUSINESS AI</span>
+      <h2>${health.mode === 'recovery' ? 'Önce kanamayı durdur, sonra büyüt.' : 'İyi giden operasyonu sistemli büyümeye çevir.'}</h2>
+      <p>Bu modül işletmeciye danışman gibi çalışır: finans, üye riski, kapasite ve ekip aksiyonlarını okuyup uygulanabilir iş geliştirme önerileri verir.</p>
+    </div>
+    <div class="business-score"><strong>%${health.score}</strong><small>işletme sağlığı</small></div>
+  </section>
+  <section class="dashboard-grid">
+    <article class="card">
+      <div class="card-title"><div><h2>AI teşhisi</h2><p>Mevcut salon verisinden çıkan iş durumu</p></div><span class="badge">${businessModeLabel(health.mode)}</span></div>
+      <div class="business-diagnosis">${businessDiagnosisItems().map(item=>`<div class="${item.tone}"><span>${item.label}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+    </article>
+    <article class="card">
+      <div class="card-title"><div><h2>7 günlük aksiyon planı</h2><p>İşletmeci ve ekip için uygulanabilir sıra</p></div><button class="secondary" data-action="copy-growth-plan">Kopyala</button></div>
+      <div class="business-plan">${actionPlan.map((item,index)=>`<div><span>${index+1}</span><strong>${item}</strong></div>`).join('')}</div>
+    </article>
+    <article class="card">
+      <div class="card-title"><div><h2>Büyüme fırsatları</h2><p>Gelir artırma ve kayıp azaltma alanları</p></div><span class="badge">Opsiyonel</span></div>
+      <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${item.title}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+    </article>
+    <article class="card business-pricing">
+      <div class="card-title"><div><h2>Paketleme önerisi</h2><p>Bu özellik ayrı değer olarak satılmalı</p></div><span class="badge">Business AI</span></div>
+      <div class="report-list">
+        <div><span>Studio</span><strong>Mikrofon + temel öneri</strong></div>
+        <div><span>Studio AI</span><strong>Haftalık AI özet</strong></div>
+        <div><span>Business AI</span><strong>İş geliştirme / büyüme planı</strong></div>
+        <div><span>Önerilen ek ücret</span><strong>+750–1.500 TL / ay</strong></div>
+      </div>
+      <p class="business-note">Pilot dönemde bu modülü seçili işletmelere ücretsiz/indirimli açıp, sonuç raporu üzerinden ücretli pakete çevirmek en sağlıklı yol.</p>
     </article>
   </section>`;
 }
@@ -2670,7 +2821,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
   <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
-const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
+const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],growth:['AI İş Geliştirme','Toparlanma ve büyüme önerilerini tek ekranda yönet.','✦'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
 function isFormeraAdmin(){
   return state.workspace === 'formera' && canAccessFormeraAdmin();
@@ -2714,7 +2865,7 @@ function render(){
   if(isFormeraAdmin()){app.innerHTML=pilotPage();return bind()}
   if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
+  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='growth'?growthPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
 }
 
 function openMemberModal(member){
@@ -3412,6 +3563,7 @@ function bind(){
     if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
     if(action==='delete-session') return deleteSession(b.dataset.sessionId);
     if(action==='copy-report') return copyReport();
+    if(action==='copy-growth-plan') return copyBusinessPlan();
     if(action==='add-trainer') return openTrainerModal();
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
     if(action==='copy-trainer-invite') return copyInvite('trainer', b.dataset.trainerId);
