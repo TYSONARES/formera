@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">PostPilot World logo mark</title>
+  <desc id="desc">Three motion lines flowing into a warm gradient forward wing.</desc>
+  <defs>
+    <linearGradient id="brand" x1="110" y1="78" x2="382" y2="438" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB800"/>
+      <stop offset="0.58" stop-color="#FF6A00"/>
+      <stop offset="1" stop-color="#6657C8"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#brand)" d="M151 73c-20-9-42 6-41 28 1 15 10 27 24 34 110 50 198 99 229 137 16 20 16 38 0 58-28 35-99 78-196 124-16 8-22 27-14 42 8 16 27 22 43 14 122-58 199-109 230-153 35-49 35-102 0-151C388 153 293 99 151 73Z"/>
+  <path fill="url(#brand)" d="M97 210h123c15 0 28 12 28 27s-13 27-28 27H97c-15 0-27-12-27-27s12-27 27-27Z"/>
+  <path fill="url(#brand)" d="M64 294h190c15 0 27 12 27 27s-12 27-27 27H64c-15 0-27-12-27-27s12-27 27-27Z"/>
+  <path fill="url(#brand)" d="M105 378h83c15 0 27 12 27 27s-12 27-27 27h-83c-15 0-27-12-27-27s12-27 27-27Z" opacity=".88"/>
+</svg>

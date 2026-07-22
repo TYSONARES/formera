@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">PostPilot.World</title>
+  <desc id="desc">PostPilot World wordmark with a gradient forward wing.</desc>
+  <defs>
+    <linearGradient id="brand" x1="72" y1="28" x2="306" y2="314" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB800"/>
+      <stop offset="0.58" stop-color="#FF6A00"/>
+      <stop offset="1" stop-color="#6657C8"/>
+    </linearGradient>
+    <linearGradient id="word" x1="772" y1="268" x2="1086" y2="268" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5A00"/>
+      <stop offset="1" stop-color="#6657C8"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(20 10) scale(.64)">
+    <path fill="url(#brand)" d="M151 73c-20-9-42 6-41 28 1 15 10 27 24 34 110 50 198 99 229 137 16 20 16 38 0 58-28 35-99 78-196 124-16 8-22 27-14 42 8 16 27 22 43 14 122-58 199-109 230-153 35-49 35-102 0-151C388 153 293 99 151 73Z"/>
+    <path fill="url(#brand)" d="M97 210h123c15 0 28 12 28 27s-13 27-28 27H97c-15 0-27-12-27-27s12-27 27-27Zm-33 84h190c15 0 27 12 27 27s-12 27-27 27H64c-15 0-27-12-27-27s12-27 27-27Zm41 84h83c15 0 27 12 27 27s-12 27-27 27h-83c-15 0-27-12-27-27s12-27 27-27Z"/>
+  </g>
+  <text x="350" y="218" fill="#101116" font-family="Inter, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="92" font-weight="600" letter-spacing="12">POSTPILOT</text>
+  <text x="350" y="300" fill="url(#word)" font-family="Inter, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="62" font-weight="700" letter-spacing="10">.WORLD</text>
+</svg>

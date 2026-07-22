@@ -1,0 +1,18 @@
+{
+  "name": "postpilot-world",
+  "version": "0.1.0",
+  "description": "PostPilot.World plugin with production-ready brand assets.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Postpilot World",
+    "shortDescription": "PostPilot.World tools and brand assets.",
+    "longDescription": "A local Codex plugin scaffold for PostPilot.World, including scalable logo assets for product and marketplace use.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me use Postpilot World."
+  }
+}
