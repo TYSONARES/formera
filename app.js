@@ -515,7 +515,10 @@ function normalizePilotLead(lead){
     nextAction: lead.nextAction || lead.next_action || 'İlk görüşmeyi planla',
     followUpDate: lead.followUpDate || lead.follow_up_date || todayISO(),
     value: Number(lead.value) || 990,
+    packageCode: ['starter','studio','studio_ai'].includes(lead.packageCode || lead.package_code) ? (lead.packageCode || lead.package_code) : (Number(lead.value) >= 2400 ? 'studio_ai' : Number(lead.value) >= 1400 ? 'studio' : 'starter'),
     source: lead.source || 'dashboard',
+    activationStatus: ['pending','active','paused'].includes(lead.activationStatus || lead.activation_status) ? (lead.activationStatus || lead.activation_status) : 'pending',
+    activationMode: lead.activationMode || lead.activation_mode || 'manual',
     createdAt: lead.createdAt || lead.created_at || new Date().toISOString()
   };
 }
@@ -1103,7 +1106,10 @@ async function loadRemoteData(){
   state.trainerTasks = taskTableMissing ? state.trainerTasks : (trainerTasksResult.data || []).map(mapRemoteTrainerTask);
   state.memberTasks = memberTaskTableMissing ? state.memberTasks : (memberTasksResult.data || []).map(mapRemoteMemberTask);
   const remotePilotLeads = (pilotLeadsResult.data || []).map(mapRemotePilotLead);
-  state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length ? remotePilotLeads : localPilotLeads.filter(lead=>lead.source === 'landing');
+  const localActivationById = new Map(localPilotLeads.map(lead=>[lead.id, lead]));
+  state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length
+    ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
+    : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
     const adminAccess = await verifyFormeraAdminAccess(db);
@@ -1953,25 +1959,24 @@ function openAiAssistant(){
   if(!aiAssistantModal || !aiAssistantBody) return;
   const usage = aiCreditUsage();
   const meta = roleMeta();
+  const internalAiRole = state.role !== 'member';
   aiAssistantBody.innerHTML = `
-    <div class="ai-package-hero">
+    <div class="ai-package-hero ${internalAiRole ? 'internal' : 'member'}">
       <div>
-        <span class="ai-package-badge">Studio AI paket özelliği</span>
+        <span class="ai-package-badge">${internalAiRole ? 'Studio AI paket özelliği' : 'Kişisel koç önerileri'}</span>
         <h3>${meta.label} için akıllı öneriler</h3>
-        <p>Bu ekran şimdilik demo öneriler üretir. Canlı AI API bağlandığında sesli asistan, haftalık özet ve program taslakları kredi/limit ile çalışacak.</p>
+        <p>${internalAiRole ? 'Bu ekran şimdilik demo öneriler üretir. Canlı AI API bağlandığında sesli asistan, haftalık özet ve program taslakları kredi/limit ile çalışacak.' : 'Bugünkü programın ve antrenör notların üzerinden kısa, uygulanabilir öneriler al.'}</p>
       </div>
-      <div class="ai-credit-ring" style="--usage:${usage.used}%"><strong>${usage.remaining}</strong><small>AI kredi kaldı</small></div>
+      ${internalAiRole ? `<div class="ai-credit-ring" style="--usage:${usage.used}%"><strong>${usage.remaining}</strong><small>AI kredi kaldı</small></div>` : ''}
     </div>
     <div class="ai-capability-grid">
       ${aiAssistantCapabilities().map(item=>`<div><b>${item[0]}</b><strong>${item[1]}</strong><small>${item[2]}</small></div>`).join('')}
     </div>
     <div class="ai-suggestion-list">
-      <div class="card-title"><div><h2>Bugünkü öneriler</h2><p>Rol, görev, üye ve finans verilerine göre demo çıktılar</p></div><span class="badge">Demo AI</span></div>
-      ${aiAssistantSuggestions().map((item,index)=>`<div class="insight ai-light"><span>${index+1}</span><div><strong>${item}</strong><small>Canlı AI paketinde sesli ve yazılı üretilecek</small></div></div>`).join('')}
+      <div class="card-title"><div><h2>Bugünkü öneriler</h2><p>${internalAiRole ? 'Rol, görev, üye ve finans verilerine göre demo çıktılar' : 'Program ve antrenör notlarına göre kişisel öneriler'}</p></div><span class="badge">${internalAiRole ? 'Demo AI' : 'Koç notu'}</span></div>
+      ${aiAssistantSuggestions().map((item,index)=>`<div class="insight ai-light"><span>${index+1}</span><div><strong>${item}</strong><small>${internalAiRole ? 'Canlı AI paketinde sesli ve yazılı üretilecek' : 'Antrenörünle birlikte gözden geçirilebilir'}</small></div></div>`).join('')}
     </div>
-    <div class="ai-upgrade-note">
-      <strong>Paket notu:</strong> Mikrofonla yazıya döküm Studio paketinde, gerçek sesli AI asistan ve otomatik öneriler Studio AI paketinde limitli krediyle sunulmalı.
-    </div>
+    ${internalAiRole ? `<div class="ai-upgrade-note"><strong>Paket notu:</strong> Mikrofonla yazıya döküm Studio paketinde, gerçek sesli AI asistan ve otomatik öneriler Studio AI paketinde limitli krediyle sunulmalı.</div>` : ''}
     <div class="modal-actions">
       <button type="button" class="secondary" data-action="voice-ai-demo">Sesli asistan demo</button>
       <button type="button" class="primary" data-action="ai-plan">Haftalık öneri üret</button>
@@ -2593,6 +2598,9 @@ function pilotFollowUpClass(lead){
 }
 
 function pilotSuggestedPackage(lead){
+  if(lead.packageCode === 'studio_ai') return 'Studio AI';
+  if(lead.packageCode === 'studio') return 'Studio';
+  if(lead.packageCode === 'starter') return 'Starter';
   if(lead.value >= 2400 || lead.members === '151–300' || lead.members === '300+' || /ai|yapay|öneri|rapor/i.test(lead.goal || '')) return 'Studio AI';
   if(lead.value >= 1400 || lead.members === '51–150') return 'Studio';
   return 'Starter';
@@ -2661,7 +2669,10 @@ function pilotLeadActionButtons(lead){
       ? `<button class="mini-button" data-action="select-studio" data-studio-id="${linkedStudioId}">Stüdyoyu aç</button>`
       : `<button class="mini-button" data-action="convert-pilot-lead" data-lead-id="${lead.id}">Stüdyoya aktar</button>`
     : '';
-  return `<button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>${stageActions}${wonAction}<button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>`;
+  const activationAction = lead.activationStatus === 'active'
+    ? `<span class="badge success-badge">Paket aktif</span>`
+    : `<button class="mini-button" data-action="manual-activate-pilot" data-lead-id="${lead.id}">Manuel aktive et</button>`;
+  return `<button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>${stageActions}${wonAction}${activationAction}<button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>`;
 }
 
 function pilotLeadRows(){
@@ -2671,7 +2682,7 @@ function pilotLeadRows(){
     .map(lead=>`<div class="pilot-lead-row">
       <div><strong>${escapeAttr(lead.studio)}</strong><small>${escapeAttr(lead.name)} · ${escapeAttr(lead.city)} · ${escapeAttr(lead.members)} üye</small></div>
       <span class="status ${pilotStageClass(lead.stage)}">${pilotStageLabel(lead.stage)}</span>
-      <div><strong>${formatCurrency(lead.value)}</strong><small>${pilotSuggestedPackage(lead)} · ${escapeAttr(lead.goal)}</small></div>
+      <div><strong>${formatCurrency(lead.value)}</strong><small>${pilotSuggestedPackage(lead)} · ${lead.activationStatus === 'active' ? 'Paket aktif' : 'Manuel aktivasyon bekliyor'}</small></div>
       <div class="pilot-lead-score"><strong>%${pilotLeadHeat(lead)}</strong><small>Sıcaklık</small></div>
       <div><strong>${escapeAttr(pilotFollowUpLabel(lead))}</strong><small>${escapeAttr(lead.nextAction)}</small></div>
       <div class="row-actions">
@@ -2755,6 +2766,15 @@ function pilotPage(){
     <article class="card pilot-plan-card">
       <div class="card-title"><div><h2>30 günlük pilot planı</h2><p>Başvuru gelen salonu ödeme görüşmesine taşıyan takip akışı</p></div><span class="badge">${payload.studios.length} stüdyo</span></div>
       <div class="pilot-timeline">${pilotTimeline()}</div>
+    </article>
+    <article class="card pilot-manual-card">
+      <div class="card-title"><div><h2>Manuel paket aktivasyonu</h2><p>İyzico otomasyonu gelene kadar pilot kontrolü</p></div><span class="badge">Pilot modu</span></div>
+      <div class="report-list">
+        <div><span>Akış</span><strong>Görüşme → ödeme teyidi → admin aktivasyonu</strong></div>
+        <div><span>Güvenlik</span><strong>Kart bilgisi Formera’da tutulmaz</strong></div>
+        <div><span>Sonraki adım</span><strong>İyzico hosted checkout + webhook</strong></div>
+      </div>
+      <p class="business-note">Pilot adayı satırındaki “Manuel aktive et” aksiyonu yalnızca durum takibidir; gerçek tahsilat bağlantısı iyzico hesabı onayından sonra eklenecek.</p>
     </article>
     <article class="card">
       <div class="card-title"><div><h2>Pilot başarı kriterleri</h2><p>Satış konuşmasında kullanılacak kanıtlar</p></div><span class="badge">%${activationScore}</span></div>
@@ -3517,6 +3537,7 @@ function pilotOfferText(lead){
     '',
     `• Paket önerisi: ${packageName}`,
     `• Kurucu pilot fiyatı: ${price} / ay`,
+    '• İlk pilotlarda aktivasyon: ödeme teyidi sonrası Formera Admin tarafından manuel',
     '• Pilot süre: 30 gün',
     '• Kurulum: işletme profili, ilk antrenör, ilk üyeler ve ilk program akışı',
     '• Kapsam: işletmeci paneli, antrenör görevleri, üye program takibi, mikrofonla yazıya döküm ve pilot raporu',
@@ -3538,6 +3559,20 @@ async function copyPilotOffer(id){
   }catch(error){
     showToast('Teklif metni kopyalanamadı. Tarayıcı izin vermedi.');
   }
+}
+
+function manualActivatePilotLead(id){
+  const lead = state.pilotLeads.find(item=>item.id === id);
+  if(!lead) return;
+  lead.activationStatus = lead.activationStatus === 'active' ? 'pending' : 'active';
+  lead.activationMode = 'manual';
+  lead.nextAction = lead.activationStatus === 'active'
+    ? 'Paket aktif; ilk hafta kullanımını izle'
+    : 'Ödeme teyidi ve paket aktivasyonunu bekle';
+  lead.followUpDate = addDaysISO(7);
+  savePilotLeads();
+  render();
+  showToast(`${lead.studio} için manuel paket durumu: ${lead.activationStatus === 'active' ? 'aktif' : 'bekliyor'}.`);
 }
 
 function bind(){
@@ -3580,6 +3615,7 @@ function bind(){
     if(action==='mark-pilot-lost') return markPilotLeadLost(b.dataset.leadId);
     if(action==='convert-pilot-lead') return convertPilotLeadToStudio(b.dataset.leadId);
     if(action==='copy-pilot-offer') return copyPilotOffer(b.dataset.leadId);
+    if(action==='manual-activate-pilot') return manualActivatePilotLead(b.dataset.leadId);
     if(action==='delete-pilot-lead') return deletePilotLead(b.dataset.leadId);
     if(action==='cycle-studio') return cycleStudio();
     if(action==='customize-studio') return openStudioBrandModal();
@@ -4004,6 +4040,9 @@ pilotLeadForm.onsubmit=e=>{
     members: data.get('members'),
     goal: data.get('goal').trim(),
     stage: data.get('stage'),
+    packageCode: data.get('package') || 'studio',
+    activationStatus: data.get('activationStatus') || 'pending',
+    activationMode: 'manual',
     nextAction: data.get('nextAction').trim() || 'İlk görüşmeyi planla',
     followUpDate: data.get('followUpDate') || todayISO(),
     value: Number(String(data.get('value')).replaceAll('.','').replace(',','.')) || 990

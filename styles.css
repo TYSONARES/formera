@@ -238,4 +238,7 @@
 .business-plan strong{font-size:12px;line-height:1.45}
 .business-pricing{background:linear-gradient(135deg,#fff 0%,#f7faee 100%)}
 .business-note{margin:14px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+.ai-package-hero.member{grid-template-columns:1fr}
 @media(max-width:760px){.business-hero,.business-diagnosis,.business-opportunities{grid-template-columns:1fr}.business-score{justify-self:start;width:112px;height:112px}.business-score strong{font-size:28px}}
+
+.success-badge{background:#e5f7c8;color:#2b713f;white-space:nowrap}

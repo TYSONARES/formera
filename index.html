@@ -9,20 +9,20 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — PT Stüdyoları İçin Operasyon Asistanı</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260722-4" />
-  <link rel="icon" href="favicon.svg?v=20260722-4" type="image/svg+xml" />
-  <link rel="shortcut icon" href="favicon.svg?v=20260722-4" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="favicon.svg?v=20260722-4" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260725-1" />
+  <link rel="icon" href="favicon.svg?v=20260725-1" type="image/svg+xml" />
+  <link rel="shortcut icon" href="favicon.svg?v=20260725-1" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg?v=20260725-1" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="landing.css?v=20260722-4" />
+  <link rel="stylesheet" href="landing.css?v=20260725-1" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
   <header class="site-header">
     <a class="brand" href="#" aria-label="Formera">
-      <img class="brand-logo" src="assets/formera-logo.svg?v=20260722-4" alt="Formera" height="28" />
+      <img class="brand-logo" src="assets/formera-logo.svg?v=20260725-1" alt="Formera" height="28" />
     </a>
     <nav aria-label="Tanıtım menüsü">
       <a href="#platform">Platform</a>
@@ -237,6 +237,7 @@
           <li>PWA mobil erişim</li>
           <li>Temel gelir-gider görünümü</li>
         </ul>
+        <button class="price-cta" type="button" data-plan-select="Starter">Starter pilot ödeme talebi →</button>
       </article>
       <article class="featured">
         <span>Studio</span>
@@ -247,6 +248,7 @@
           <li>Antrenör → üye görev/program/not akışı</li>
           <li>Mikrofonla yazıya döküm</li>
         </ul>
+        <button class="price-cta" type="button" data-plan-select="Studio">Studio pilot ödeme talebi →</button>
       </article>
       <article>
         <span>Studio AI</span>
@@ -258,15 +260,31 @@
           <li>Sesli AI asistan deneyimi</li>
           <li>Opsiyonel Business AI iş geliştirme eklentisi</li>
         </ul>
+        <button class="price-cta" type="button" data-plan-select="Studio AI">Studio AI pilot ödeme talebi →</button>
       </article>
       <p class="package-note">Kurucu pilotta fiyat değil kullanım doğrulaması önceliklidir: ilk 4 stüdyo için düşük maliyetli pilot + geri bildirim ortaklığı önerilir.</p>
+      <p class="payment-note"><strong>Pilot ödeme akışı:</strong> İlk dönemde ödeme linki ve paket aktivasyonu manuel yürütülür. İyzico hesabı onaylandığında bu butonlar güvenli hosted checkout’a bağlanacak; kart bilgisi Formera sayfasında tutulmayacaktır.</p>
     </section>
   </main>
+
+  <dialog class="payment-modal" id="planPaymentModal" aria-labelledby="planPaymentTitle">
+    <div class="payment-modal-head">
+      <div><span class="eyebrow">PİLOT PAKETİ</span><h2 id="planPaymentTitle">Planını seç</h2></div>
+      <button class="modal-close" type="button" id="closePlanPayment" aria-label="Kapat">×</button>
+    </div>
+    <p id="planPaymentSummary">Seçtiğin plan için 30 günlük pilot aktivasyonunu başlatalım.</p>
+    <div class="payment-status-card"><span>Şu anki yöntem</span><strong>Manuel aktivasyon</strong><small>Görüşme → ödeme teyidi → admin aktivasyonu</small></div>
+    <div class="payment-modal-actions">
+      <button class="secondary" type="button" id="closePlanPaymentSecondary">Daha sonra</button>
+      <button class="primary" type="button" id="continuePlanToPilot">Pilot başvurusuna geç →</button>
+    </div>
+    <small class="payment-disclaimer">İyzico hesabı ve ödeme linki hazır olduğunda otomatik checkout ayrıca etkinleştirilecektir.</small>
+  </dialog>
 
   <footer class="site-footer">
     <div>
       <a class="brand" href="#" aria-label="Formera">
-        <img class="brand-logo" src="assets/formera-logo.svg?v=20260722-4" alt="Formera" height="24" />
+        <img class="brand-logo" src="assets/formera-logo.svg?v=20260725-1" alt="Formera" height="24" />
       </a>
       <p>PT stüdyoları için premium operasyon asistanı.</p>
     </div>
@@ -275,7 +293,7 @@
       <a href="#pilot">Kurucu pilot</a>
     </div>
   </footer>
-  <script src="landing.js?v=20260722-4"></script>
-  <script src="pwa.js?v=20260722-4"></script>
+  <script src="landing.js?v=20260725-1"></script>
+  <script src="pwa.js?v=20260725-1"></script>
 </body>
 </html>

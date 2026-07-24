@@ -1,4 +1,4 @@
-const CACHE_NAME = 'formera-pwa-v24';
+const CACHE_NAME = 'formera-pwa-v26';
 const CORE_ASSETS = [
   './',
   './index.html',
