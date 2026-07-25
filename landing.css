@@ -536,6 +536,20 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
   background:linear-gradient(135deg,var(--acid),var(--ice));
   box-shadow:0 0 18px rgba(217,255,100,.26);
 }
+.price-cta{
+  margin-top:auto;
+  width:100%;
+  border:1px solid rgba(217,255,100,.35);
+  border-radius:14px;
+  padding:13px 15px;
+  background:rgba(217,255,100,.1);
+  color:var(--ink);
+  font:800 13px "DM Sans";
+  cursor:pointer;
+  transition:transform .2s ease,background .2s ease,border-color .2s ease;
+}
+.price-cta:hover{transform:translateY(-2px);background:var(--acid);border-color:var(--acid)}
+.pricing-teaser .featured .price-cta{background:var(--acid);border-color:var(--acid)}
 .package-note{
   grid-column:1/-1;
   margin:0!important;
@@ -545,6 +559,37 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
   background:rgba(217,255,100,.06);
   color:#dbe5c7!important;
 }
+.payment-note{
+  grid-column:1/-1;
+  margin:0;
+  padding:15px 17px;
+  border:1px solid rgba(217,255,100,.22);
+  border-radius:16px;
+  background:rgba(217,255,100,.07);
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.55;
+}
+.payment-note strong{color:var(--ink)}
+.payment-modal{
+  width:min(520px,calc(100% - 28px));
+  border:1px solid rgba(217,255,100,.3);
+  border-radius:24px;
+  padding:26px;
+  color:var(--ink);
+  background:#f7f9f1;
+  box-shadow:0 28px 100px rgba(0,0,0,.4);
+}
+.payment-modal::backdrop{background:rgba(4,6,3,.72);backdrop-filter:blur(6px)}
+.payment-modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.payment-modal h2{font-size:30px;color:var(--ink);margin:9px 0 0}
+.payment-modal p{color:var(--muted);line-height:1.6}
+.payment-modal .modal-close{border:0;background:transparent;color:var(--ink);font-size:27px;cursor:pointer;line-height:1}
+.payment-status-card{display:grid;gap:5px;margin:20px 0;padding:16px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+.payment-status-card span,.payment-status-card small{color:var(--muted);font-size:12px}
+.payment-status-card strong{font:800 16px Manrope;color:var(--green)}
+.payment-modal-actions{display:flex;justify-content:flex-end;gap:10px}
+.payment-disclaimer{display:block;margin-top:15px;color:var(--muted);font-size:11px;line-height:1.5}
 .cinematic-band{
   position:relative;
   overflow:hidden;

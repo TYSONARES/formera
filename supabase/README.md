@@ -78,6 +78,12 @@ Landing ve Dashboard Pilot CRM lead’lerini canlı hesaba taşımak için:
 
 SQL Editor → New query → `pilot-leads.sql` içeriğini yapıştır → Run.
 
+Pilotlarda manuel paket durumu ve ilerideki abonelik/webhook altyapısı için:
+
+SQL Editor → New query → `subscriptions.sql` içeriğini yapıştır → Run.
+
+Bu tablo ilk aşamada `activation_mode = 'manual'` ile kullanılır. İyzico hosted checkout ve webhook bağlandığında ödeme olaylarını yalnızca Supabase Edge Function yazmalıdır.
+
 Formera kurucu/admin panelini müşteri işletmeci hesaplarından ayırmak için:
 
 SQL Editor → New query → `formera-admins.sql` içeriğini yapıştır → `ADMIN_EMAIL_ADRESINI_BURAYA_YAZ` alanını kendi admin e-postanla değiştir → Run.
