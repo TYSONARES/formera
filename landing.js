@@ -6,7 +6,41 @@
   const previewTitle = document.querySelector('#leadPreviewTitle');
   const previewMeta = document.querySelector('#leadPreviewMeta');
   const previewRecommendation = document.querySelector('#leadPreviewRecommendation');
+  const planModal = document.querySelector('#planPaymentModal');
+  const planTitle = document.querySelector('#planPaymentTitle');
+  const planSummary = document.querySelector('#planPaymentSummary');
+  const packageSelect = form?.elements.package;
+  const planPrices = {'Starter':'790 TL / ay','Studio':'1.490 TL / ay','Studio AI':'2.490 TL / ay'};
   if(!form) return;
+
+  let selectedPlan = 'Studio';
+
+  function openPlanModal(plan){
+    selectedPlan = planPrices[plan] ? plan : 'Studio';
+    if(planTitle) planTitle.textContent = `${selectedPlan} · ${planPrices[selectedPlan]}`;
+    if(planSummary) planSummary.textContent = `${selectedPlan} planı için 30 günlük pilot aktivasyonunu başlatalım.`;
+    if(planModal?.showModal) planModal.showModal();
+    else planModal?.setAttribute('open','');
+  }
+
+  function closePlanModal(){
+    if(planModal?.close) planModal.close();
+    else planModal?.removeAttribute('open');
+  }
+
+  document.querySelectorAll('[data-plan-select]').forEach(button=>{
+    button.addEventListener('click', ()=>openPlanModal(button.dataset.planSelect));
+  });
+  document.querySelector('#closePlanPayment')?.addEventListener('click', closePlanModal);
+  document.querySelector('#closePlanPaymentSecondary')?.addEventListener('click', closePlanModal);
+  planModal?.addEventListener('click', event=>{ if(event.target === planModal) closePlanModal(); });
+  document.querySelector('#continuePlanToPilot')?.addEventListener('click', ()=>{
+    if(packageSelect) packageSelect.value = selectedPlan;
+    closePlanModal();
+    document.querySelector('#pilot')?.scrollIntoView({behavior:'smooth', block:'start'});
+    setTimeout(()=>form.elements.name?.focus(), 450);
+    updatePreview();
+  });
 
   function field(name, fallback='-'){
     const value = new FormData(form).get(name);
@@ -17,6 +51,10 @@
     if(packageName === 'Studio AI') return 2490;
     if(packageName === 'Starter') return 790;
     return 1490;
+  }
+
+  function packageCode(packageName){
+    return packageName === 'Studio AI' ? 'studio_ai' : packageName === 'Starter' ? 'starter' : 'studio';
   }
 
   function recommendedPackage(){
@@ -56,6 +94,9 @@
       stage: 'lead',
       nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme mesajı gönder' : 'WhatsApp görüşmesini planla',
       value: leadValueForPackage(packageName),
+      packageCode: packageCode(packageName),
+      activationStatus: 'pending',
+      activationMode: 'manual',
       followUpDate: new Date().toISOString().slice(0,10),
       createdAt: new Date().toISOString(),
       source: 'landing'
