@@ -743,6 +743,26 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
 .lead-status[data-type="success"]{color:var(--acid)}
 .lead-status[data-type="warning"]{color:#ffc857}
 .pricing-teaser .featured{border-color:rgba(217,255,100,.35);background:rgba(217,255,100,.09)}
+.pricing-teaser article{color:#f3f7eb}
+.pricing-teaser article p,.pricing-teaser article li{color:#cbd5c2}
+.pricing-teaser article h3{color:#f7faef}
+.pricing-teaser article>span{color:#d9ff64}
+.pricing-teaser .featured{background:linear-gradient(160deg,rgba(46,64,17,.96),rgba(22,29,16,.98))}
+.pricing-teaser .featured p,.pricing-teaser .featured li{color:#e4edd6}
+.pricing-teaser .price-cta{color:#f4f8ea}
+.pricing-teaser .featured .price-cta{color:#18200f}
+.pricing-teaser .package-note,.pricing-teaser .payment-note{color:#dbe5c7}
+.pricing-teaser .payment-note strong{color:#f0f7df}
+
+/* The pilot dialog sits on a light surface; keep every label readable even
+   when the global dark-theme text tokens are changed. */
+.payment-modal{color-scheme:light;background:#f8fbf2;color:#172015}
+.payment-modal h2,.payment-modal p,.payment-modal .modal-close{color:#172015!important;opacity:1}
+.payment-modal .eyebrow{color:#4f7432!important}
+.payment-modal .payment-status-card span,.payment-modal .payment-status-card small,.payment-modal .payment-disclaimer{color:#52624d!important}
+.payment-modal .payment-status-card strong{color:#2b8a4a!important}
+.payment-modal .secondary{color:#172015!important;background:#fff;border-color:#d7dfce}
+.payment-modal .primary{color:#f7ffd8!important;background:#172015;border-color:#172015}
 .site-footer{
   display:flex;
   align-items:center;

@@ -70,9 +70,9 @@ const starterStudios = [
 ];
 
 const starterPilotLeads = [
-  {id:'lead_1', name:'Ayhan Demir', studio:'CoreLab PT', city:'İstanbul', phone:'0532 400 40 40', members:'51–150', goal:'Antrenör takibini görünür yapmak', stage:'pilot', nextAction:'Gün 7 kullanım raporunu paylaş', value:1490},
+  {id:'lead_1', name:'Ayhan Demir', studio:'CoreLab PT', city:'İstanbul', phone:'0532 400 40 40', members:'51–150', goal:'Antrenör takibini görünür yapmak', stage:'pilot', nextAction:'Gün 7 kullanım raporunu paylaş', value:1690},
   {id:'lead_2', name:'Ebru Kaan', studio:'Pulse Studio', city:'İstanbul', phone:'0532 500 50 50', members:'0–50', goal:'Üye program takibini artırmak', stage:'demo', nextAction:'Demo sonrası 3 üye eklet', value:990},
-  {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2490}
+  {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2990}
 ];
 
 function initialPageFromUrl(){

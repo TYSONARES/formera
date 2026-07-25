@@ -10,15 +10,21 @@
   const planTitle = document.querySelector('#planPaymentTitle');
   const planSummary = document.querySelector('#planPaymentSummary');
   const packageSelect = form?.elements.package;
-  const planPrices = {'Starter':'790 TL / ay','Studio':'1.490 TL / ay','Studio AI':'2.490 TL / ay'};
+  const planPrices = {
+    'Starter':{list:'1.290 TL / ay',pilot:'990 TL / ay'},
+    'Studio':{list:'2.490 TL / ay',pilot:'1.690 TL / ay'},
+    'Studio AI':{list:'4.490 TL / ay',pilot:'2.990 TL / ay'}
+  };
+  const pilotPrice = document.querySelector('#planPilotPrice');
   if(!form) return;
 
   let selectedPlan = 'Studio';
 
   function openPlanModal(plan){
     selectedPlan = planPrices[plan] ? plan : 'Studio';
-    if(planTitle) planTitle.textContent = `${selectedPlan} · ${planPrices[selectedPlan]}`;
-    if(planSummary) planSummary.textContent = `${selectedPlan} planı için 30 günlük pilot aktivasyonunu başlatalım.`;
+    if(planTitle) planTitle.textContent = `${selectedPlan} · ${planPrices[selectedPlan].list}`;
+    if(pilotPrice) pilotPrice.textContent = planPrices[selectedPlan].pilot;
+    if(planSummary) planSummary.textContent = `${selectedPlan} planı için 30 günlük kurucu pilot başvurusunu başlatalım.`;
     if(planModal?.showModal) planModal.showModal();
     else planModal?.setAttribute('open','');
   }
@@ -48,9 +54,9 @@
   }
 
   function leadValueForPackage(packageName){
-    if(packageName === 'Studio AI') return 2490;
-    if(packageName === 'Starter') return 790;
-    return 1490;
+    if(packageName === 'Studio AI') return 2990;
+    if(packageName === 'Starter') return 990;
+    return 1690;
   }
 
   function packageCode(packageName){
