@@ -1959,24 +1959,26 @@ function openAiAssistant(){
   if(!aiAssistantModal || !aiAssistantBody) return;
   const usage = aiCreditUsage();
   const meta = roleMeta();
-  const internalAiRole = state.role !== 'member';
+  const memberRole = state.role === 'member';
+  const showPackageInfo = !memberRole;
+  const showInternalNote = isFormeraAdmin();
   aiAssistantBody.innerHTML = `
-    <div class="ai-package-hero ${internalAiRole ? 'internal' : 'member'}">
+    <div class="ai-package-hero ${showPackageInfo ? 'internal' : 'member'}">
       <div>
-        <span class="ai-package-badge">${internalAiRole ? 'Studio AI paket özelliği' : 'Kişisel koç önerileri'}</span>
+        <span class="ai-package-badge">${showPackageInfo ? 'Studio AI paket özelliği' : 'Kişisel koç önerileri'}</span>
         <h3>${meta.label} için akıllı öneriler</h3>
-        <p>${internalAiRole ? 'Bu ekran şimdilik demo öneriler üretir. Canlı AI API bağlandığında sesli asistan, haftalık özet ve program taslakları kredi/limit ile çalışacak.' : 'Bugünkü programın ve antrenör notların üzerinden kısa, uygulanabilir öneriler al.'}</p>
+        <p>${showPackageInfo ? 'Bu ekran şimdilik demo öneriler üretir. Canlı AI API bağlandığında sesli asistan, haftalık özet ve program taslakları kredi/limit ile çalışacak.' : 'Bugünkü programın ve antrenör notların üzerinden kısa, uygulanabilir öneriler al.'}</p>
       </div>
-      ${internalAiRole ? `<div class="ai-credit-ring" style="--usage:${usage.used}%"><strong>${usage.remaining}</strong><small>AI kredi kaldı</small></div>` : ''}
+      ${showPackageInfo ? `<div class="ai-credit-ring" style="--usage:${usage.used}%"><strong>${usage.remaining}</strong><small>AI kredi kaldı</small></div>` : ''}
     </div>
     <div class="ai-capability-grid">
       ${aiAssistantCapabilities().map(item=>`<div><b>${item[0]}</b><strong>${item[1]}</strong><small>${item[2]}</small></div>`).join('')}
     </div>
     <div class="ai-suggestion-list">
-      <div class="card-title"><div><h2>Bugünkü öneriler</h2><p>${internalAiRole ? 'Rol, görev, üye ve finans verilerine göre demo çıktılar' : 'Program ve antrenör notlarına göre kişisel öneriler'}</p></div><span class="badge">${internalAiRole ? 'Demo AI' : 'Koç notu'}</span></div>
-      ${aiAssistantSuggestions().map((item,index)=>`<div class="insight ai-light"><span>${index+1}</span><div><strong>${item}</strong><small>${internalAiRole ? 'Canlı AI paketinde sesli ve yazılı üretilecek' : 'Antrenörünle birlikte gözden geçirilebilir'}</small></div></div>`).join('')}
+      <div class="card-title"><div><h2>Bugünkü öneriler</h2><p>${showPackageInfo ? 'Rol, görev, üye ve finans verilerine göre demo çıktılar' : 'Program ve antrenör notlarına göre kişisel öneriler'}</p></div><span class="badge">${showPackageInfo ? 'Demo AI' : 'Koç notu'}</span></div>
+      ${aiAssistantSuggestions().map((item,index)=>`<div class="insight ai-light"><span>${index+1}</span><div><strong>${item}</strong><small>${showPackageInfo ? 'Canlı AI paketinde sesli ve yazılı üretilecek' : 'Antrenörünle birlikte gözden geçirilebilir'}</small></div></div>`).join('')}
     </div>
-    ${internalAiRole ? `<div class="ai-upgrade-note"><strong>Paket notu:</strong> Mikrofonla yazıya döküm Studio paketinde, gerçek sesli AI asistan ve otomatik öneriler Studio AI paketinde limitli krediyle sunulmalı.</div>` : ''}
+    ${showInternalNote ? `<div class="ai-upgrade-note"><strong>Paket notu:</strong> Mikrofonla yazıya döküm Studio paketinde, gerçek sesli AI asistan ve otomatik öneriler Studio AI paketinde limitli krediyle sunulmalı.</div>` : ''}
     <div class="modal-actions">
       <button type="button" class="secondary" data-action="voice-ai-demo">Sesli asistan demo</button>
       <button type="button" class="primary" data-action="ai-plan">Haftalık öneri üret</button>
