@@ -37,6 +37,23 @@
   document.querySelectorAll('[data-plan-select]').forEach(button=>{
     button.addEventListener('click', ()=>openPlanModal(button.dataset.planSelect));
   });
+  const pricingSection = document.querySelector('#pricing');
+  const billingToggles = document.querySelectorAll('[data-billing]');
+  const priceNodes = document.querySelectorAll('[data-price-plan]');
+  billingToggles.forEach(toggle=>{
+    toggle.addEventListener('click', ()=>{
+      const billing = toggle.dataset.billing === 'yearly' ? 'yearly' : 'monthly';
+      pricingSection?.setAttribute('data-billing', billing);
+      billingToggles.forEach(item=>{
+        const active = item.dataset.billing === billing;
+        item.classList.toggle('is-active', active);
+        item.setAttribute('aria-pressed', String(active));
+      });
+      priceNodes.forEach(node=>{
+        node.textContent = node.dataset[billing] || node.dataset.monthly || '';
+      });
+    });
+  });
   document.querySelector('#closePlanPayment')?.addEventListener('click', closePlanModal);
   document.querySelector('#closePlanPaymentSecondary')?.addEventListener('click', closePlanModal);
   planModal?.addEventListener('click', event=>{ if(event.target === planModal) closePlanModal(); });

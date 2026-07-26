@@ -9,20 +9,20 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — PT Stüdyoları İçin Operasyon Asistanı</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260726-1" />
-  <link rel="icon" href="favicon.svg?v=20260726-1" type="image/svg+xml" />
-  <link rel="shortcut icon" href="favicon.svg?v=20260726-1" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="favicon.svg?v=20260726-1" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260726-2" />
+  <link rel="icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
+  <link rel="shortcut icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg?v=20260726-2" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="landing.css?v=20260726-1" />
+  <link rel="stylesheet" href="landing.css?v=20260726-2" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
   <header class="site-header">
     <a class="brand" href="#" aria-label="Formera">
-      <img class="brand-logo" src="assets/formera-logo.svg?v=20260726-1" alt="Formera" height="28" />
+      <img class="brand-logo" src="assets/formera-logo.svg?v=20260726-2" alt="Formera" height="28" />
     </a>
     <nav aria-label="Tanıtım menüsü">
       <a href="#platform">Platform</a>
@@ -227,10 +227,15 @@
       </aside>
     </section>
 
-    <section class="pricing-teaser" aria-label="Paket taslağı">
+    <section class="pricing-teaser" id="pricing" aria-label="Paket taslağı">
+      <div class="pricing-controls" role="group" aria-label="Faturalama dönemi">
+        <span>Faturalama dönemi</span>
+        <button class="billing-toggle is-active" type="button" data-billing="monthly" aria-pressed="true">Aylık</button>
+        <button class="billing-toggle" type="button" data-billing="yearly" aria-pressed="false">Yıllık <small>%15 avantaj</small></button>
+      </div>
       <article>
         <span>Starter</span>
-        <h3>790 TL / ay</h3>
+        <h3 data-price-plan="Starter" data-monthly="1.290 TL / ay" data-yearly="13.158 TL / yıl">1.290 TL / ay</h3>
         <p>Küçük PT stüdyoları için temel operasyon takibi.</p>
         <ul>
           <li>Üye, program ve seans takibi</li>
@@ -241,7 +246,7 @@
       </article>
       <article class="featured">
         <span>Studio</span>
-        <h3>2.490 TL / ay</h3>
+        <h3 data-price-plan="Studio" data-monthly="2.490 TL / ay" data-yearly="25.398 TL / yıl">2.490 TL / ay</h3>
         <p>Ekipli çalışan stüdyolar için antrenör ve görev akışı.</p>
         <ul>
           <li>İşletmeci → antrenör görevleri</li>
@@ -252,7 +257,7 @@
       </article>
       <article>
         <span>Studio AI</span>
-        <h3>4.490 TL / ay</h3>
+        <h3 data-price-plan="Studio AI" data-monthly="4.490 TL / ay" data-yearly="45.798 TL / yıl">4.490 TL / ay</h3>
         <p>Operasyonu yorumlayan ve öneri sunan premium yapay zekâ katmanı.</p>
         <ul>
           <li>AI haftalık özet ve aksiyon önerileri</li>
@@ -262,8 +267,8 @@
         </ul>
         <button class="price-cta" type="button" data-plan-select="Studio AI">Kurucu pilot başvurusu →</button>
       </article>
-      <p class="package-note">Kurucu pilot fiyatları: Starter 990 TL, Studio 1.690 TL, Studio AI 2.990 TL / ay. İlk 4 stüdyoya 6 ay fiyat sabitleme ve kurulum desteği verilir.</p>
-      <p class="payment-note"><strong>Paketleme:</strong> Fiyatlar stüdyo lokasyonu bazındadır. Ek lokasyon +1.490 TL / ay; 3+ lokasyon için özel teklif. Pilot dönemde ödeme ve aktivasyon manuel yürütülür, İyzico onayından sonra güvenli hosted checkout’a geçilir.</p>
+      <p class="package-note">Kurucu pilot fiyatları aylık uygulanır: Starter 990 TL, Studio 1.690 TL, Studio AI 2.990 TL. İlk 4 stüdyoya 6 ay fiyat sabitleme ve kurulum desteği verilir.</p>
+      <p class="payment-note"><strong>Paketleme:</strong> Liste fiyatında yıllık ödeme %15 avantajlıdır. Fiyatlar stüdyo lokasyonu bazındadır; ek lokasyon +1.490 TL / ay, 3+ lokasyon için özel teklif. Pilot dönemde ödeme ve aktivasyon manuel yürütülür, İyzico onayından sonra güvenli hosted checkout’a geçilir.</p>
     </section>
   </main>
 
@@ -278,13 +283,13 @@
       <button class="secondary" type="button" id="closePlanPaymentSecondary">Daha sonra</button>
       <button class="primary" type="button" id="continuePlanToPilot">Pilot başvurusuna geç →</button>
     </div>
-    <small class="payment-disclaimer">İyzico hesabı ve ödeme linki hazır olduğunda otomatik checkout ayrıca etkinleştirilecektir.</small>
+    <small class="payment-disclaimer">Kurucu pilot aylık faturalandırılır. İyzico hesabı ve ödeme linki hazır olduğunda otomatik checkout, pilot sonrasında yıllık ödeme seçeneğiyle birlikte etkinleştirilecektir.</small>
   </dialog>
 
   <footer class="site-footer">
     <div>
       <a class="brand" href="#" aria-label="Formera">
-        <img class="brand-logo" src="assets/formera-logo.svg?v=20260726-1" alt="Formera" height="24" />
+        <img class="brand-logo" src="assets/formera-logo.svg?v=20260726-2" alt="Formera" height="24" />
       </a>
       <p>PT stüdyoları için premium operasyon asistanı.</p>
     </div>
@@ -293,7 +298,7 @@
       <a href="#pilot">Kurucu pilot</a>
     </div>
   </footer>
-  <script src="landing.js?v=20260726-1"></script>
-  <script src="pwa.js?v=20260726-1"></script>
+  <script src="landing.js?v=20260726-2"></script>
+  <script src="pwa.js?v=20260726-2"></script>
 </body>
 </html>
