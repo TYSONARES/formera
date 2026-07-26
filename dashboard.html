@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260726-3" />
+  <link rel="stylesheet" href="styles.css?v=20260726-5" />
 </head>
 <body>
   <div class="app-shell">
@@ -27,16 +27,19 @@
       </a>
 
       <nav class="nav" aria-label="Ana menü">
-        <p class="nav-label" data-studio-nav>Çalışma alanı</p>
+        <p class="nav-label" data-studio-nav>Stüdyo</p>
         <button class="nav-item active" data-page="dashboard" data-studio-nav><span>⌂</span> Genel bakış</button>
         <button class="nav-item" data-page="members" data-studio-nav><span>♙</span> Üyeler <b id="memberCount">48</b></button>
         <button class="nav-item" data-page="programs" data-studio-nav><span>▤</span> Programlar</button>
-        <button class="nav-item" data-page="calendar" data-studio-nav><span>□</span> Takvim</button>
+        <button class="nav-item" data-page="calendar" data-studio-nav><span>□</span> Seanslar</button>
         <p class="nav-label" data-studio-nav>İşletme</p>
         <button class="nav-item" data-page="finance" data-studio-nav><span>◒</span> Finans</button>
-        <button class="nav-item" data-page="reports" data-studio-nav><span>↗</span> Raporlar</button>
-        <button class="nav-item" data-page="growth" data-studio-nav><span>✦</span> AI İş Geliştirme</button>
         <button class="nav-item" data-page="team" data-studio-nav><span>♧</span> Ekip</button>
+        <button class="nav-more-toggle" type="button" data-studio-nav aria-expanded="false"><span>⋯</span> Daha fazla <b>⌄</b></button>
+        <div class="nav-more-group" data-secondary-nav hidden>
+          <button class="nav-item" data-page="reports" data-studio-nav><span>↗</span> Haftalık özet</button>
+          <button class="nav-item" data-page="growth" data-studio-nav><span>✦</span> İş geliştirme</button>
+        </div>
         <p class="nav-label" data-admin-nav>Formera</p>
         <button class="nav-item" data-page="pilot" data-admin-nav><span>⚑</span> Admin · Pilot takibi</button>
       </nav>
@@ -271,7 +274,7 @@
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="pwa.js?v=20260726-3"></script>
-  <script src="app.js?v=20260726-3"></script>
+  <script src="pwa.js?v=20260726-5"></script>
+  <script src="app.js?v=20260726-5"></script>
 </body>
 </html>

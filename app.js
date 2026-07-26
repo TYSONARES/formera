@@ -1160,9 +1160,10 @@ function updateBackendShell(){
   button.classList.toggle('connected', state.backend.connected);
   button.classList.toggle('warning', state.backend.configured && !state.backend.connected);
   if(state.backend.loading) button.textContent = 'Bağlanıyor...';
-  else if(state.backend.connected) button.textContent = roleLabel(state.backend.profile?.role || state.role);
+  else if(state.backend.connected) button.textContent = 'Canlı hesap';
   else if(state.backend.configured) button.textContent = 'Giriş gerekli';
-  else button.textContent = 'Demo mod';
+  else button.textContent = 'Demo';
+  button.title = state.backend.connected ? 'Canlı hesap ve çıkış seçenekleri' : state.backend.configured ? 'Hesap bağlantısı gerekli' : 'Örnek verilerle önizleme';
   updateAccountSummary();
 }
 
@@ -1645,8 +1646,9 @@ function updateRoleShell(){
   const workspaceButton = document.querySelector('#workspaceSwitch');
   if(roleButton){
     roleButton.querySelector('span').textContent = meta.label;
-    roleButton.querySelector('small').textContent = isFormeraAdmin() ? 'Satış / pilot kontrolü' : state.backend.connected ? 'Canlı rol' : meta.next;
+    roleButton.querySelector('small').textContent = isFormeraAdmin() ? 'Satış / pilot kontrolü' : state.backend.connected ? 'Canlı rol' : 'Rol önizlemesi';
     roleButton.classList.toggle('locked', state.backend.connected || isFormeraAdmin());
+    roleButton.hidden = state.backend.connected || isFormeraAdmin();
     roleButton.title = isFormeraAdmin() ? 'Formera Admin modunda salon rolü kilitlenir.' : state.backend.connected ? 'Canlı modda rol giriş yapan hesaba göre belirlenir.' : 'Demo rolünü değiştir';
   }
   if(workspaceButton){
@@ -1847,21 +1849,28 @@ function ownerSetupGuide(){
   const steps = ownerSetupSteps();
   const completed = steps.filter(step=>step.done).length;
   const nextStep = steps.find(step=>!step.done) || {action:'customize-studio', button:'Kurulumu gözden geçir'};
+  const primarySteps = steps.slice(0,3);
+  const advancedSteps = steps.slice(3);
+  const stepMarkup = step => `<div class="owner-setup-step ${step.done ? 'done' : ''}">
+        <span>${step.done ? '✓' : steps.indexOf(step) + 1}</span>
+        <strong>${step.title}</strong>
+        <small>${step.note}</small>
+      </div>`;
   return `<article class="card owner-setup-card">
     <div class="card-title">
       <div><h2>İlk kurulum rehberi</h2><p>Salon panelini satışa ve gerçek kullanıma hazır hale getiren kısa yol.</p></div>
       <span class="badge">${completed}/${steps.length} tamam</span>
     </div>
     <div class="owner-setup-grid">
-      ${steps.map((step,index)=>`<div class="owner-setup-step ${step.done ? 'done' : ''}">
-        <span>${step.done ? '✓' : index + 1}</span>
-        <strong>${step.title}</strong>
-        <small>${step.note}</small>
-      </div>`).join('')}
+      ${primarySteps.map(stepMarkup).join('')}
     </div>
+    <details class="setup-advanced">
+      <summary>Program ve görev adımlarını göster</summary>
+      <div class="owner-setup-grid">${advancedSteps.map(stepMarkup).join('')}</div>
+    </details>
     <div class="owner-setup-actions">
       <button class="primary" data-action="${nextStep.action}">${nextStep.button}</button>
-      <button class="secondary" data-action="start-onboarding">5 adımlı kurulum sihirbazı</button>
+      <button class="secondary" data-action="start-onboarding">Kurulum sihirbazı</button>
     </div>
   </article>`;
 }
@@ -1887,7 +1896,7 @@ function dashboard(){
     <article class="card ai-card"><span class="ai-label">✦ FORMA AI · HAFTALIK ÖZET</span><h2>${finance.net >= 0 ? 'Kârlı gidiyorsun' : 'Gider baskısı var'}, ${riskyCount || 1} üye dikkat istiyor.</h2><p>Bu haftanın neti ${formatCurrency(finance.net)}. Tahsilat oranı %${finance.collectionRate}; riskli ve yenilemeye yaklaşan üyeler için bugün takip aksiyonu öneriyorum.</p>
       <div class="insight"><span>↗</span><div><strong>${Math.min(3, riskyCount || 3)} üyeye bugün ulaş</strong><small>Bekleyen tahsilat: ${formatCurrency(finance.pending)}</small></div></div>
       <div class="insight"><span>◷</span><div><strong>${sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu` : 'Kapasite uygun'}</strong><small>${sessions.busiest ? `${sessions.busiest[1]} seans aynı saate yakın` : 'Bugün rahat plan görünüyor'}</small></div></div>
-      <button class="primary ai-action" data-page-link="growth">AI iş geliştirme paneli →</button>
+      <button class="primary ai-action" data-page-link="growth">İş geliştirme önerilerini gör →</button>
     </article>
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
     <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
@@ -2868,7 +2877,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
   <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
-const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Raporlar','Haftalık ve aylık performansı karşılaştır.','↗'],growth:['AI İş Geliştirme','Toparlanma ve büyüme önerilerini tek ekranda yönet.','✦'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
+const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Haftalık özet','Haftalık ve aylık performansı karşılaştır.','↗'],growth:['AI İş Geliştirme','Toparlanma ve büyüme önerilerini tek ekranda yönet.','✦'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
 function isFormeraAdmin(){
   return state.workspace === 'formera' && canAccessFormeraAdmin();
@@ -2893,9 +2902,23 @@ function updateWorkspaceNav(){
   if(studioCard) studioCard.hidden = isAdmin;
 }
 
+function updateSecondaryNav(){
+  const toggle = document.querySelector('.nav-more-toggle');
+  const group = document.querySelector('[data-secondary-nav]');
+  if(!toggle || !group) return;
+  const shouldOpen = ['reports','growth'].includes(state.page);
+  const isOpen = toggle.getAttribute('aria-expanded') === 'true' || shouldOpen;
+  toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  group.hidden = !isOpen;
+  toggle.classList.toggle('active', shouldOpen);
+  const arrow = toggle.querySelector('b');
+  if(arrow) arrow.textContent = isOpen ? '⌃' : '⌄';
+}
+
 function syncNavState(){
   normalizeWorkspacePage();
   updateWorkspaceNav();
+  updateSecondaryNav();
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === state.page);
   });
@@ -3854,6 +3877,18 @@ document.addEventListener('click', event=>{
 }, true);
 
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
+document.querySelector('.nav-more-toggle')?.addEventListener('click', event=>{
+  event.preventDefault();
+  const toggle = event.currentTarget;
+  const group = document.querySelector('[data-secondary-nav]');
+  if(!group) return;
+  const nextOpen = toggle.getAttribute('aria-expanded') !== 'true';
+  toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+  group.hidden = !nextOpen;
+  if(nextOpen && !isMobileSidebar()) document.querySelector('.app-shell')?.classList.add('sidebar-expanded');
+  const arrow = toggle.querySelector('b');
+  if(arrow) arrow.textContent = nextOpen ? '⌃' : '⌄';
+});
 document.querySelector('#roleSwitch').onclick=()=>{
   if(isFormeraAdmin()){
     showToast('Formera Admin modunda rol değil, satış/pilot kontrol paneli açıktır.');

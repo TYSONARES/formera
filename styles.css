@@ -115,7 +115,7 @@
 .setup-summary strong,.setup-summary small{display:block}
 .setup-summary small{color:var(--muted);font-size:11px;margin-top:4px}
 .owner-setup-card{margin-bottom:16px;background:linear-gradient(135deg,#ffffff 0%,#f7faee 100%)}
-.owner-setup-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.owner-setup-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .owner-setup-step{border:1px solid var(--line);background:#f8f9f4;border-radius:14px;padding:13px;min-height:118px}
 .owner-setup-step span{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#eef0e8;color:#6f7568;font-weight:900;margin-bottom:11px}
 .owner-setup-step.done{border-color:#d7ecc0;background:#f3fae6}
@@ -223,6 +223,35 @@
 .business-hero{display:grid;grid-template-columns:1fr 160px;gap:18px;align-items:center;margin-bottom:16px}
 .business-score{position:relative;z-index:1;display:grid;place-items:center;text-align:center;width:136px;height:136px;border-radius:34px;background:linear-gradient(135deg,rgba(217,255,100,.18),rgba(255,255,255,.05));border:1px solid rgba(217,255,100,.22);justify-self:end}
 .business-score strong{font:900 34px Manrope;color:var(--acid)}
+
+/* Sadeleştirilmiş bilgi mimarisi: ikincil araçlar tek bir açılır grupta kalır. */
+.nav-more-toggle{border:0;background:transparent;color:#aeb3a7;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:10px;font:500 14px "DM Sans";cursor:pointer;text-align:left}
+.nav-more-toggle span{font-size:19px;width:20px;text-align:center}
+.nav-more-toggle b{margin-left:auto;color:#74796c;font-size:12px}
+.nav-more-toggle:hover,.nav-more-toggle.active{background:#272a22;color:white}
+.nav-more-group{display:grid;gap:5px;padding-left:8px}
+.nav-more-group[hidden]{display:none}
+.setup-advanced{margin-top:12px;border-top:1px solid rgba(232,234,223,.9);padding-top:10px}
+.setup-advanced summary{cursor:pointer;color:var(--green);font-size:12px;font-weight:700;list-style:none}
+.setup-advanced summary::-webkit-details-marker{display:none}
+.setup-advanced summary::before{content:'+';display:inline-grid;place-items:center;width:20px;height:20px;border-radius:7px;background:#eef0e8;color:var(--green);margin-right:7px}
+.setup-advanced[open] summary::before{content:'−'}
+.setup-advanced .owner-setup-grid{margin-top:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+
+@media(min-width:761px){
+  .app-shell:not(.sidebar-expanded) .nav-more-toggle{justify-content:center;gap:0;padding:11px 8px;font-size:0}
+  .app-shell:not(.sidebar-expanded) .nav-more-toggle span{width:auto}
+  .app-shell:not(.sidebar-expanded) .nav-more-toggle b{display:none}
+  .app-shell:not(.sidebar-expanded) .nav-more-group{display:none!important}
+  .app-shell.sidebar-expanded .nav-more-toggle{justify-content:flex-start;gap:12px}
+  .app-shell.sidebar-expanded .nav-more-toggle span{width:20px}
+}
+
+@media(max-width:760px){
+  .nav-more-toggle{justify-content:flex-start;gap:12px;padding:11px 12px}
+  .nav-more-toggle span{width:20px}
+  .setup-advanced .owner-setup-grid{grid-template-columns:1fr}
+}
 .business-score small{color:#aeb4a7;font-size:11px;font-weight:800}
 .business-diagnosis,.business-opportunities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .business-diagnosis div,.business-opportunities div{border:1px solid var(--line);background:#f8f9f4;border-radius:13px;padding:13px;min-width:0}
