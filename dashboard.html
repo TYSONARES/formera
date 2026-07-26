@@ -8,22 +8,22 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — Stüdyo Yönetimi</title>
-  <link rel="manifest" href="manifest.webmanifest?v=20260726-2" />
-  <link rel="icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
-  <link rel="shortcut icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="favicon.svg?v=20260726-2" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260726-3" />
+  <link rel="icon" href="favicon.svg?v=20260726-3" type="image/svg+xml" />
+  <link rel="shortcut icon" href="favicon.svg?v=20260726-3" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg?v=20260726-3" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260726-2" />
+  <link rel="stylesheet" href="styles.css?v=20260726-3" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <button class="sidebar-close" type="button" aria-label="Sol menüyü kapat">×</button>
       <a class="brand" href="#" aria-label="Formera ana sayfa">
-        <img class="dashboard-brand-mark" src="assets/formera-favicon.svg?v=20260726-2" alt="" aria-hidden="true" height="32" />
-        <img class="dashboard-brand-logo" src="assets/formera-logo.svg?v=20260726-2" alt="Formera" height="32" />
+        <img class="dashboard-brand-mark" src="assets/formera-favicon.svg?v=20260726-3" alt="" aria-hidden="true" height="32" />
+        <img class="dashboard-brand-logo" src="assets/formera-logo.svg?v=20260726-3" alt="Formera" height="32" />
       </a>
 
       <nav class="nav" aria-label="Ana menü">
@@ -115,6 +115,7 @@
       <div class="form-grid"><label>Tarih<input name="date" type="date" required></label><label>Saat<input name="time" type="time" required></label></div>
       <div class="form-grid"><label>Üye<input name="member" required placeholder="Selin Aksoy"></label><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label></div>
       <div class="form-grid"><label>Program<input name="program" placeholder="Alt vücut güç"></label><label>Salon<select name="room"><option>Salon A</option><option>Salon B</option><option>Online</option></select></label></div>
+      <div class="form-grid"><label>Seans tipi<select name="sessionType"><option value="one_to_one">Birebir</option><option value="group">Grup</option><option value="online">Online</option></select></label><label>Kapasite<input name="capacity" type="number" min="1" max="100" value="1" required></label></div>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Seansı kaydet</button></div>
     </form>
   </dialog>
@@ -270,7 +271,7 @@
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="pwa.js?v=20260726-2"></script>
-  <script src="app.js?v=20260726-2"></script>
+  <script src="pwa.js?v=20260726-3"></script>
+  <script src="app.js?v=20260726-3"></script>
 </body>
 </html>

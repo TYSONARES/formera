@@ -392,6 +392,7 @@ function addDaysISO(days){
 }
 
 function normalizeSession(session){
+  const hasReserved = session.reserved != null || session.reserved_count != null;
   return {
     id: session.id || makeId(),
     studioId: session.studioId || session.studio_id || null,
@@ -404,6 +405,10 @@ function normalizeSession(session){
     trainer: session.trainer || 'Ece',
     program: session.program || state?.programs?.[0]?.title || 'Genel PT',
     room: session.room || 'Salon A',
+    sessionType: ['one_to_one','group','online'].includes(session.sessionType || session.session_type) ? (session.sessionType || session.session_type) : 'one_to_one',
+    capacity: Math.max(1, Number(session.capacity) || 1),
+    reserved: Math.max(0, hasReserved ? Number(session.reserved ?? session.reserved_count) || 0 : 1),
+    waitlist: Math.max(0, Number(session.waitlist ?? session.waitlist_count) || 0),
     status: ['scheduled','done','cancelled'].includes(session.status) ? session.status : 'scheduled'
   };
 }
@@ -916,6 +921,10 @@ function mapRemoteSession(session){
     trainer: trainerNameById(session.trainer_profile_id),
     program: programTitleById(session.program_id),
     room: session.room,
+    sessionType: session.session_type || 'one_to_one',
+    capacity: Math.max(1, Number(session.capacity) || 1),
+    reserved: Math.max(0, Number(session.reserved_count) || 1),
+    waitlist: Math.max(0, Number(session.waitlist_count) || 0),
     status: session.status
   });
 }
@@ -1383,6 +1392,10 @@ function syncSessionsToSupabase(){
     session_date: session.date,
     session_time: session.time,
     room: session.room,
+    session_type: session.sessionType,
+    capacity: session.capacity,
+    reserved_count: session.reserved,
+    waitlist_count: session.waitlist,
     status: session.status
   })));
 }
@@ -1796,10 +1809,19 @@ function sessionStatusClass(status){
   return {scheduled:'warn', done:'good', cancelled:'risk'}[status] || 'warn';
 }
 
+function sessionTypeLabel(type){
+  return {one_to_one:'Birebir',group:'Grup',online:'Online'}[type] || 'Birebir';
+}
+
+function sessionCapacityLabel(session){
+  const remaining = Math.max(0, session.capacity - session.reserved);
+  return `${sessionTypeLabel(session.sessionType)} · ${session.reserved}/${session.capacity} dolu${session.waitlist ? ` · ${session.waitlist} bekleme` : remaining ? ` · ${remaining} yer` : ' · Kapasite dolu'}`;
+}
+
 function compactSessionRows(items=sessionsForDate()){
   return items.slice(0,4).map(session=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
     <span>${session.time}</span>
-    <div><strong>${session.member} · ${session.program}</strong><small>${session.trainer} ile · ${session.room} · ${sessionStatusLabel(session.status)}</small></div>
+    <div><strong>${session.member} · ${session.program}</strong><small>${session.trainer} ile · ${session.room} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
 }
 
@@ -2030,11 +2052,13 @@ function programsPage(){
 }
 
 function sessionRows(items=sessionsForDate()){
+  const canManageBookings = state.role === 'owner' || isFormeraAdmin();
   return items.map(session=>`<div class="session-row">
     <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
-    <div><strong>${session.member}</strong><small>${session.program} · PT ${session.trainer}</small></div>
+    <div><strong>${session.member}</strong><small>${session.program} · PT ${session.trainer} · ${sessionCapacityLabel(session)}</small></div>
     <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
     <div class="row-actions">
+      ${canManageBookings && session.status === 'scheduled' ? `<button class="mini-button" data-action="reserve-session" data-session-id="${session.id}">Rezervasyon ekle</button>` : ''}
       <button class="mini-button" data-action="complete-session" data-session-id="${session.id}">Tamamla</button>
       <button class="mini-button" data-action="cancel-session" data-session-id="${session.id}">İptal</button>
       <button class="mini-button danger" data-action="delete-session" data-session-id="${session.id}">Sil</button>
@@ -2168,7 +2192,7 @@ function businessPlanText(){
     '7 günlük aksiyon planı:',
     ...businessActionPlan().map((item,index)=>`${index+1}. ${item}`),
     '',
-    'Not: Bu modül Studio AI / Business AI paketi içinde ücretli veya opsiyonel danışmanlık eklentisi olarak sunulabilir.'
+    ...(isFormeraAdmin() ? ['','Not: Bu modül Studio AI / Business AI paketi içinde ücretli veya opsiyonel danışmanlık eklentisi olarak sunulabilir.'] : [])
   ].join('\n');
 }
 
@@ -2185,6 +2209,16 @@ async function copyBusinessPlan(){
 function growthPage(){
   const health = businessHealth();
   const actionPlan = businessActionPlan();
+  const internalPricingCard = isFormeraAdmin() ? `<article class="card business-pricing">
+      <div class="card-title"><div><h2>Paketleme önerisi</h2><p>İç satış ve paket stratejisi</p></div><span class="badge">Business AI</span></div>
+      <div class="report-list">
+        <div><span>Studio</span><strong>Mikrofon + temel öneri</strong></div>
+        <div><span>Studio AI</span><strong>Haftalık AI özet</strong></div>
+        <div><span>Business AI</span><strong>İş geliştirme / büyüme planı</strong></div>
+        <div><span>Önerilen ek ücret</span><strong>+1.990 TL / ay</strong></div>
+      </div>
+      <p class="business-note">Pilot dönemde seçili işletmelere ücretsiz/indirimli açıp sonuç raporuyla ücretli pakete çevrilebilir.</p>
+    </article>` : '';
   return `<div class="welcome"><div><span class="eyebrow">BUSINESS AI · OPSİYONEL ÜCRETLİ MODÜL</span><h1>AI İş Geliştirme</h1><p>İşleri kötü giden salon için toparlanma, büyümek isteyen salon için büyüme planı üretir.</p></div><div class="welcome-actions"><button class="secondary" data-action="copy-growth-plan">Planı kopyala</button><button class="primary" data-action="ai-assistant">AI asistana sor</button></div></div>
   <section class="metrics">
     ${metric('İşletme skoru',`%${health.score}`,businessModeLabel(health.mode),'✦',health.score < 58)}
@@ -2213,16 +2247,7 @@ function growthPage(){
       <div class="card-title"><div><h2>Büyüme fırsatları</h2><p>Gelir artırma ve kayıp azaltma alanları</p></div><span class="badge">Opsiyonel</span></div>
       <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${item.title}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
     </article>
-    <article class="card business-pricing">
-      <div class="card-title"><div><h2>Paketleme önerisi</h2><p>Bu özellik ayrı değer olarak satılmalı</p></div><span class="badge">Business AI</span></div>
-      <div class="report-list">
-        <div><span>Studio</span><strong>Mikrofon + temel öneri</strong></div>
-        <div><span>Studio AI</span><strong>Haftalık AI özet</strong></div>
-        <div><span>Business AI</span><strong>İş geliştirme / büyüme planı</strong></div>
-        <div><span>Önerilen ek ücret</span><strong>+750–1.500 TL / ay</strong></div>
-      </div>
-      <p class="business-note">Pilot dönemde bu modülü seçili işletmelere ücretsiz/indirimli açıp, sonuç raporu üzerinden ücretli pakete çevirmek en sağlıklı yol.</p>
-    </article>
+    ${internalPricingCard}
   </section>`;
 }
 
@@ -3019,7 +3044,23 @@ function openSessionModal(){
   sessionForm.elements.time.value = '09:00';
   sessionForm.elements.member.value = state.members[0]?.name || '';
   sessionForm.elements.program.value = state.programs[0]?.title || '';
+  if(sessionForm.elements.sessionType) sessionForm.elements.sessionType.value = 'one_to_one';
+  if(sessionForm.elements.capacity) sessionForm.elements.capacity.value = '1';
   sessionModal.showModal();
+}
+
+function reserveSession(id){
+  const session = state.sessions.find(item=>item.id === id);
+  if(!session || session.status !== 'scheduled') return;
+  if(session.reserved < session.capacity){
+    session.reserved += 1;
+    showToast(`${session.member} rezervasyonu eklendi. ${sessionCapacityLabel(session)}`);
+  }else{
+    session.waitlist += 1;
+    showToast('Kapasite dolu; üye bekleme listesine eklendi.');
+  }
+  saveSessions();
+  render();
 }
 
 function completeSession(id){
@@ -3596,6 +3637,7 @@ function bind(){
     if(action==='delete-program') return deleteProgram(b.dataset.programId);
     if(action==='assign-program') return assignProgram(b.dataset.programId);
     if(action==='add-session') return openSessionModal();
+    if(action==='reserve-session') return reserveSession(b.dataset.sessionId);
     if(action==='complete-session') return completeSession(b.dataset.sessionId);
     if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
     if(action==='delete-session') return deleteSession(b.dataset.sessionId);
@@ -3943,6 +3985,10 @@ sessionForm.onsubmit=e=>{
     trainer: data.get('trainer'),
     program: data.get('program').trim() || 'Genel PT',
     room: data.get('room'),
+    sessionType: data.get('sessionType'),
+    capacity: data.get('capacity'),
+    reserved: 1,
+    waitlist: 0,
     status: 'scheduled'
   });
   state.sessions.push(session);

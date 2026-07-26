@@ -78,6 +78,10 @@ create table if not exists public.sessions (
   session_date date not null,
   session_time time not null,
   room text default 'Salon A',
+  session_type text not null default 'one_to_one' check (session_type in ('one_to_one', 'group', 'online')),
+  capacity integer not null default 1 check (capacity > 0),
+  reserved_count integer not null default 1 check (reserved_count >= 0),
+  waitlist_count integer not null default 0 check (waitlist_count >= 0),
   status text not null default 'scheduled' check (status in ('scheduled', 'done', 'cancelled')),
   created_at timestamptz not null default now()
 );
