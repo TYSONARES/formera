@@ -115,7 +115,7 @@
       members: field('members', '0–50'),
       goal: `${field('goal', 'Operasyonu toparlamak')} · ${packageDecisionLabel()} · ${timeline}`,
       stage: 'lead',
-      nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme mesajı gönder' : 'WhatsApp görüşmesini planla',
+      nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme ve demo akışını planla' : 'Demo ve pilot görüşmesini planla',
       value: leadValueForPackage(packageName),
       packageCode: packageCode(packageName),
       activationStatus: 'pending',
@@ -156,20 +156,20 @@
     const decisionPackage = selectedPackage();
     const timeline = field('timeline', 'Bu hafta');
     return [
-      'Merhaba, Formera kurucu pilot programı için kısa bir görüşme talep ediyorum.',
+      'Merhaba, Formera kurucu pilotuna başvurmak istiyorum.',
       '',
       `Ad soyad: ${field('name')}`,
       `Stüdyo: ${field('studio')}`,
       `Şehir: ${field('city')}`,
       `Üye sayısı: ${field('members')}`,
-      `Telefon / WhatsApp: ${field('phone')}`,
+      `Telefon: ${field('phone')}`,
       `Öncelik: ${field('goal')}`,
       `Paket ilgisi: ${packageName}`,
       `Formera önerisi: ${suggestedPackage}`,
       `Başlama zamanı: ${timeline}`,
       '',
       '30 günlük pilotta özellikle işletmeci paneli, antrenör görevleri, üye program takibi ve haftalık rapor akışını görmek istiyorum.',
-      decisionPackage === 'Studio AI' ? 'AI öneriler ve sesli asistan katmanı hakkında da bilgi almak isterim.' : 'Uygunsa demo dashboard üzerinden kısa bir kurulum görüşmesi planlayalım.',
+      decisionPackage === 'Studio AI' ? 'AI öneriler ve sesli asistan katmanı hakkında da bilgi almak isterim.' : 'Demo akışını incelemek ve pilot planını netleştirmek istiyorum.',
       '',
       'Kaynak: Formera ön tanıtım sayfası'
     ].join('\n');
@@ -198,12 +198,8 @@
   form.addEventListener('submit', event => {
     event.preventDefault();
     if(!form.reportValidity()) return;
-    const message = leadMessage();
-    const encodedMessage = encodeURIComponent(message);
     const saved = saveLeadToDashboard();
-    setStatus(saved ? 'WhatsApp mesajı hazırlandı. Lead Dashboard Pilot CRM’e de eklendi.' : 'WhatsApp mesajı hazırlandı. CRM kaydı için Dashboard’u açabilirsin.', 'success');
-    try{ navigator.clipboard?.writeText(message); }catch(error){}
-    window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
+    setStatus(saved ? 'Pilot başvurusu kaydedildi. Başvuru özetini ayrıca kopyalayabilirsiniz.' : 'Başvuru özeti hazırlandı; bu cihazdaki CRM kaydı oluşturulamadı.', saved ? 'success' : 'warning');
   });
 
   copyButton?.addEventListener('click', async () => {
@@ -212,9 +208,9 @@
     try{
       await navigator.clipboard.writeText(message);
       const saved = saveLeadToDashboard();
-      setStatus(saved ? 'Başvuru mesajı kopyalandı ve lead Dashboard Pilot CRM’e eklendi.' : 'Başvuru mesajı kopyalandı. WhatsApp veya DM içinde yapıştırabilirsin.', 'success');
+      setStatus(saved ? 'Başvuru özeti kopyalandı ve pilot CRM’e eklendi.' : 'Başvuru özeti kopyalandı; CRM kaydı oluşturulamadı.', saved ? 'success' : 'warning');
     }catch(error){
-      setStatus('Kopyalama olmadı. WhatsApp butonunu kullanabilirsin.', 'warning');
+      setStatus('Kopyalama olmadı. Başvuru bilgilerini kontrol edip tekrar dene.', 'warning');
     }
   });
 

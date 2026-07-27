@@ -2163,7 +2163,7 @@ function businessActionPlan(){
   if(mode === 'recovery'){
     return [
       finance.pending > 0 ? `Bugün bekleyen ${formatCurrency(finance.pending)} tahsilat için 3 aşamalı hatırlatma mesajı gönder.` : 'Son 7 günün gelir/gider kayıtlarını tamamla; gerçek nakit resmini netleştir.',
-      risky.length ? `${risky.slice(0,3).map(member=>member.name).join(', ')} için aynı gün arama + WhatsApp takip planı aç.` : 'Son 30 gün seansa gelmeyen üyeleri bul ve geri kazanım listesi çıkar.',
+      risky.length ? `${risky.slice(0,3).map(member=>member.name).join(', ')} için aynı gün geri dönüş takip planı aç.` : 'Son 30 gün seansa gelmeyen üyeleri bul ve geri kazanım listesi çıkar.',
       'En büyük 2 gider kalemini işaretle; bu hafta ertelenebilir/azaltılabilir olanı belirle.',
       'Antrenörlere günlük 1 takip görevi ver: riskli üye, yenileme, seans sonrası not.',
       '7 gün sonunda: tahsilat, seans katılımı ve riskli üye sayısını tekrar ölç.'
@@ -2173,7 +2173,7 @@ function businessActionPlan(){
     risky.length ? `${risky[0].name} için yenileme konuşmasını bugün başlat; kayıp olmadan satış fırsatı yarat.` : 'Memnun 3 üyeden referans iste; deneme dersi kontenjanı aç.',
     sessions.busiest ? `${sessions.busiest[0]}:00 yoğunluğu için ek PT bloğu veya premium saat fiyatı test et.` : 'Boş saatlere ölçüm/deneme dersi kampanyası yerleştir.',
     'En iyi sonuç alan programı paket satış metnine dönüştür; antrenörlere aynı dili kullandır.',
-    'Instagram/WhatsApp için “üye dönüşümü” hikâyesi hazırla; satış konuşmasını gerçek sonuçla destekle.',
+    'Sosyal medya için “üye dönüşümü” hikâyesi hazırla; satış konuşmasını gerçek sonuçla destekle.',
     'Hafta sonunda yeni üyelik, yenileme ve referans sayılarını raporla.'
   ];
 }
