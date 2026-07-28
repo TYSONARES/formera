@@ -4023,6 +4023,68 @@ function enhanceVoiceFields(){
   });
 }
 
+// İnsan isimleri başlık düzeninde, kısa açıklama ve notlar cümle düzeninde yazılır.
+// E-posta, parola, URL, adres ve egzersiz adları gibi alanlara dokunulmaz; bunlar
+// otomatik küçültüldüğünde anlam veya marka yazımı bozulabilir.
+const NAME_CASE_FIELDS = new Set(['name', 'ownerName', 'trainerName', 'memberName']);
+const SENTENCE_CASE_FIELDS = new Set(['title', 'goal', 'category', 'location', 'trainerSpecialty', 'note']);
+
+function titleCaseTR(value){
+  return String(value || '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/(^|[\s\-’'])\p{L}/gu, match => match.toLocaleUpperCase('tr-TR'));
+}
+
+function sentenceCaseTR(value){
+  let shouldUppercase = true;
+  return Array.from(String(value || '').toLocaleLowerCase('tr-TR')).map(character=>{
+    if(shouldUppercase && /\p{L}/u.test(character)){
+      shouldUppercase = false;
+      return character.toLocaleUpperCase('tr-TR');
+    }
+    if(/[.!?\n]/.test(character)) shouldUppercase = true;
+    return character;
+  }).join('');
+}
+
+function isCapsLockEnabled(event, field){
+  if(typeof event?.getModifierState === 'function') return event.getModifierState('CapsLock');
+  return field?.dataset.capsLock === 'true';
+}
+
+function smartCaseMode(field){
+  // Marka/stüdyo adları (NorthFit, F45 vb.) bilinçli özgün yazımlara sahip olabilir.
+  if(field.form?.id === 'studioBrandForm' || field.name === 'studioName') return '';
+  if(field.name === 'name'){
+    return 'name';
+  }
+  if(NAME_CASE_FIELDS.has(field.name)) return 'name';
+  return SENTENCE_CASE_FIELDS.has(field.name) ? 'sentence' : '';
+}
+
+function applySmartCase(field, event){
+  const mode = smartCaseMode(field);
+  if(!mode || isCapsLockEnabled(event, field)) return;
+  const current = field.value;
+  const next = mode === 'name' || mode === 'title' ? titleCaseTR(current) : sentenceCaseTR(current);
+  if(next === current) return;
+  const start = field.selectionStart;
+  const end = field.selectionEnd;
+  field.value = next;
+  if(typeof start === 'number' && typeof end === 'number') field.setSelectionRange(start, end);
+}
+
+function enhanceSmartCaseFields(){
+  document.querySelectorAll('.modal form input, .modal form textarea').forEach(field=>{
+    if(!smartCaseMode(field) || field.dataset.smartCaseReady) return;
+    field.dataset.smartCaseReady = 'true';
+    field.addEventListener('keydown', event=>{
+      field.dataset.capsLock = event.getModifierState?.('CapsLock') ? 'true' : 'false';
+    });
+    field.addEventListener('input', event=>applySmartCase(field, event));
+  });
+}
+
 const appShell = document.querySelector('.app-shell');
 const sidebar = document.querySelector('.sidebar');
 const sidebarBackdrop = document.querySelector('.sidebar-backdrop');
@@ -4482,6 +4544,7 @@ onboardingForm?.addEventListener('submit', async event=>{
 });
 
 enhanceVoiceFields();
+enhanceSmartCaseFields();
 setLoginRole(selectedLoginRole);
 render();
 initSupabase();
