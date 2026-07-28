@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260726-5" />
+  <link rel="stylesheet" href="styles.css?v=20260729-1" />
 </head>
 <body>
   <div class="app-shell">
@@ -248,15 +248,17 @@
     </form>
   </dialog>
   <dialog class="modal" id="trialModal">
-    <div class="modal-panel">
-      <div class="modal-head"><div><span class="eyebrow">FORMERA PİLOT</span><h2>30 günlük denemeni başlat</h2></div><button class="modal-close" id="closeTrialModal" aria-label="Kapat">×</button></div>
+    <div class="modal-panel trial-panel">
+      <div class="trial-celebration" aria-hidden="true">✦ &nbsp; ✦ &nbsp; 🎉 &nbsp; ✦ &nbsp; ✦</div>
+      <div class="modal-head"><div><span class="eyebrow">KUTLAMA · FORMERA PİLOT</span><h2>Harika, stüdyon hazır!</h2></div><button class="modal-close" id="closeTrialModal" aria-label="Kapat">×</button></div>
+      <p class="trial-intro">Şimdi hiçbir kart bilgisi girmeden 14 günlük canlı Formera deneyimini başlatabilirsin.</p>
       <div class="setup-summary trial-summary">
-        <div><span>30</span><strong>Günlük deneme</strong><small>Kart bilgisi gerekmez</small></div>
+        <div><span>14</span><strong>Günlük deneme</strong><small>Kart bilgisi gerekmez</small></div>
         <div><span>✓</span><strong>Canlı stüdyo paneli</strong><small>Ekip, üye, program ve seans akışı</small></div>
         <div><span>→</span><strong>Sonraki adım</strong><small>Deneme sonunda planını birlikte seçersin</small></div>
       </div>
       <p class="modal-note">Denemeyi başlattığında stüdyo panelin aktif kalır. Ödeme bilgisi bu ekranda alınmaz; pilot paket aktivasyonu şimdilik manuel yürütülür.</p>
-      <div class="modal-actions"><button type="button" class="secondary" id="reviewPlansLater">Planları sonra incele</button><button type="button" class="primary" id="startPilotTrial">30 günlük denemeyi başlat</button></div>
+      <div class="modal-actions"><button type="button" class="secondary" id="reviewPlansLater">Planları sonra incele</button><button type="button" class="primary" id="startPilotTrial">14 günlük denemeyi başlat</button></div>
     </div>
   </dialog>
   <dialog class="modal" id="supabaseModal">
@@ -288,7 +290,7 @@
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="pwa.js?v=20260726-5"></script>
-  <script src="app.js?v=20260728-1"></script>
+  <script src="pwa.js?v=20260729-1"></script>
+  <script src="app.js?v=20260729-1"></script>
 </body>
 </html>

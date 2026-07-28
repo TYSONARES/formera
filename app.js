@@ -15,6 +15,8 @@ const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
 const PENDING_OWNER_ONBOARDING_STORAGE_KEY = 'formera_pending_owner_onboarding';
 const WORKSPACE_MODE_STORAGE_KEY = 'formera_workspace_mode';
 const ADMIN_ACCESS_STORAGE_KEY = 'formera_admin_access';
+const INVITE_ROLE_QUERY_KEY = 'invite';
+const INVITE_EMAIL_QUERY_KEY = 'email';
 
 const starterMembers = [
   {name:'Selin Aksoy', initials:'SA', trainer:'Ece', last:'Bugün', sessions:'7 / 12', status:'Aktif', type:'good', phone:'0532 000 00 01'},
@@ -1195,15 +1197,17 @@ function updateBackendShell(){
 
 function openSupabaseModal(){
   clearAccountMessage();
-  setLoginRole(isFormeraAdmin() ? 'owner' : selectedLoginRole);
+  const invite = inviteEnrollment();
+  setLoginRole(isFormeraAdmin() ? 'owner' : invite?.role || selectedLoginRole);
   updateSupabaseModalMode();
   const config = readSupabaseConfig();
   if(config && supabaseConfigForm){
     supabaseConfigForm.elements.url.value = config.url || '';
     supabaseConfigForm.elements.anonKey.value = config.anonKey || '';
   }
-  if(state.backend.user?.email && supabaseAuthForm){
-    supabaseAuthForm.elements.email.value = state.backend.user.email;
+  if(supabaseAuthForm){
+    const accountEmail = state.backend.user?.email || invite?.email || '';
+    if(accountEmail) supabaseAuthForm.elements.email.value = accountEmail;
     supabaseAuthForm.elements.password.value = '';
   }
   updateAccountSummary();
@@ -1232,15 +1236,16 @@ async function signInSupabase(email, password){
 }
 
 async function signUpSupabase(email, password){
-  if(selectedLoginRole !== 'owner' && !isFormeraAdmin()){
-    showAccountMessage('Antrenör ve üye hesapları işletmecinin davetiyle açılır. Davet e-postandaki bilgilerle giriş yap.', 'warning');
+  const completingInvite = inviteEnrollmentMatches(selectedLoginRole, email);
+  if(selectedLoginRole !== 'owner' && !isFormeraAdmin() && !completingInvite){
+    showAccountMessage('Antrenör ve üye hesapları yalnızca işletmecinin gönderdiği kişisel davet bağlantısından etkinleştirilebilir.', 'warning');
     return;
   }
   if(!(await ensureSupabaseClient())) return;
   const normalizedEmail = String(email || '').trim().toLocaleLowerCase('tr');
   const createsOwnerAccount = selectedLoginRole === 'owner';
   state.backend.loading = true;
-  setAccountBusy(true, 'Hesap oluşturuluyor...');
+  setAccountBusy(true, createsOwnerAccount ? 'İşletme hesabı hazırlanıyor; ardından stüdyo kurulumuna geçeceksin...' : 'Davet hesabın hazırlanıyor...');
   updateBackendShell();
   const {data, error} = await state.backend.client.auth.signUp({
     email,
@@ -1273,7 +1278,9 @@ async function signUpSupabase(email, password){
   }
   setAccountBusy(false);
   updateBackendShell();
-  notify('Hesabın oluşturuldu. E-postandaki doğrulama bağlantısını açtığında stüdyo kurulumuna devam edeceksin.', 'success');
+  notify(createsOwnerAccount
+    ? 'Hesabın oluşturuldu. E-postandaki doğrulama bağlantısını açtığında stüdyo kurulumuna devam edeceksin.'
+    : 'Davet hesabın oluşturuldu. E-postandaki doğrulama bağlantısını açarak hesabını etkinleştir.', 'success');
 }
 
 async function signOutSupabase(){
@@ -1591,7 +1598,7 @@ function loginRoleMeta(role=selectedLoginRole){
       label: 'İşletme',
       emailLabel: 'İşletme e-postası',
       placeholder: 'owner@email.com',
-      note: 'İşletme hesabını oluştur; ardından stüdyonu kurup 30 günlük denemeni başlat.'
+      note: 'İşletme hesabını oluştur; ardından stüdyonu kurup 14 günlük denemeni başlat.'
     },
     trainer: {
       label: 'Antrenör',
@@ -1629,10 +1636,17 @@ function setLoginRole(role){
 function updateSupabaseModalMode(){
   const adminMode = isFormeraAdmin();
   const setupMode = requestedSupabaseSetup();
+  const invite = inviteEnrollment();
+  const completingInvite = Boolean(invite && invite.role === selectedLoginRole);
   if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Formera hesabına giriş';
   if(loginTabs) loginTabs.hidden = adminMode;
   if(supabaseConfigForm) supabaseConfigForm.hidden = !setupMode;
-  if(signupSupabaseButton) signupSupabaseButton.hidden = adminMode || selectedLoginRole !== 'owner';
+  if(signupSupabaseButton){
+    signupSupabaseButton.hidden = adminMode || (selectedLoginRole !== 'owner' && !completingInvite);
+    signupSupabaseButton.textContent = completingInvite
+      ? `${loginRoleMeta().label} davetini tamamla`
+      : 'İşletme hesabı oluştur';
+  }
   if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
   if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
@@ -1651,7 +1665,9 @@ function updateSupabaseModalMode(){
     }
   }else if(loginRoleNote){
     const meta = loginRoleMeta();
-    loginRoleNote.textContent = meta.note;
+    loginRoleNote.textContent = completingInvite
+      ? `Bu kişisel davet ${invite.email} için hazırlandı. Şifreni belirleyerek ${meta.label.toLocaleLowerCase('tr')} hesabını etkinleştir.`
+      : meta.note;
   }
 }
 
@@ -1795,18 +1811,39 @@ function appAccessUrl(){
   return `${location.origin}${location.pathname}`;
 }
 
+function inviteEnrollment(){
+  const query = new URLSearchParams(window.location.search);
+  const role = query.get(INVITE_ROLE_QUERY_KEY);
+  const email = String(query.get(INVITE_EMAIL_QUERY_KEY) || '').trim().toLocaleLowerCase('tr');
+  if(!['trainer','member'].includes(role) || !email || !email.includes('@')) return null;
+  return {role, email};
+}
+
+function inviteEnrollmentMatches(role, email){
+  const invite = inviteEnrollment();
+  return Boolean(invite && invite.role === role && invite.email === String(email || '').trim().toLocaleLowerCase('tr'));
+}
+
+function inviteAccessUrl(person, role){
+  const url = new URL(appAccessUrl());
+  url.searchParams.set(INVITE_ROLE_QUERY_KEY, role === 'antrenör' ? 'trainer' : 'member');
+  url.searchParams.set(INVITE_EMAIL_QUERY_KEY, String(person.email || '').trim().toLocaleLowerCase('tr'));
+  return url.toString();
+}
+
 function inviteText(person, role){
+  const accessUrl = inviteAccessUrl(person, role);
   return [
     `Merhaba ${person.name},`,
     `${activeStudio().name} Formera hesabın hazırlandı.`,
     '',
-    `Giriş linki: ${appAccessUrl()}`,
-    `E-posta: ${person.email}`,
+    `Kişisel davet bağlantın: ${accessUrl}`,
+    `Davet e-postası: ${person.email}`,
     '',
     'Adımlar:',
-    '1. Linki aç.',
-    '2. Sağ üstteki “Giriş gerekli / Demo mod” butonuna bas.',
-    '3. Bu e-posta ile “Hesap oluştur” veya hesabın varsa “Giriş yap” seçeneğini kullan.',
+    '1. Kişisel bağlantını aç.',
+    '2. İlk girişinse şifreni belirleyerek davetini tamamla.',
+    '3. Hesabın varsa aynı e-posta ve şifreyle giriş yap.',
     `4. Girişten sonra ${role} ekranın otomatik açılır.`
   ].join('\n');
 }
@@ -3608,12 +3645,12 @@ function startPilotTrial(){
   const studio = activeStudio();
   if(!studio?.id) return;
   state.studios = state.studios.map(item=>item.id === studio.id
-    ? normalizeStudio({...item, status:'30 gün deneme'})
+    ? normalizeStudio({...item, status:'14 gün deneme'})
     : item);
   saveStudios();
   trialModal?.close();
   render();
-  showToast('30 günlük denemen başlatıldı. Ödeme bilgisi gerekmiyor.');
+  showToast('14 günlük denemen başlatıldı. Ödeme bilgisi gerekmiyor.');
 }
 
 function openStudioBrandModal(){
@@ -4579,9 +4616,13 @@ onboardingForm?.addEventListener('submit', async event=>{
 
 enhanceVoiceFields();
 enhanceSmartCaseFields();
+const initialInvite = inviteEnrollment();
+if(initialInvite) selectedLoginRole = initialInvite.role;
 setLoginRole(selectedLoginRole);
 render();
-initSupabase();
+initSupabase().finally(()=>{
+  if(initialInvite && !state.backend.connected) openSupabaseModal();
+});
 if(!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !readSupabaseConfig()){
   setTimeout(()=>openOnboardingModal(), 450);
 }
