@@ -244,6 +244,7 @@ const studioBrandModal = document.querySelector('#studioBrandModal');
 const studioBrandForm = document.querySelector('#studioBrandForm');
 const onboardingModal = document.querySelector('#onboardingModal');
 const onboardingForm = document.querySelector('#onboardingForm');
+const trialModal = document.querySelector('#trialModal');
 const aiAssistantModal = document.querySelector('#aiAssistantModal');
 const aiAssistantBody = document.querySelector('#aiAssistantBody');
 const supabaseModal = document.querySelector('#supabaseModal');
@@ -1231,6 +1232,10 @@ async function signInSupabase(email, password){
 }
 
 async function signUpSupabase(email, password){
+  if(selectedLoginRole !== 'owner' && !isFormeraAdmin()){
+    showAccountMessage('Antrenör ve üye hesapları işletmecinin davetiyle açılır. Davet e-postandaki bilgilerle giriş yap.', 'warning');
+    return;
+  }
   if(!(await ensureSupabaseClient())) return;
   const normalizedEmail = String(email || '').trim().toLocaleLowerCase('tr');
   const createsOwnerAccount = selectedLoginRole === 'owner';
@@ -1268,7 +1273,7 @@ async function signUpSupabase(email, password){
   }
   setAccountBusy(false);
   updateBackendShell();
-  notify('Hesap oluşturuldu. Email doğrulaması gerekiyorsa gelen kutunu kontrol et.', 'success');
+  notify('Hesabın oluşturuldu. E-postandaki doğrulama bağlantısını açtığında stüdyo kurulumuna devam edeceksin.', 'success');
 }
 
 async function signOutSupabase(){
@@ -1586,19 +1591,19 @@ function loginRoleMeta(role=selectedLoginRole){
       label: 'İşletme',
       emailLabel: 'İşletme e-postası',
       placeholder: 'owner@email.com',
-      note: 'İşletme hesabıyla tüm salon verilerini, ekibi, üyeleri ve finansı yönet.'
+      note: 'İşletme hesabını oluştur; ardından stüdyonu kurup 30 günlük denemeni başlat.'
     },
     trainer: {
       label: 'Antrenör',
       emailLabel: 'Antrenör e-postası',
       placeholder: 'antrenor@email.com',
-      note: 'Antrenör hesabıyla kendi danışanlarını, seanslarını ve üye aksiyonlarını yönet.'
+      note: 'Antrenör hesabın işletmeci tarafından davet edilir. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
     },
     member: {
       label: 'Üye',
       emailLabel: 'Üye e-postası',
       placeholder: 'uye@email.com',
-      note: 'Üye hesabıyla kendi programını, seanslarını ve antrenör notlarını takip et.'
+      note: 'Üye hesabın işletmeci tarafından oluşturulur. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
     }
   }[role] || {};
 }
@@ -1618,15 +1623,16 @@ function setLoginRole(role){
     loginEmailLabel.childNodes[0].nodeValue = meta.emailLabel;
     if(input) input.placeholder = meta.placeholder;
   }
+  if(supabaseModal?.open) updateSupabaseModalMode();
 }
 
 function updateSupabaseModalMode(){
   const adminMode = isFormeraAdmin();
   const setupMode = requestedSupabaseSetup();
-  if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Giriş ve hesap değiştir';
+  if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Formera hesabına giriş';
   if(loginTabs) loginTabs.hidden = adminMode;
   if(supabaseConfigForm) supabaseConfigForm.hidden = !setupMode;
-  if(signupSupabaseButton) signupSupabaseButton.hidden = adminMode;
+  if(signupSupabaseButton) signupSupabaseButton.hidden = adminMode || selectedLoginRole !== 'owner';
   if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
   if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
@@ -3568,6 +3574,8 @@ async function completeOnboarding(form){
       form.reset();
       render();
       showToast('Canlı stüdyo hazır. Bu panel yalnızca kendi verilerinle çalışıyor.');
+      onboardingLiveSetup = false;
+      window.setTimeout(()=>openTrialModal(), 180);
     }catch(error){
       showToast(error.message || 'Kurulum tamamlanamadı. Lütfen tekrar dene.');
     }finally{
@@ -3589,6 +3597,23 @@ async function completeOnboarding(form){
   form.reset();
   render();
   showToast('İlk kurulum tamamlandı. Davetleri üye ve ekip kartlarından kopyalayabilirsin.');
+}
+
+function openTrialModal(){
+  if(!trialModal || trialModal.open) return;
+  trialModal.showModal();
+}
+
+function startPilotTrial(){
+  const studio = activeStudio();
+  if(!studio?.id) return;
+  state.studios = state.studios.map(item=>item.id === studio.id
+    ? normalizeStudio({...item, status:'30 gün deneme'})
+    : item);
+  saveStudios();
+  trialModal?.close();
+  render();
+  showToast('30 günlük denemen başlatıldı. Ödeme bilgisi gerekmiyor.');
 }
 
 function openStudioBrandModal(){
@@ -4511,6 +4536,15 @@ document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm.reportValidity()) return;
   const data = new FormData(supabaseAuthForm);
   await signUpSupabase(data.get('email'), data.get('password'));
+});
+document.querySelector('#startPilotTrial')?.addEventListener('click', event=>{
+  event.preventDefault();
+  startPilotTrial();
+});
+document.querySelector('#reviewPlansLater')?.addEventListener('click', event=>{
+  event.preventDefault();
+  trialModal?.close();
+  showToast('Planını deneme sonunda veya istediğin zaman Ayarlar bölümünden seçebilirsin.');
 });
 
 supabaseConfigForm?.addEventListener('submit', async event=>{
