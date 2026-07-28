@@ -197,7 +197,7 @@
   <dialog class="modal onboarding-modal" id="onboardingModal">
     <form method="dialog" id="onboardingForm">
       <div class="modal-head">
-        <div><span class="eyebrow">İLK KURULUM</span><h2>Salonunu 5 adımda hazırla</h2></div>
+        <div><span class="eyebrow" id="onboardingEyebrow">İLK KURULUM</span><h2 id="onboardingTitle">Salonunu 5 adımda hazırla</h2></div>
         <button value="cancel" class="modal-close" aria-label="Kapat">×</button>
       </div>
       <div class="onboarding-progress" aria-label="Kurulum adımları">
@@ -206,6 +206,7 @@
       <section class="onboarding-step active" data-step="0">
         <h3>İşletme bilgileri</h3>
         <label>Salon adı<input name="studioName" required placeholder="Örn. NorthFit Studio"></label>
+        <label>İşletme sahibi<input name="ownerName" required placeholder="Örn. Ömer Yıldız"></label>
         <div class="form-grid"><label>Kısa konum<input name="studioLocation" placeholder="Kadıköy · İstanbul"></label><label>Telefon<input name="studioPhone" inputmode="tel" placeholder="05xx xxx xx xx"></label></div>
         <label>Adres<textarea name="studioAddress" rows="3" placeholder="Cadde, sokak, bina no, ilçe / şehir"></textarea></label>
         <div class="form-grid"><label>Instagram<input name="studioInstagram" placeholder="@studiohesabi"></label><label>Logo<input name="studioLogo" type="file" accept="image/*"></label></div>
@@ -273,8 +274,9 @@
     </div>
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
+  <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="pwa.js?v=20260726-5"></script>
-  <script src="app.js?v=20260726-5"></script>
+  <script src="app.js?v=20260728-1"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@ const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
+const PENDING_OWNER_ONBOARDING_STORAGE_KEY = 'formera_pending_owner_onboarding';
 const WORKSPACE_MODE_STORAGE_KEY = 'formera_workspace_mode';
 const ADMIN_ACCESS_STORAGE_KEY = 'formera_admin_access';
 
@@ -140,6 +141,7 @@ const state = {
     user: null,
     profile: null,
     studioId: null,
+    needsStudioSetup: false,
     brandingReady: false,
     accountsReady: false,
     trainerTasksReady: false,
@@ -262,6 +264,7 @@ let signaturePadReady = false;
 let signatureDrawing = false;
 let selectedLoginRole = localStorage.getItem('formera_login_role') || 'owner';
 let onboardingStep = 0;
+let onboardingLiveSetup = false;
 
 function makeId(){
   return crypto?.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -755,6 +758,18 @@ function isSupabaseReady(){
   return Boolean(state.backend.connected && state.backend.client && state.backend.studioId);
 }
 
+function pendingOwnerOnboardingFor(email){
+  try{
+    return String(localStorage.getItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY) || '').toLocaleLowerCase('tr') === String(email || '').trim().toLocaleLowerCase('tr');
+  }catch(error){
+    return false;
+  }
+}
+
+function clearPendingOwnerOnboarding(){
+  try{ localStorage.removeItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY); }catch(error){}
+}
+
 function studioIdForRemote(){
   return state.backend.studioId || (isUuid(state.activeStudioId) ? state.activeStudioId : null);
 }
@@ -1038,13 +1053,23 @@ async function loadRemoteData(){
   if(!profile){
     state.backend.loading = false;
     state.backend.connected = false;
-    state.backend.error = 'Bu e-postaya bağlı işletmeci/antrenör/üye profili bulunamadı.';
+    state.backend.needsStudioSetup = pendingOwnerOnboardingFor(state.backend.user.email);
+    state.backend.error = state.backend.needsStudioSetup
+      ? ''
+      : 'Bu e-postaya bağlı işletmeci/antrenör/üye profili bulunamadı. İşletme hesabı için kurulum davetiyle devam et.';
     updateBackendShell();
+    if(state.backend.needsStudioSetup){
+      supabaseModal?.close();
+      setTimeout(()=>openOnboardingModal({fresh:true, liveSetup:true}), 80);
+      showToast('Hesabın hazır. İlk stüdyonu oluşturarak canlı panele geçebilirsin.');
+    }
     return;
   }
 
   state.backend.profile = profile;
   state.backend.studioId = profile.studio_id;
+  state.backend.needsStudioSetup = false;
+  clearPendingOwnerOnboarding();
   const studioId = profile.studio_id;
   const localPilotLeads = state.pilotLeads.slice();
 
@@ -1201,29 +1226,44 @@ async function signInSupabase(email, password){
   state.backend.user = data.user;
   await loadRemoteData();
   setAccountBusy(false);
-  supabaseModal?.close();
+  if(state.backend.connected || state.backend.needsStudioSetup) supabaseModal?.close();
+  else showAccountMessage(state.backend.error || 'Bu hesaba ait bir profil bulunamadı.', 'warning');
 }
 
 async function signUpSupabase(email, password){
   if(!(await ensureSupabaseClient())) return;
+  const normalizedEmail = String(email || '').trim().toLocaleLowerCase('tr');
+  const createsOwnerAccount = selectedLoginRole === 'owner';
   state.backend.loading = true;
   setAccountBusy(true, 'Hesap oluşturuluyor...');
   updateBackendShell();
-  const {data, error} = await state.backend.client.auth.signUp({email, password});
+  const {data, error} = await state.backend.client.auth.signUp({
+    email,
+    password,
+    options: {emailRedirectTo: `${window.location.origin}${window.location.pathname}`}
+  });
   state.backend.loading = false;
   if(error){
+    if(createsOwnerAccount) clearPendingOwnerOnboarding();
     setAccountBusy(false);
     const message = readableAuthError(error, 'Hesap oluşturulamadı. Email/şifreyi kontrol et.');
     remoteError(error, message);
     notify(message, 'error');
     return;
   }
+  if(createsOwnerAccount){
+    try{ localStorage.setItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY, normalizedEmail); }catch(storageError){}
+  }
   if(data.session?.user){
     state.backend.user = data.session.user;
     await loadRemoteData();
     setAccountBusy(false);
-    supabaseModal?.close();
-    notify('Hesap oluşturuldu ve giriş yapıldı.', 'success');
+    if(state.backend.connected || state.backend.needsStudioSetup){
+      supabaseModal?.close();
+      notify('Hesap oluşturuldu ve giriş yapıldı.', 'success');
+    }else{
+      showAccountMessage(state.backend.error || 'Bu hesap için profil kurulumu bulunamadı.', 'warning');
+    }
     return;
   }
   setAccountBusy(false);
@@ -1237,6 +1277,7 @@ async function signOutSupabase(){
   state.backend.user = null;
   state.backend.profile = null;
   state.backend.studioId = null;
+  state.backend.needsStudioSetup = false;
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
@@ -1259,6 +1300,7 @@ async function switchSupabaseAccount(){
   state.backend.user = null;
   state.backend.profile = null;
   state.backend.studioId = null;
+  state.backend.needsStudioSetup = false;
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
@@ -3277,6 +3319,7 @@ function prefillOnboarding(){
   const member = state.members[0] || {};
   const program = state.programs[0] || {};
   onboardingForm.elements.studioName.value = studio.name || '';
+  onboardingForm.elements.ownerName.value = state.backend.profile?.full_name || '';
   onboardingForm.elements.studioLocation.value = studio.location || '';
   onboardingForm.elements.studioPhone.value = studio.phone || '';
   onboardingForm.elements.studioAddress.value = studio.address || '';
@@ -3295,10 +3338,19 @@ function prefillOnboarding(){
   onboardingForm.elements.programExercises.value = Array.isArray(program.exercises) ? program.exercises.join('\n') : '';
 }
 
-function openOnboardingModal({fresh=false}={}){
+function openOnboardingModal({fresh=false, liveSetup=false}={}){
   if(!onboardingModal || !onboardingForm) return;
-  if(fresh) onboardingForm.reset();
+  onboardingLiveSetup = Boolean(liveSetup);
+  if(fresh){
+    onboardingForm.reset();
+    const ownerName = state.backend.user?.email?.split('@')[0] || '';
+    onboardingForm.elements.ownerName.value = ownerName;
+  }
   else prefillOnboarding();
+  const eyebrow = document.querySelector('#onboardingEyebrow');
+  const title = document.querySelector('#onboardingTitle');
+  if(eyebrow) eyebrow.textContent = onboardingLiveSetup ? 'CANLI KURULUM' : 'İLK KURULUM';
+  if(title) title.textContent = onboardingLiveSetup ? 'İlk stüdyonu 5 adımda kur' : 'Salonunu 5 adımda hazırla';
   onboardingStep = 0;
   updateOnboardingStep();
   onboardingModal.showModal();
@@ -3329,10 +3381,125 @@ async function copyOnboardingInvites(){
   }
 }
 
+async function readableFunctionError(error, fallback){
+  try{
+    const body = await error?.context?.json?.();
+    if(body?.error) return body.error;
+  }catch(parseError){}
+  return error?.message || fallback;
+}
+
+async function provisionLiveStudio({studio, trainer, member, program, ownerName}){
+  const db = state.backend.client;
+  if(!db || !state.backend.user) throw new Error('Canlı oturum bulunamadı. Lütfen yeniden giriş yap.');
+  state.backend.loading = true;
+  updateBackendShell();
+  try{
+    const {data, error} = await db.functions.invoke('bootstrap-studio', {
+      body: {
+        studioName: studio.name,
+        ownerName,
+        initials: studio.initials,
+        location: studio.location,
+        phone: studio.phone,
+        address: studio.address,
+        instagram: studio.instagram,
+        logoDataUrl: studio.logoDataUrl || ''
+      }
+    });
+    if(error || !data?.studio || !data?.profile) throw new Error(await readableFunctionError(error, 'Stüdyo oluşturulamadı.'));
+
+    state.backend.profile = data.profile;
+    state.backend.studioId = data.studio.id;
+    state.backend.brandingReady = true;
+    state.backend.accountsReady = true;
+
+    const trainerRows = [{
+      id: trainer.profileId,
+      studio_id: data.studio.id,
+      full_name: trainer.name,
+      role: 'trainer',
+      phone: trainer.phone || null,
+      email: trainer.email || null,
+      avatar_data_url: trainer.avatarDataUrl || null
+    }];
+    if(member.profileId){
+      trainerRows.push({
+        id: member.profileId,
+        studio_id: data.studio.id,
+        full_name: member.name,
+        role: 'member',
+        phone: member.phone || null,
+        email: member.email || null,
+        avatar_data_url: member.avatarDataUrl || null
+      });
+    }
+    const profilesResult = await db.from('profiles').upsert(trainerRows, {onConflict:'id'});
+    if(profilesResult.error) throw new Error(profilesResult.error.message || 'Ekip profilleri kaydedilemedi.');
+
+    const parsed = parseSessions(member.sessions);
+    const membersResult = await db.from('members').upsert([{
+      id: member.id,
+      studio_id: data.studio.id,
+      profile_id: member.profileId || null,
+      trainer_profile_id: trainer.profileId,
+      full_name: member.name,
+      initials: member.initials,
+      email: member.email || null,
+      phone: member.phone || null,
+      avatar_data_url: member.avatarDataUrl || null,
+      last_visit_label: member.last,
+      sessions_used: parsed.used,
+      sessions_total: parsed.total,
+      status: member.status,
+      risk_type: member.type
+    }], {onConflict:'id'});
+    if(membersResult.error) throw new Error(membersResult.error.message || 'İlk üye kaydedilemedi.');
+
+    const programsResult = await db.from('programs').upsert([{
+      id: program.id,
+      studio_id: data.studio.id,
+      title: program.title,
+      goal: program.goal,
+      level: program.level,
+      duration_minutes: program.duration,
+      exercises: program.exercises
+    }], {onConflict:'id'});
+    if(programsResult.error) throw new Error(programsResult.error.message || 'İlk program kaydedilemedi.');
+
+    const selectionResult = await db.from('member_program_selections').upsert([{
+      member_id: member.id,
+      program_id: program.id
+    }], {onConflict:'member_id'});
+    if(selectionResult.error) throw new Error(selectionResult.error.message || 'Program ataması kaydedilemedi.');
+
+    state.studios = [mapRemoteStudio(data.studio)];
+    state.activeStudioId = data.studio.id;
+    state.team = [];
+    state.members = [];
+    state.programs = [];
+    state.sessions = [];
+    state.finance = [];
+    state.signatures = [];
+    state.trainerTasks = [];
+    state.memberTasks = [];
+    state.pilotLeads = [];
+    state.programSelections = {};
+    await loadRemoteData();
+    clearPendingOwnerOnboarding();
+  }finally{
+    state.backend.loading = false;
+    updateBackendShell();
+  }
+}
+
 async function completeOnboarding(form){
   const data = new FormData(form);
-  const studio = activeStudio();
   const studioName = data.get('studioName').trim();
+  const liveSetup = onboardingLiveSetup && state.backend.needsStudioSetup;
+  const studio = liveSetup
+    ? normalizeStudio({id:makeId(), name:studioName, initials:initialsFromName(studioName)})
+    : activeStudio();
   const logoFile = data.get('studioLogo');
   const logoDataUrl = logoFile?.size ? await imageFileToDataUrl(logoFile, 520) : studio.logoDataUrl;
   const trainerName = data.get('trainerName').trim();
@@ -3390,6 +3557,25 @@ async function completeOnboarding(form){
     exercises: data.get('programExercises')
   });
 
+  if(liveSetup){
+    const finish = document.querySelector('#onboardingFinish');
+    if(finish) finish.disabled = true;
+    try{
+      await provisionLiveStudio({studio:updatedStudio, trainer, member, program, ownerName:data.get('ownerName').trim()});
+      state.page = 'dashboard';
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+      onboardingModal.close();
+      form.reset();
+      render();
+      showToast('Canlı stüdyo hazır. Bu panel yalnızca kendi verilerinle çalışıyor.');
+    }catch(error){
+      showToast(error.message || 'Kurulum tamamlanamadı. Lütfen tekrar dene.');
+    }finally{
+      if(finish) finish.disabled = false;
+    }
+    return;
+  }
+
   state.studios = state.studios.map(item=>item.id === studio.id ? updatedStudio : item);
   state.team = [trainer, ...state.team.filter(item=>item.name !== trainer.name)];
   state.members = [member, ...state.members.filter(item=>item.name !== member.name)];
@@ -3399,6 +3585,7 @@ async function completeOnboarding(form){
   localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
   persistAllData();
   onboardingModal.close();
+  onboardingLiveSetup = false;
   form.reset();
   render();
   showToast('İlk kurulum tamamlandı. Davetleri üye ve ekip kartlarından kopyalayabilirsin.');
@@ -4212,6 +4399,11 @@ document.querySelector('#switchSupabaseAccount')?.addEventListener('click', even
 });
 document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
   event.preventDefault();
+  if(onboardingLiveSetup){
+    onboardingModal?.close();
+    showToast('Kurulumu daha sonra aynı işletme hesabıyla giriş yaparak sürdürebilirsin.');
+    return;
+  }
   localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
   onboardingModal?.close();
   showToast('İlk kurulum daha sonra Pilot araçlarından açılabilir.');

@@ -106,8 +106,12 @@ Bir sonraki backend adımında:
 - Antrenör ve üye erişimleri daha sıkı RLS politikalarıyla daraltılacak
 - localStorage verisi Supabase’e göç ettirilecek
 
-## 7. Frontend bağlantısı
+## 7. Canlı işletme kurulumu
 
-`config.example.js` dosyasını örnek alarak canlı ortamda `config.js` oluşturulabilir. `config.js` repo’ya eklenmemelidir.
+`bootstrap-studio` Edge Function, yeni oluşturulan işletme hesabı için ayrı bir `studio` ve owner `profile` kaydı açar. Bu fonksiyon JWT doğrulamasıyla çalışır; service role anahtarı yalnızca Supabase sunucusunda kalır.
 
-GitHub Pages üzerinde public anon key kullanılabilir; kritik güvenlik RLS politikalarıyla sağlanır.
+Antrenör ve üye hesapları, işletmecinin ilk kurulumda girdiği e-posta ile önceden hazırlanır. Bu kişiler aynı e-postayla hesap oluşturup giriş yaptığında mevcut `claim_profile_by_email` akışı kendi rollerine yönlendirir.
+
+## 8. Frontend bağlantısı
+
+Yayımlanan `config.js` dosyasında yalnızca Supabase **publishable** anahtarı bulunur. Bu anahtar tarayıcıda görünür olması için tasarlanmıştır; veri erişimi RLS politikalarıyla korunur. `service_role` anahtarını hiçbir zaman repoya, tarayıcıya veya istemci koduna ekleme.
