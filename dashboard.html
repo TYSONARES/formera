@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260729-1" />
+  <link rel="stylesheet" href="styles.css?v=20260729-2" />
 </head>
 <body>
   <div class="app-shell">
@@ -262,35 +262,46 @@
     </div>
   </dialog>
   <dialog class="modal" id="supabaseModal">
-    <div class="modal-panel">
-      <div class="modal-head"><div><span class="eyebrow">HESAP</span><h2 id="supabaseModalTitle">Formera hesabına giriş</h2></div><button class="modal-close" id="closeSupabaseModal" aria-label="Kapat">×</button></div>
-      <div class="account-summary" id="accountSummary">
+    <div class="modal-panel formera-login-panel">
+      <div class="formera-login-top">
+        <a class="formera-login-brand" href="index.html" aria-label="Formera ana sayfa"><img src="assets/formera-logo.svg?v=20260726-3" alt="Formera"></a>
+        <span class="formera-login-tag">STÜDYO OPERASYON SİSTEMİ</span>
+        <button class="modal-close" id="closeSupabaseModal" aria-label="Kapat">×</button>
+      </div>
+      <div class="formera-login-copy">
+        <span class="eyebrow" id="loginEyebrow">FORMERA GİRİŞ</span>
+        <h2 id="supabaseModalTitle">Operasyon sahnene hoş geldin.</h2>
+        <p id="loginWelcomeText">İşletmeni, ekibini ve üye akışını tek bir ritimde yönet.</p>
+      </div>
+      <div class="login-tabs formera-login-tabs" id="loginTabs" role="tablist" aria-label="Giriş rolü">
+        <button type="button" class="active" data-login-role="owner" role="tab" aria-selected="true"><span>◫</span> İşletme</button>
+        <button type="button" data-login-role="trainer" role="tab" aria-selected="false"><span>⌁</span> Antrenör</button>
+        <button type="button" data-login-role="member" role="tab" aria-selected="false"><span>◌</span> Üye</button>
+      </div>
+      <div class="account-summary login-account-summary" id="accountSummary">
         <span class="avatar">?</span>
-        <div><strong>Demo mod</strong><small>Henüz canlı hesaba giriş yapılmadı.</small></div>
+        <div><strong>Canlı giriş bekleniyor</strong><small>Rolün, kayıtlı hesabına göre güvenli biçimde açılır.</small></div>
       </div>
-      <div class="login-tabs" id="loginTabs" role="tablist" aria-label="Giriş tipi">
-        <button type="button" class="active" data-login-role="owner" role="tab" aria-selected="true">İşletme</button>
-        <button type="button" data-login-role="trainer" role="tab" aria-selected="false">Antrenör</button>
-        <button type="button" data-login-role="member" role="tab" aria-selected="false">Üye</button>
-      </div>
-      <p class="modal-note" id="loginRoleNote">İşletme hesabıyla tüm salon verilerini yönet.</p>
+      <p class="modal-note login-role-note" id="loginRoleNote">İşletme hesabıyla tüm salon verilerini yönet.</p>
       <form id="supabaseConfigForm">
         <label>Project URL<input name="url" required placeholder="https://xxxxx.supabase.co"></label>
         <label>Anon public key<textarea name="anonKey" required rows="4" placeholder="eyJhbGciOi..."></textarea></label>
         <div class="modal-actions"><button type="button" class="secondary" id="clearSupabaseConfig">Bağlantıyı temizle</button><button type="submit" class="primary">Ayarları kaydet</button></div>
       </form>
       <div class="account-alert" id="accountAlert" role="status" aria-live="polite"></div>
-      <form id="supabaseAuthForm">
+      <form id="supabaseAuthForm" class="formera-login-form">
         <label id="loginEmailLabel">İşletme e-postası<input name="email" type="email" required placeholder="owner@email.com"></label>
         <label>Şifre<span class="password-field"><input name="password" type="password" required placeholder="Şifreni gir"><button type="button" id="togglePassword" aria-label="Şifreyi göster">👁</button></span></label>
-        <div class="modal-actions"><button type="button" class="secondary" id="logoutSupabase">Çıkış yap</button><button type="button" class="secondary" id="switchSupabaseAccount">Başka hesapla giriş yap</button><button type="button" class="secondary" id="signupSupabase">İşletme hesabı oluştur</button><button type="submit" class="primary">Giriş yap</button></div>
+        <div class="modal-actions formera-login-actions"><button type="submit" class="primary">Giriş yap</button><button type="button" class="secondary" id="signupSupabase">İşletme hesabı oluştur</button></div>
+        <div class="formera-login-utility"><button type="button" class="text-button" id="switchSupabaseAccount">Başka hesapla giriş yap</button><button type="button" class="text-button" id="logoutSupabase">Çıkış yap</button></div>
       </form>
+      <p class="formera-login-footer">İşletme hesabı açtığında kart bilgisi istemeden 14 günlük canlı deneme başlatırsın. Antrenör ve üye hesapları yalnızca kişisel davet bağlantısıyla etkinleştirilir.</p>
     </div>
   </dialog>
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260729-1"></script>
+  <script src="app.js?v=20260729-2"></script>
 </body>
 </html>

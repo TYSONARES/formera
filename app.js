@@ -255,6 +255,8 @@ const supabaseAuthForm = document.querySelector('#supabaseAuthForm');
 const accountSummary = document.querySelector('#accountSummary');
 const accountAlert = document.querySelector('#accountAlert');
 const supabaseModalTitle = document.querySelector('#supabaseModalTitle');
+const loginEyebrow = document.querySelector('#loginEyebrow');
+const loginWelcomeText = document.querySelector('#loginWelcomeText');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
 const logoutSupabaseButton = document.querySelector('#logoutSupabase');
 const switchSupabaseAccountButton = document.querySelector('#switchSupabaseAccount');
@@ -1598,18 +1600,27 @@ function loginRoleMeta(role=selectedLoginRole){
       label: 'İşletme',
       emailLabel: 'İşletme e-postası',
       placeholder: 'owner@email.com',
-      note: 'İşletme hesabını oluştur; ardından stüdyonu kurup 14 günlük denemeni başlat.'
+      eyebrow: 'İŞLETME GİRİŞİ',
+      welcome: 'Operasyon sahnene hoş geldin.',
+      intro: 'İşletmeni, ekibini ve üye akışını tek bir ritimde yönet.',
+      note: 'İşletme hesabını oluştur; ardından stüdyonu kurup kart bilgisi vermeden 14 günlük denemeni başlat.'
     },
     trainer: {
       label: 'Antrenör',
       emailLabel: 'Antrenör e-postası',
       placeholder: 'antrenor@email.com',
+      eyebrow: 'ANTRENÖR GİRİŞİ',
+      welcome: 'Bugünün akışı seni bekliyor.',
+      intro: 'Atanmış üyelerini, programlarını ve görevlerini tek ekranda gör.',
       note: 'Antrenör hesabın işletmeci tarafından davet edilir. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
     },
     member: {
       label: 'Üye',
       emailLabel: 'Üye e-postası',
       placeholder: 'uye@email.com',
+      eyebrow: 'ÜYE GİRİŞİ',
+      welcome: 'Antrenman yolculuğuna devam et.',
+      intro: 'Bugünkü programını, görevlerini ve stüdyondan gelen notları takip et.',
       note: 'Üye hesabın işletmeci tarafından oluşturulur. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
     }
   }[role] || {};
@@ -1625,6 +1636,9 @@ function setLoginRole(role){
     tab.setAttribute('aria-selected', active ? 'true' : 'false');
   });
   if(loginRoleNote) loginRoleNote.textContent = meta.note;
+  if(loginEyebrow) loginEyebrow.textContent = meta.eyebrow || 'FORMERA GİRİŞ';
+  if(supabaseModalTitle) supabaseModalTitle.textContent = meta.welcome || 'Formera hesabına giriş';
+  if(loginWelcomeText) loginWelcomeText.textContent = meta.intro || '';
   if(loginEmailLabel){
     const input = loginEmailLabel.querySelector('input');
     loginEmailLabel.childNodes[0].nodeValue = meta.emailLabel;
@@ -1638,7 +1652,12 @@ function updateSupabaseModalMode(){
   const setupMode = requestedSupabaseSetup();
   const invite = inviteEnrollment();
   const completingInvite = Boolean(invite && invite.role === selectedLoginRole);
-  if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : 'Formera hesabına giriş';
+  const meta = loginRoleMeta();
+  if(supabaseModalTitle) supabaseModalTitle.textContent = adminMode ? 'Formera Admin girişi' : meta.welcome;
+  if(loginEyebrow) loginEyebrow.textContent = adminMode ? 'FORMERA KURUCU' : meta.eyebrow;
+  if(loginWelcomeText) loginWelcomeText.textContent = adminMode
+    ? 'Pilot, satış ve platform ayarlarını yalnızca kurucu ekibi için yönet.'
+    : meta.intro;
   if(loginTabs) loginTabs.hidden = adminMode;
   if(supabaseConfigForm) supabaseConfigForm.hidden = !setupMode;
   if(signupSupabaseButton){
@@ -1664,7 +1683,6 @@ function updateSupabaseModalMode(){
       if(input) input.placeholder = 'admin@email.com';
     }
   }else if(loginRoleNote){
-    const meta = loginRoleMeta();
     loginRoleNote.textContent = completingInvite
       ? `Bu kişisel davet ${invite.email} için hazırlandı. Şifreni belirleyerek ${meta.label.toLocaleLowerCase('tr')} hesabını etkinleştir.`
       : meta.note;
