@@ -15,6 +15,9 @@ alter table public.studios
   add column if not exists makeup_notice_hours integer not null default 12 check (makeup_notice_hours between 0 and 168),
   add column if not exists makeup_max_per_month integer not null default 1 check (makeup_max_per_month between 0 and 12);
 
+alter table public.sessions
+  add column if not exists is_makeup_slot boolean not null default false;
+
 create table if not exists public.makeup_requests (
   id uuid primary key default gen_random_uuid(),
   studio_id uuid not null references public.studios(id) on delete cascade,

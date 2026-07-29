@@ -14,6 +14,7 @@ const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
 const PENDING_OWNER_ONBOARDING_STORAGE_KEY = 'formera_pending_owner_onboarding';
+const PENDING_GOOGLE_OWNER_ONBOARDING_STORAGE_KEY = 'formera_pending_google_owner_onboarding';
 const WORKSPACE_MODE_STORAGE_KEY = 'formera_workspace_mode';
 const ADMIN_ACCESS_STORAGE_KEY = 'formera_admin_access';
 const INVITE_ROLE_QUERY_KEY = 'invite';
@@ -268,6 +269,7 @@ const supabaseModalTitle = document.querySelector('#supabaseModalTitle');
 const loginEyebrow = document.querySelector('#loginEyebrow');
 const loginWelcomeText = document.querySelector('#loginWelcomeText');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
+const googleSignInButton = document.querySelector('#googleSignIn');
 const logoutSupabaseButton = document.querySelector('#logoutSupabase');
 const switchSupabaseAccountButton = document.querySelector('#switchSupabaseAccount');
 const togglePasswordButton = document.querySelector('#togglePassword');
@@ -809,14 +811,19 @@ function isSupabaseReady(){
 
 function pendingOwnerOnboardingFor(email){
   try{
-    return String(localStorage.getItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY) || '').toLocaleLowerCase('tr') === String(email || '').trim().toLocaleLowerCase('tr');
+    const passwordSignupMatch = String(localStorage.getItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY) || '').toLocaleLowerCase('tr') === String(email || '').trim().toLocaleLowerCase('tr');
+    const googleOwnerSignupPending = sessionStorage.getItem(PENDING_GOOGLE_OWNER_ONBOARDING_STORAGE_KEY) === 'true';
+    return passwordSignupMatch || googleOwnerSignupPending;
   }catch(error){
     return false;
   }
 }
 
 function clearPendingOwnerOnboarding(){
-  try{ localStorage.removeItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY); }catch(error){}
+  try{
+    localStorage.removeItem(PENDING_OWNER_ONBOARDING_STORAGE_KEY);
+    sessionStorage.removeItem(PENDING_GOOGLE_OWNER_ONBOARDING_STORAGE_KEY);
+  }catch(error){}
 }
 
 function studioIdForRemote(){
@@ -900,7 +907,7 @@ async function verifyFormeraAdminAccess(db){
 }
 
 function setAccountBusy(isBusy, message=''){
-  [signupSupabaseButton, supabaseAuthForm?.querySelector('button[type="submit"]')].forEach(button=>{
+  [signupSupabaseButton, googleSignInButton, supabaseAuthForm?.querySelector('button[type="submit"]')].forEach(button=>{
     if(button) button.disabled = isBusy;
   });
   if(isBusy && message) showAccountMessage(message, 'info');
@@ -1233,7 +1240,7 @@ async function loadRemoteData(){
     state.page = 'dashboard';
     notify('Formera Admin alanı için işletme/owner yetkili hesapla giriş gerekir.', 'warning');
   }
-  if(profile.role === 'trainer') state.trainerName = profile.full_name;
+  if(profile.role === 'trainer' || profile.role === 'dietitian') state.trainerName = profile.full_name;
   if(profile.role === 'member' && !isFormeraAdmin()) state.page = 'dashboard';
   state.backend.connected = true;
   state.backend.loading = false;
@@ -1299,6 +1306,45 @@ async function signInSupabase(email, password){
   setAccountBusy(false);
   if(state.backend.connected || state.backend.needsStudioSetup) supabaseModal?.close();
   else showAccountMessage(state.backend.error || 'Bu hesaba ait bir profil bulunamadı.', 'warning');
+}
+
+function authRedirectUrl(){
+  const url = new URL(appAccessUrl());
+  const invite = inviteEnrollment();
+  if(invite){
+    url.searchParams.set(INVITE_ROLE_QUERY_KEY, invite.role);
+    url.searchParams.set(INVITE_EMAIL_QUERY_KEY, invite.email);
+  }
+  return url.toString();
+}
+
+async function signInWithGoogle(){
+  const invite = inviteEnrollment();
+  if(selectedLoginRole !== 'owner' && !inviteEnrollmentMatches(selectedLoginRole, invite?.email)){
+    showAccountMessage('Antrenör, diyetisyen ve üye için Google girişi kişisel davet bağlantısından açılır.', 'warning');
+    return;
+  }
+  if(!(await ensureSupabaseClient())) return;
+  try{
+    if(selectedLoginRole === 'owner') sessionStorage.setItem(PENDING_GOOGLE_OWNER_ONBOARDING_STORAGE_KEY, 'true');
+    else sessionStorage.removeItem(PENDING_GOOGLE_OWNER_ONBOARDING_STORAGE_KEY);
+  }catch(storageError){}
+  state.backend.loading = true;
+  setAccountBusy(true, 'Google hesabına yönlendiriliyorsun...');
+  updateBackendShell();
+  const {error} = await state.backend.client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {redirectTo: authRedirectUrl()}
+  });
+  if(error){
+    state.backend.loading = false;
+    setAccountBusy(false);
+    updateBackendShell();
+    const message = /provider.*not enabled|unsupported provider/i.test(error.message || '')
+      ? 'Google ile giriş henüz etkinleştirilmedi. Yönetici, Google sağlayıcısını bağladıktan sonra tekrar dene.'
+      : readableAuthError(error, 'Google ile giriş başlatılamadı.');
+    showAccountMessage(message, 'error');
+  }
 }
 
 async function signUpSupabase(email, password){
@@ -1664,9 +1710,9 @@ function roleMeta(){
   if(isFormeraAdmin()){
     return {label:'Formera Admin', next:'Salon paneli', avatar:'F', avatarImage:''};
   }
-  if(state.role === 'trainer'){
+  if(state.role === 'trainer' || state.role === 'dietitian'){
     const trainer = trainerByName(state.trainerName);
-    return {label:'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName), avatarImage:trainer?.avatarDataUrl || ''};
+    return {label:state.role === 'dietitian' ? 'Diyetisyen' : 'Antrenör', next:'Üye görünümü', avatar:initialsFromName(state.trainerName), avatarImage:trainer?.avatarDataUrl || ''};
   }
   if(state.role === 'member'){
     const member = currentMember();
@@ -1678,7 +1724,7 @@ function roleMeta(){
 
 function roleLabel(role=state.role){
   if(isFormeraAdmin()) return 'Formera Admin';
-  return {owner:'İşletmeci', trainer:'Antrenör', member:'Üye'}[role] || 'Kullanıcı';
+  return {owner:'İşletmeci', trainer:'Antrenör', dietitian:'Diyetisyen', member:'Üye'}[role] || 'Kullanıcı';
 }
 
 function loginRoleMeta(role=selectedLoginRole){
@@ -1701,6 +1747,15 @@ function loginRoleMeta(role=selectedLoginRole){
       intro: 'Atanmış üyelerini, programlarını ve görevlerini tek ekranda gör.',
       note: 'Antrenör hesabın işletmeci tarafından davet edilir. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
     },
+    dietitian: {
+      label: 'Diyetisyen',
+      emailLabel: 'Diyetisyen e-postası',
+      placeholder: 'diyetisyen@email.com',
+      eyebrow: 'DİYETİSYEN GİRİŞİ',
+      welcome: 'Beslenme ve performans akışı hazır.',
+      intro: 'Atanmış üyelerin beslenme notlarını ve antrenörün eylemlerini aynı ekrandan takip et.',
+      note: 'Diyetisyen hesabın işletmeci tarafından davet edilir. Davetinde kullanılan e-posta ve şifreyle giriş yap.'
+    },
     member: {
       label: 'Üye',
       emailLabel: 'Üye e-postası',
@@ -1714,7 +1769,7 @@ function loginRoleMeta(role=selectedLoginRole){
 }
 
 function setLoginRole(role){
-  selectedLoginRole = ['owner','trainer','member'].includes(role) ? role : 'owner';
+  selectedLoginRole = ['owner','trainer','dietitian','member'].includes(role) ? role : 'owner';
   localStorage.setItem('formera_login_role', selectedLoginRole);
   const meta = loginRoleMeta();
   loginRoleTabs.forEach(tab=>{
@@ -1753,6 +1808,7 @@ function updateSupabaseModalMode(){
       ? `${loginRoleMeta().label} davetini tamamla`
       : 'İşletme hesabı oluştur';
   }
+  if(googleSignInButton) googleSignInButton.hidden = adminMode;
   if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
   if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
@@ -1780,7 +1836,7 @@ function accountMeta(){
   const profile = state.backend.profile;
   const email = state.backend.user?.email || profile?.email || '';
   if(state.backend.connected && profile){
-    const image = profile.role === 'trainer'
+    const image = profile.role === 'trainer' || profile.role === 'dietitian'
       ? trainerByName(profile.full_name)?.avatarDataUrl
       : profile.role === 'member'
         ? currentMember()?.avatarDataUrl
@@ -1920,7 +1976,7 @@ function inviteEnrollment(){
   const query = new URLSearchParams(window.location.search);
   const role = query.get(INVITE_ROLE_QUERY_KEY);
   const email = String(query.get(INVITE_EMAIL_QUERY_KEY) || '').trim().toLocaleLowerCase('tr');
-  if(!['trainer','member'].includes(role) || !email || !email.includes('@')) return null;
+  if(!['trainer','dietitian','member'].includes(role) || !email || !email.includes('@')) return null;
   return {role, email};
 }
 
@@ -1931,7 +1987,7 @@ function inviteEnrollmentMatches(role, email){
 
 function inviteAccessUrl(person, role){
   const url = new URL(appAccessUrl());
-  url.searchParams.set(INVITE_ROLE_QUERY_KEY, role === 'antrenör' ? 'trainer' : 'member');
+  url.searchParams.set(INVITE_ROLE_QUERY_KEY, role === 'antrenör' ? 'trainer' : role === 'diyetisyen' ? 'dietitian' : 'member');
   url.searchParams.set(INVITE_EMAIL_QUERY_KEY, String(person.email || '').trim().toLocaleLowerCase('tr'));
   return url.toString();
 }
@@ -1962,7 +2018,7 @@ async function copyInvite(kind, id){
     showToast(`${person.name} için önce giriş e-postası ekle.`);
     return;
   }
-  const text = inviteText(person, kind === 'trainer' ? 'antrenör' : 'üye');
+  const text = inviteText(person, kind === 'trainer' ? (person.accountRole === 'dietitian' ? 'diyetisyen' : 'antrenör') : 'üye');
   try{
     await navigator.clipboard?.writeText(text);
     showToast(`${person.name} için davet metni kopyalandı.`);
@@ -4127,6 +4183,10 @@ function bind(){
     if(action==='complete-session') return completeSession(b.dataset.sessionId);
     if(action==='cancel-session') return cancelSession(b.dataset.sessionId);
     if(action==='delete-session') return deleteSession(b.dataset.sessionId);
+    if(action==='toggle-makeup') return toggleMakeup();
+    if(action==='request-makeup') return createMakeupRequest(b.dataset.memberId, b.dataset.sessionId);
+    if(action==='approve-makeup') return approveMakeupRequest(b.dataset.makeupId);
+    if(action==='reject-makeup') return rejectMakeupRequest(b.dataset.makeupId);
     if(action==='copy-report') return copyReport();
     if(action==='copy-growth-plan') return copyBusinessPlan();
     if(action==='add-trainer') return openTrainerModal();
@@ -4794,6 +4854,9 @@ document.querySelector('#signupSupabase')?.addEventListener('click', async ()=>{
   if(!supabaseAuthForm.reportValidity()) return;
   const data = new FormData(supabaseAuthForm);
   await signUpSupabase(data.get('email'), data.get('password'));
+});
+googleSignInButton?.addEventListener('click', async ()=>{
+  await signInWithGoogle();
 });
 document.querySelector('#startPilotTrial')?.addEventListener('click', event=>{
   event.preventDefault();

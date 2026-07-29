@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260729-3" />
+  <link rel="stylesheet" href="styles.css?v=20260729-4" />
 </head>
 <body>
   <div class="app-shell">
@@ -292,6 +292,8 @@
       </form>
       <div class="account-alert" id="accountAlert" role="status" aria-live="polite"></div>
       <form id="supabaseAuthForm" class="formera-login-form">
+        <button type="button" class="google-signin-button" id="googleSignIn"><span class="google-signin-mark" aria-hidden="true">G</span> Google ile devam et</button>
+        <div class="login-divider" aria-hidden="true"><span>veya e-posta ile</span></div>
         <label id="loginEmailLabel">İşletme e-postası<input name="email" type="email" required placeholder="owner@email.com"></label>
         <label>Şifre<span class="password-field"><input name="password" type="password" required placeholder="Şifreni gir"><button type="button" id="togglePassword" aria-label="Şifreyi göster">👁</button></span></label>
         <div class="modal-actions formera-login-actions"><button type="submit" class="primary">Giriş yap</button><button type="button" class="secondary" id="signupSupabase">İşletme hesabı oluştur</button></div>
@@ -304,6 +306,6 @@
   <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260729-2"></script>
+  <script src="app.js?v=20260729-4"></script>
 </body>
 </html>
