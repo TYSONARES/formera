@@ -116,6 +116,86 @@ as $$
     );
 $$;
 
+-- Program şablonları bakım ekibinin ortak çalışma alanıdır.
+create or replace function public.can_access_program(target_program_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.programs p
+    where p.id = target_program_id
+      and p.studio_id = public.current_studio_id()
+      and (public.is_owner() or public.is_trainer() or public.is_dietitian())
+  );
+$$;
+
+-- Üyeler yalnızca kendi, kaçırılmış seansları için ve işletmenin izin verdiği
+-- aylık sınırlar içinde telafi talebi açabilir. Bu kontrol UI'a değil veritabanına aittir.
+create or replace function public.validate_makeup_request()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  is_enabled boolean;
+  monthly_limit integer;
+  already_used integer;
+begin
+  if public.is_member() then
+    select s.makeup_enabled, s.makeup_max_per_month
+      into is_enabled, monthly_limit
+    from public.studios s
+    where s.id = new.studio_id;
+
+    if coalesce(is_enabled, false) is not true then
+      raise exception 'Telafi dersi bu işletmede aktif değil';
+    end if;
+
+    if not exists (
+      select 1 from public.members m
+      where m.id = new.member_id
+        and m.studio_id = new.studio_id
+        and m.profile_id = public.current_profile_id()
+    ) then
+      raise exception 'Yalnızca kendi üyeliğin için telafi talebi açabilirsin';
+    end if;
+
+    if new.missed_session_id is null or not exists (
+      select 1 from public.sessions ss
+      where ss.id = new.missed_session_id
+        and ss.studio_id = new.studio_id
+        and ss.member_id = new.member_id
+        and ss.status = 'cancelled'
+    ) then
+      raise exception 'Telafi talebi için kaçırılmış bir seans seçmelisin';
+    end if;
+
+    select count(*) into already_used
+    from public.makeup_requests mr
+    where mr.studio_id = new.studio_id
+      and mr.member_id = new.member_id
+      and mr.created_at >= date_trunc('month', now())
+      and mr.status in ('pending', 'approved');
+
+    if already_used >= coalesce(monthly_limit, 0) then
+      raise exception 'Bu ay için telafi dersi limitine ulaştın';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists validate_makeup_request_before_insert on public.makeup_requests;
+create trigger validate_makeup_request_before_insert
+before insert on public.makeup_requests
+for each row execute function public.validate_makeup_request();
+
 -- Diyetisyen atanmış üyeleri görebilir; üye profilini/üyelik paketini değiştiremez.
 drop policy if exists "members_select_same_studio" on public.members;
 create policy "members_select_same_studio"
@@ -229,6 +309,9 @@ with check (
 revoke execute on function public.is_dietitian() from public;
 revoke execute on function public.is_care_specialist() from public;
 revoke execute on function public.can_support_member(uuid) from public;
+revoke execute on function public.can_access_program(uuid) from public;
+revoke execute on function public.validate_makeup_request() from public;
 grant execute on function public.is_dietitian() to authenticated;
 grant execute on function public.is_care_specialist() to authenticated;
 grant execute on function public.can_support_member(uuid) to authenticated;
+grant execute on function public.can_access_program(uuid) to authenticated;

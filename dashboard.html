@@ -84,7 +84,8 @@
     <form method="dialog" id="memberForm">
       <div class="modal-head"><div><span class="eyebrow" id="memberModalEyebrow">YENİ KAYIT</span><h2 id="memberModalTitle">Yeni üye ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <label>Ad soyad<input name="name" required placeholder="Örn. Ayşe Yılmaz"></label>
-      <div class="form-grid"><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label><label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label></div>
+      <div class="form-grid"><label>Antrenör<select name="trainer"></select></label><label>Diyetisyen<select name="dietitian"></select></label></div>
+      <label>Paket<select name="package"><option>12 Seans</option><option>8 Seans</option><option>24 Seans</option></select></label>
       <label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label>
       <label>Giriş e-postası<input name="email" type="email" placeholder="uye@email.com"></label>
       <p class="invite-note">Bu e-posta üyenin giriş kimliği olur. Üye aynı e-postayla hesap oluşturunca otomatik üye ekranına düşer.</p>
@@ -116,22 +117,23 @@
     <form method="dialog" id="sessionForm">
       <div class="modal-head"><div><span class="eyebrow">TAKVİM</span><h2>Seans ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <div class="form-grid"><label>Tarih<input name="date" type="date" required></label><label>Saat<input name="time" type="time" required></label></div>
-      <div class="form-grid"><label>Üye<input name="member" required placeholder="Selin Aksoy"></label><label>Antrenör<select name="trainer"><option>Ece</option><option>Kerem</option></select></label></div>
+      <div class="form-grid"><label>Üye<input name="member" placeholder="Selin Aksoy"></label><label>Antrenör<select name="trainer"></select></label></div>
       <div class="form-grid"><label>Program<input name="program" placeholder="Alt vücut güç"></label><label>Salon<select name="room"><option>Salon A</option><option>Salon B</option><option>Online</option></select></label></div>
       <div class="form-grid"><label>Seans tipi<select name="sessionType"><option value="one_to_one">Birebir</option><option value="group">Grup</option><option value="online">Online</option></select></label><label>Kapasite<input name="capacity" type="number" min="1" max="100" value="1" required></label></div>
+      <label class="check-row"><input name="isMakeupSlot" type="checkbox"> <span><strong>Telafi dersi kontenjanı aç</strong><small>Bu slot yalnızca işletmecinin onayladığı telafi talebi için kullanılabilir.</small></span></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Seansı kaydet</button></div>
     </form>
   </dialog>
   <dialog class="modal" id="trainerModal">
     <form method="dialog" id="trainerForm">
-      <div class="modal-head"><div><span class="eyebrow">EKİP</span><h2>Antrenör ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="modal-head"><div><span class="eyebrow">EKİP</span><h2>Ekip üyesi ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <label>Ad<input name="name" required placeholder="Örn. Derya"></label>
-      <div class="form-grid"><label>Rol<input name="role" placeholder="PT Coach"></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
+      <div class="form-grid"><label>Ekibin rolü<select name="teamRole"><option value="trainer">Antrenör</option><option value="dietitian">Diyetisyen</option></select></label><label>Uzmanlık<input name="specialty" placeholder="Pilates · mobilite"></label></div>
       <div class="form-grid"><label>Telefon<input name="phone" inputmode="tel" placeholder="05xx xxx xx xx"></label><label>Prim %<input name="commission" inputmode="numeric" placeholder="15"></label></div>
       <label>Giriş e-postası<input name="email" type="email" placeholder="antrenor@email.com"></label>
-      <p class="invite-note">Bu e-posta antrenörün giriş kimliği olur. Antrenör aynı e-postayla hesap oluşturunca otomatik antrenör paneli açılır.</p>
+      <p class="invite-note">Bu e-posta ekip üyesinin giriş kimliği olur. Davetli kullanıcı aynı e-postayla giriş yaptığında kendi uzman ekranına yönlenir.</p>
       <label>Fotoğraf veya avatar<input name="avatar" type="file" accept="image/*"></label>
-      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Antrenörü kaydet</button></div>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Ekip üyesini kaydet</button></div>
     </form>
   </dialog>
   <dialog class="modal" id="trainerTaskModal">
@@ -149,7 +151,7 @@
       <div class="modal-head"><div><span class="eyebrow">ÜYE AKSİYONU</span><h2>Üyeye program, görev veya beslenme notu ekle</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
       <div class="form-grid"><label>Üye<select name="member"></select></label><label>Tür<select name="type"><option value="workout">Antrenman görevi</option><option value="nutrition">Beslenme notu</option><option value="followup">Genel takip görevi</option></select></label></div>
       <label>Başlık<input name="title" required placeholder="Örn. Protein takibi"></label>
-      <div class="form-grid"><label>Antrenör<select name="trainer"></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
+      <div class="form-grid"><label>Uzman<select name="trainer"></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
       <label>Komut / açıklama<textarea name="note" rows="5" required placeholder="Üyenin göreceği net talimatı yaz. Örn. Bugün her ana öğünde protein kaynağı ekle."></textarea></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Üyeye gönder</button></div>
     </form>

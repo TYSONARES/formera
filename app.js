@@ -9,6 +9,7 @@ const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
+const MAKEUP_REQUEST_STORAGE_KEY = 'formera_makeup_requests';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
 const ONBOARDING_STORAGE_KEY = 'formera_onboarding_complete';
@@ -129,6 +130,7 @@ const state = {
   team: starterTeam.map(normalizeTrainer),
   trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
   memberTasks: starterMemberTasks.map(normalizeMemberTask),
+  makeupRequests: [],
   pilotLeads: starterPilotLeads.map(normalizePilotLead),
   studios: starterStudios.map(normalizeStudio),
   activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
@@ -148,6 +150,8 @@ const state = {
     accountsReady: false,
     trainerTasksReady: false,
     memberTasksReady: false,
+    makeupRequestsReady: false,
+    careReady: false,
     pilotLeadsReady: false
   }
 };
@@ -156,6 +160,12 @@ const savedMembers = localStorage.getItem(STORAGE_KEY);
 if(savedMembers){
   try{ state.members = JSON.parse(savedMembers).map(normalizeMember); }
   catch(e){ console.warn('Kayıtlı üyeler okunamadı.'); }
+}
+
+const savedMakeupRequests = localStorage.getItem(MAKEUP_REQUEST_STORAGE_KEY);
+if(savedMakeupRequests){
+  try{ state.makeupRequests = JSON.parse(savedMakeupRequests).map(normalizeMakeupRequest); }
+  catch(e){ console.warn('Kayıtlı telafi talepleri okunamadı.'); }
 }
 
 const savedFinance = localStorage.getItem(FINANCE_STORAGE_KEY);
@@ -305,10 +315,12 @@ function normalizeMember(member){
     profileId: member.profileId || member.profile_id || null,
     authUserId: member.authUserId || member.auth_user_id || null,
     trainerProfileId: member.trainerProfileId || member.trainer_profile_id || null,
+    dietitianProfileId: member.dietitianProfileId || member.dietitian_profile_id || null,
     name: member.name || 'İsimsiz Üye',
     initials: member.initials || initialsFromName(member.name || 'İsimsiz Üye'),
     avatarDataUrl: member.avatarDataUrl || member.avatar_data_url || '',
     trainer: member.trainer || 'Ece',
+    dietitian: member.dietitian || 'Atanmadı',
     last: member.last || 'Henüz gelmedi',
     sessions: member.sessions || '0 / 12',
     status: member.status || 'Aktif',
@@ -409,7 +421,7 @@ function normalizeSession(session){
     programId: session.programId || session.program_id || null,
     date: session.date || todayISO(),
     time: session.time || '09:00',
-    member: session.member || state?.members?.[0]?.name || 'Üye seçilmedi',
+    member: session.member || (session.isMakeupSlot || session.is_makeup_slot ? 'Telafi kontenjanı' : state?.members?.[0]?.name || 'Üye seçilmedi'),
     trainer: session.trainer || 'Ece',
     program: session.program || state?.programs?.[0]?.title || 'Genel PT',
     room: session.room || 'Salon A',
@@ -417,6 +429,7 @@ function normalizeSession(session){
     capacity: Math.max(1, Number(session.capacity) || 1),
     reserved: Math.max(0, hasReserved ? Number(session.reserved ?? session.reserved_count) || 0 : 1),
     waitlist: Math.max(0, Number(session.waitlist ?? session.waitlist_count) || 0),
+    isMakeupSlot: Boolean(session.isMakeupSlot || session.is_makeup_slot),
     status: ['scheduled','done','cancelled'].includes(session.status) ? session.status : 'scheduled'
   };
 }
@@ -455,14 +468,36 @@ function normalizeTrainer(trainer){
     id: trainer.id || makeId(),
     profileId: trainer.profileId || trainer.profile_id || trainer.id || null,
     authUserId: trainer.authUserId || trainer.auth_user_id || null,
-    name: trainer.name || 'Yeni antrenör',
-    role: trainer.role || 'PT Coach',
+    name: trainer.name || 'Yeni ekip üyesi',
+    accountRole: trainer.accountRole || trainer.account_role || (String(trainer.role || '').toLocaleLowerCase('tr').includes('diyet') ? 'dietitian' : 'trainer'),
+    role: trainer.role || (trainer.accountRole === 'dietitian' || trainer.account_role === 'dietitian' ? 'Diyetisyen' : 'PT Coach'),
     specialty: trainer.specialty || 'Genel fitness',
     phone: trainer.phone || '',
     commission: Number(trainer.commission) || 15,
     avatarDataUrl: trainer.avatarDataUrl || trainer.avatar_data_url || '',
     email: trainer.email || ''
   };
+}
+
+function normalizeMakeupRequest(request){
+  return {
+    id: request.id || makeId(),
+    studioId: request.studioId || request.studio_id || null,
+    memberId: request.memberId || request.member_id || null,
+    member: request.member || memberNameById(request.memberId || request.member_id) || 'Üye',
+    missedSessionId: request.missedSessionId || request.missed_session_id || null,
+    requestedSessionId: request.requestedSessionId || request.requested_session_id || null,
+    note: request.note || '',
+    status: ['pending','approved','rejected','cancelled'].includes(request.status) ? request.status : 'pending',
+    reviewedByProfileId: request.reviewedByProfileId || request.reviewed_by_profile_id || null,
+    reviewedAt: request.reviewedAt || request.reviewed_at || null,
+    createdAt: request.createdAt || request.created_at || new Date().toISOString()
+  };
+}
+
+function saveMakeupRequests(){
+  localStorage.setItem(MAKEUP_REQUEST_STORAGE_KEY, JSON.stringify(state.makeupRequests));
+  syncMakeupRequestsToSupabase();
 }
 
 function saveTeam(){
@@ -544,12 +579,18 @@ function savePilotLeads(){
   syncPilotLeadsToSupabase();
 }
 
+function isMemberAssignedToSpecialist(member, specialistName=state.trainerName){
+  const specialist = state.team.find(item=>item.name === specialistName);
+  const profileId = specialist?.profileId || trainerProfileIdByName(specialistName);
+  return member.trainer === specialistName || member.dietitian === specialistName || Boolean(profileId && (member.trainerProfileId === profileId || member.dietitianProfileId === profileId));
+}
+
 function trainerStats(trainerName){
   const todaySessions = sessionsForDate().filter(session=>session.trainer === trainerName);
   const done = todaySessions.filter(session=>session.status === 'done').length;
   const scheduled = todaySessions.filter(session=>session.status === 'scheduled').length;
   const cancelled = todaySessions.filter(session=>session.status === 'cancelled').length;
-  const trainerMembers = state.members.filter(member=>member.trainer === trainerName).map(member=>member.name);
+  const trainerMembers = state.members.filter(member=>isMemberAssignedToSpecialist(member, trainerName)).map(member=>member.name);
   const revenue = state.finance
     .filter(entry=>entry.type === 'income' && trainerMembers.some(name=>entry.title.includes(name)))
     .reduce((sum,entry)=>sum + entry.amount, 0);
@@ -581,7 +622,10 @@ function normalizeStudio(studio){
     whatsapp: studio.whatsapp || '',
     instagram: studio.instagram || '',
     website: studio.website || '',
-    mapUrl: studio.mapUrl || studio.map_url || ''
+    mapUrl: studio.mapUrl || studio.map_url || '',
+    makeupEnabled: Boolean(studio.makeupEnabled ?? studio.makeup_enabled),
+    makeupNoticeHours: Math.max(0, Number(studio.makeupNoticeHours ?? studio.makeup_notice_hours) || 12),
+    makeupMaxPerMonth: Math.max(0, Number(studio.makeupMaxPerMonth ?? studio.makeup_max_per_month) || 1)
   };
 }
 
@@ -876,7 +920,10 @@ function mapRemoteStudio(studio){
     whatsapp: studio.whatsapp,
     instagram: studio.instagram,
     website: studio.website,
-    mapUrl: studio.map_url
+    mapUrl: studio.map_url,
+    makeupEnabled: studio.makeup_enabled,
+    makeupNoticeHours: studio.makeup_notice_hours,
+    makeupMaxPerMonth: studio.makeup_max_per_month
   });
 }
 
@@ -886,8 +933,9 @@ function mapRemoteTrainer(profile){
     profileId: profile.id,
     authUserId: profile.auth_user_id,
     name: profile.full_name,
-    role: profile.role === 'owner' ? 'Owner' : 'PT Coach',
-    specialty: profile.role === 'owner' ? 'İşletme yönetimi' : 'Genel fitness',
+    accountRole: profile.role,
+    role: profile.role === 'owner' ? 'Owner' : profile.role === 'dietitian' ? 'Diyetisyen' : 'PT Coach',
+    specialty: profile.role === 'owner' ? 'İşletme yönetimi' : profile.role === 'dietitian' ? 'Beslenme ve performans' : 'Genel fitness',
     phone: profile.phone || '',
     commission: 15,
     avatarDataUrl: profile.avatar_data_url,
@@ -902,9 +950,11 @@ function mapRemoteMember(member, profilesById){
     profileId: member.profile_id,
     authUserId: profilesById[member.profile_id]?.auth_user_id || null,
     trainerProfileId: member.trainer_profile_id,
+    dietitianProfileId: member.dietitian_profile_id,
     name: member.full_name,
     initials: member.initials,
     trainer: profilesById[member.trainer_profile_id]?.full_name || 'Atanmadı',
+    dietitian: profilesById[member.dietitian_profile_id]?.full_name || 'Atanmadı',
     last: member.last_visit_label,
     sessions: `${member.sessions_used || 0} / ${member.sessions_total || 12}`,
     status: member.status,
@@ -937,7 +987,7 @@ function mapRemoteSession(session){
     programId: session.program_id,
     date: session.session_date,
     time: String(session.session_time || '09:00').slice(0,5),
-    member: memberNameById(session.member_id),
+    member: session.member_id ? memberNameById(session.member_id) : (session.is_makeup_slot ? 'Telafi kontenjanı' : 'Üye seçilmedi'),
     trainer: trainerNameById(session.trainer_profile_id),
     program: programTitleById(session.program_id),
     room: session.room,
@@ -945,7 +995,15 @@ function mapRemoteSession(session){
     capacity: Math.max(1, Number(session.capacity) || 1),
     reserved: Math.max(0, Number(session.reserved_count) || 1),
     waitlist: Math.max(0, Number(session.waitlist_count) || 0),
+    isMakeupSlot: session.is_makeup_slot,
     status: session.status
+  });
+}
+
+function mapRemoteMakeupRequest(request){
+  return normalizeMakeupRequest({
+    ...request,
+    member: memberNameById(request.member_id)
   });
 }
 
@@ -1089,7 +1147,8 @@ async function loadRemoteData(){
     signaturesResult,
     trainerTasksResult,
     memberTasksResult,
-    pilotLeadsResult
+    pilotLeadsResult,
+    makeupRequestsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -1101,16 +1160,20 @@ async function loadRemoteData(){
     db.from('signatures').select('*').eq('studio_id', studioId).order('signed_at', {ascending:false}),
     db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
     db.from('member_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
-    db.from('pilot_leads').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
+    db.from('pilot_leads').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('makeup_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
   const memberTaskTableMissing = Boolean(memberTasksResult.error && (memberTasksResult.error.code === '42P01' || String(memberTasksResult.error.message || '').includes('member_tasks')));
   const pilotLeadTableMissing = Boolean(pilotLeadsResult.error && (pilotLeadsResult.error.code === '42P01' || String(pilotLeadsResult.error.message || '').includes('pilot_leads')));
+  const makeupTableMissing = Boolean(makeupRequestsResult.error && (makeupRequestsResult.error.code === '42P01' || String(makeupRequestsResult.error.message || '').includes('makeup_requests')));
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
   state.backend.pilotLeadsReady = !pilotLeadTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult].filter(Boolean).find(result=>result.error);
+  state.backend.makeupRequestsReady = !makeupTableMissing;
+  state.backend.careReady = !makeupTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
@@ -1131,7 +1194,7 @@ async function loadRemoteData(){
   state.studios = (studiosResult.data || []).map(mapRemoteStudio);
   state.activeStudioId = studioId;
   state.team = (profilesResult.data || [])
-    .filter(item=>item.role === 'trainer')
+    .filter(item=>item.role === 'trainer' || item.role === 'dietitian')
     .map(mapRemoteTrainer);
   if(!state.team.length){
     state.team = (profilesResult.data || []).filter(item=>item.role === 'owner').map(mapRemoteTrainer);
@@ -1144,12 +1207,13 @@ async function loadRemoteData(){
   state.signatures = (signaturesResult.data || []).map(mapRemoteSignature);
   state.trainerTasks = taskTableMissing ? state.trainerTasks : (trainerTasksResult.data || []).map(mapRemoteTrainerTask);
   state.memberTasks = memberTaskTableMissing ? state.memberTasks : (memberTasksResult.data || []).map(mapRemoteMemberTask);
+  state.makeupRequests = makeupTableMissing ? state.makeupRequests : (makeupRequestsResult.data || []).map(mapRemoteMakeupRequest);
   const remotePilotLeads = (pilotLeadsResult.data || []).map(mapRemotePilotLead);
   const localActivationById = new Map(localPilotLeads.map(lead=>[lead.id, lead]));
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length
     ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
     : localPilotLeads.filter(lead=>lead.source === 'landing');
-  state.role = profile.role === 'trainer' ? 'trainer' : profile.role === 'member' ? 'member' : 'owner';
+  state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
     const adminAccess = await verifyFormeraAdminAccess(db);
     if(adminAccess.error){
@@ -1372,6 +1436,7 @@ async function syncMembersToSupabase(){
       status: member.status,
       risk_type: member.type
     };
+    if(state.backend.careReady) row.dietitian_profile_id = trainerProfileIdByName(member.dietitian);
     if(state.backend.accountsReady){
       row.email = member.email || null;
       row.avatar_data_url = member.avatarDataUrl || null;
@@ -1401,7 +1466,12 @@ function syncStudiosToSupabase(){
         row.whatsapp = studio.whatsapp || null;
         row.instagram = studio.instagram || null;
         row.website = studio.website || null;
-        row.map_url = studio.mapUrl || null;
+      row.map_url = studio.mapUrl || null;
+      if(state.backend.careReady){
+        row.makeup_enabled = Boolean(studio.makeupEnabled);
+        row.makeup_notice_hours = studio.makeupNoticeHours;
+        row.makeup_max_per_month = studio.makeupMaxPerMonth;
+      }
       }
       return row;
     });
@@ -1453,6 +1523,7 @@ function syncSessionsToSupabase(){
     capacity: session.capacity,
     reserved_count: session.reserved,
     waitlist_count: session.waitlist,
+    ...(state.backend.careReady ? {is_makeup_slot: Boolean(session.isMakeupSlot)} : {}),
     status: session.status
   })));
 }
@@ -1465,7 +1536,7 @@ function syncTeamToSupabase(){
       id: trainer.profileId || trainer.id,
       studio_id: studioId,
       full_name: trainer.name,
-      role: 'trainer',
+      role: trainer.accountRole || 'trainer',
       phone: trainer.phone || null
     };
     if(state.backend.accountsReady){
@@ -1507,6 +1578,22 @@ function syncMemberTasksToSupabase(){
     due_date: task.dueDate,
     status: task.status,
     completed_at: task.completedAt
+  })));
+}
+
+function syncMakeupRequestsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.makeupRequestsReady)) return;
+  syncRemote('makeup_requests', state.makeupRequests.map(request=>({
+    id: request.id,
+    studio_id: studioId,
+    member_id: request.memberId || memberIdByName(request.member),
+    missed_session_id: request.missedSessionId,
+    requested_session_id: request.requestedSessionId,
+    note: request.note || null,
+    status: request.status,
+    reviewed_by_profile_id: request.reviewedByProfileId,
+    reviewed_at: request.reviewedAt
   })));
 }
 
@@ -1919,8 +2006,36 @@ function sessionTypeLabel(type){
 }
 
 function sessionCapacityLabel(session){
+  if(session.isMakeupSlot && !session.memberId) return `Telafi kontenjanı · ${session.reserved}/${session.capacity} dolu${session.waitlist ? ` · ${session.waitlist} bekleme` : ''}`;
   const remaining = Math.max(0, session.capacity - session.reserved);
   return `${sessionTypeLabel(session.sessionType)} · ${session.reserved}/${session.capacity} dolu${session.waitlist ? ` · ${session.waitlist} bekleme` : remaining ? ` · ${remaining} yer` : ' · Kapasite dolu'}`;
+}
+
+function makeupStatusLabel(status){
+  return {pending:'Onay bekliyor', approved:'Onaylandı', rejected:'Reddedildi', cancelled:'İptal edildi'}[status] || 'Onay bekliyor';
+}
+
+function makeupRequestRows(requests, {owner=false}={}){
+  return requests.map(request=>{
+    const missed = state.sessions.find(session=>session.id === request.missedSessionId);
+    const requested = state.sessions.find(session=>session.id === request.requestedSessionId);
+    return `<div class="makeup-request"><div><strong>${request.member}</strong><small>${missed ? `${formatDateTR(missed.date)} · ${missed.time} kaçırılan seans` : 'Kaçırılan seans'}${request.note ? ` · ${request.note}` : ''}${requested ? ` · Telafi: ${formatDateTR(requested.date)} ${requested.time}` : ''}</small></div><div class="makeup-actions"><span class="status ${request.status === 'approved' ? 'good' : request.status === 'rejected' ? 'risk' : 'warn'}">${makeupStatusLabel(request.status)}</span>${owner && request.status === 'pending' ? `<button class="mini-button" data-action="approve-makeup" data-makeup-id="${request.id}">Onayla</button><button class="mini-button danger" data-action="reject-makeup" data-makeup-id="${request.id}">Reddet</button>` : ''}</div></div>`;
+  }).join('') || `<div class="empty-mini">${owner ? 'Onay bekleyen telafi talebi yok.' : 'Henüz telafi talebin yok.'}</div>`;
+}
+
+function makeupOwnerPanel(){
+  const studio = activeStudio();
+  const requests = state.makeupRequests.filter(request=>request.studioId === studio.id || !request.studioId);
+  const openSlots = state.sessions.filter(session=>session.isMakeupSlot && session.status === 'scheduled' && session.reserved < session.capacity);
+  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi kontrolü</h2><p>${studio.makeupEnabled ? `Aktif · ayda en fazla ${studio.makeupMaxPerMonth} telafi talebi` : 'Kapalı · işletmeci onayı olmadan üyelere görünmez'}</p></div><button class="secondary" data-action="toggle-makeup">${studio.makeupEnabled ? 'Telafi sistemini kapat' : 'Telafi sistemini aç'}</button></div>${studio.makeupEnabled ? `<div class="report-list"><div><span>Açık telafi kontenjanı</span><strong>${openSlots.length}</strong></div><div><span>Onay bekleyen</span><strong>${requests.filter(item=>item.status === 'pending').length}</strong></div></div><div class="makeup-list">${makeupRequestRows(requests,{owner:true})}</div>` : `<div class="empty-mini">Aktifleştirdiğinde üyeler yalnızca iptal edilen seansları için talep açabilir. Uygun saati ve onayı sen belirlersin.</div>`}</article>`;
+}
+
+function memberMakeupPanel(member){
+  const studio = activeStudio();
+  const missed = state.sessions.filter(session=>session.memberId === member.id || session.member === member.name).filter(session=>session.status === 'cancelled');
+  const requests = state.makeupRequests.filter(request=>request.memberId === member.id || request.member === member.name);
+  if(!studio.makeupEnabled) return '';
+  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi</h2><p>İşletmenin onayladığı uygun kontenjanlar için talep oluştur.</p></div><span class="badge">İsteğe bağlı</span></div>${missed.map(session=>`<div class="makeup-request"><div><strong>${formatDateTR(session.date)} · ${session.time}</strong><small>${session.program} · ${session.room}</small></div><div class="makeup-actions"><button class="mini-button" data-action="request-makeup" data-session-id="${session.id}" data-member-id="${member.id}">Telafi iste</button></div></div>`).join('') || `<div class="empty-mini">Telafi talebi oluşturulabilecek iptal edilmiş seansın yok.</div>`}<div class="makeup-list">${makeupRequestRows(requests)}</div></article>`;
 }
 
 function compactSessionRows(items=sessionsForDate()){
@@ -2144,6 +2259,18 @@ function financePage(){
   </section>`;
 }
 
+function exercisePreviewPath(exercise=''){
+  const value = String(exercise).toLocaleLowerCase('tr');
+  if(/squat|lunge|deadlift|hip thrust|step-up|carry/.test(value)) return 'assets/exercises/lower-body.svg';
+  if(/row|trx|pull/.test(value)) return 'assets/exercises/pull.svg';
+  if(/plank|dead bug|pallof|core/.test(value)) return 'assets/exercises/core.svg';
+  return 'assets/exercises/mobility.svg';
+}
+
+function exerciseRow(exercise,index,{member=false}={}){
+  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${exercise}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
+}
+
 function programCards(){
   return state.programs.map(program=>{
     const assignedMember = memberByName(program.assigned);
@@ -2151,7 +2278,7 @@ function programCards(){
     <div class="card-title"><div><h2>${program.title}</h2><p>${program.goal} · ${program.duration} dk</p></div><span class="badge">${program.level}</span></div>
     <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
     <div class="program-exercises">
-      ${program.exercises.slice(0,4).map((exercise,index)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><div><strong>${exercise}</strong><small>Setleri PT onayıyla güncelle</small></div></div>`).join('')}
+      ${program.exercises.slice(0,4).map((exercise,index)=>exerciseRow(exercise,index)).join('')}
     </div>
     <div class="program-actions"><button class="secondary" data-action="assign-program" data-program-id="${program.id}">Üyeye gönder</button><button class="mini-button danger" data-action="delete-program" data-program-id="${program.id}">Sil</button></div>
   </article>`;
@@ -2209,6 +2336,7 @@ function calendarPage(){
       <p>Seans yoğunluğu, iptal ve tamamlanma durumuna göre kısa aksiyon listesi.</p>
       ${calendarAiNotes(selectedDate).map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Takvim aksiyonu</small></div></div>`).join('')}
     </article>
+    ${state.role === 'owner' ? makeupOwnerPanel() : ''}
   </section>`;
 }
 
@@ -2481,7 +2609,7 @@ function trainerTaskRows(items=state.trainerTasks){
 
 function currentTrainerMemberTasks(){
   const trainerId = trainerProfileIdByName(state.trainerName);
-  return state.memberTasks.filter(task=>task.trainer === state.trainerName || (trainerId && task.trainerProfileId === trainerId));
+  return state.memberTasks.filter(task=>task.trainer === state.trainerName || (trainerId && task.trainerProfileId === trainerId) || state.members.some(member=>isMemberAssignedToSpecialist(member, state.trainerName) && (task.memberId === member.id || task.member === member.name)));
 }
 
 function memberTasksForMember(memberName){
@@ -2495,7 +2623,7 @@ function memberTaskRows(items, {owner=false}={}){
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row member-task ${task.status === 'done' ? 'done' : ''}">
       <span class="task-type ${task.type}">${memberTaskTypeIcon(task.type)}</span>
-      <div><strong>${task.title}</strong><small>${memberTaskTypeLabel(task.type)} · ${task.member} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${task.title}</strong><small>${memberTaskTypeLabel(task.type)} · ${task.member} · ${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : memberTaskTypeStatus(task.type)}">${task.status === 'done' ? 'Tamamlandı' : memberTaskTypeLabel(task.type)}</span>
       <div class="row-actions">
         ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-member-task" data-member-task-id="${task.id}">Tamamla</button>`}
@@ -2551,7 +2679,7 @@ function trainerSessionRows(){
 }
 
 function trainerClientRows(){
-  const clients = state.members.filter(member=>member.trainer === state.trainerName);
+  const clients = state.members.filter(member=>isMemberAssignedToSpecialist(member, state.trainerName));
   return clients.map(member=>`<div class="member-row">
     <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
@@ -2562,7 +2690,7 @@ function trainerClientRows(){
 }
 
 function trainerProgramRows(){
-  const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && member.trainer === state.trainerName));
+  const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && isMemberAssignedToSpecialist(member, state.trainerName)));
   return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
     <span>▤</span><div><strong>${program.title}</strong><small>${program.assigned} · ${program.duration} dk · ${program.level}</small></div>
   </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
@@ -2588,12 +2716,14 @@ function trainerDashboard(){
   const trainer = state.team.find(item=>item.name === state.trainerName) || state.team[0] || normalizeTrainer({name:'Ece'});
   state.trainerName = trainer.name;
   const stats = trainerStats(trainer.name);
-  const clients = state.members.filter(member=>member.trainer === trainer.name);
+  const clients = state.members.filter(member=>isMemberAssignedToSpecialist(member, trainer.name));
   const riskyClients = clients.filter(member=>member.type !== 'good');
   const openTasks = currentTrainerTasks().filter(task=>task.status === 'open').length;
   const clientActions = currentTrainerMemberTasks();
   const openClientActions = clientActions.filter(task=>task.status === 'open').length;
-  return `<div class="welcome"><div><span class="eyebrow">ANTRENÖR ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve seanslarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ Üye aksiyonu</button><button class="primary" data-action="add-session">+ Seans planla</button></div></div>
+  const specialistLabel = trainer.accountRole === 'dietitian' ? 'DİYETİSYEN' : 'ANTRENÖR';
+  const actionLabel = trainer.accountRole === 'dietitian' ? 'Beslenme notu' : 'Üye aksiyonu';
+  return `<div class="welcome"><div><span class="eyebrow">${specialistLabel} ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve ekip notlarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ ${actionLabel}</button>${trainer.accountRole === 'dietitian' ? '' : '<button class="primary" data-action="add-session">+ Seans planla</button>'}</div></div>
   <section class="metrics">
     ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
     ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
@@ -2614,9 +2744,9 @@ function trainerDashboard(){
       <div class="insight"><span>2</span><div><strong>${riskyClients[0]?.name || 'Aktif danışanlar'} için kısa motivasyon mesajı gönder.</strong><small>Katılım ve yenileme riskini azaltır</small></div></div>
       <div class="insight"><span>3</span><div><strong>Program sonrası notları üye kartında güncelle.</strong><small>Pilot geri bildirimi için değerli</small></div></div>
     </article>
-    <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenörüne atanmış üyeler</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
+    <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenör ve diyetisyen ortak takip alanı</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
     <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Danışanlara atanmış şablonlar</p></div><button class="secondary" data-action="add-program">Program oluştur</button></div>${trainerProgramRows()}</article>
-    <article class="card"><div class="card-title"><div><h2>Üye aksiyonları</h2><p>Antrenman görevi, beslenme notu ve takip komutu</p></div><button class="secondary" data-action="add-member-task">+ Üyeye gönder</button></div><div class="task-list">${memberTaskRows(clientActions, {owner:true})}</div></article>
+    <article class="card"><div class="card-title"><div><h2>Ortak üye akışı</h2><p>Antrenör ve diyetisyenin aynı üyedeki eylemleri</p></div><button class="secondary" data-action="add-member-task">+ Üyeye gönder</button></div><div class="task-list">${memberTaskRows(clientActions, {owner:true})}</div></article>
     <article class="card"><div class="card-title"><div><h2>Görevlerim</h2><p>İşletmeciden gelen öneri ve aksiyonlar</p></div><span class="badge">${openTasks} açık</span></div><div class="task-list">${trainerOwnTaskRows()}</div></article>
   </section>`;
 }
@@ -2969,12 +3099,13 @@ function memberDashboard(){
   const actions = memberTasksForMember(memberName);
   const openActions = actions.filter(task=>task.status === 'open').length;
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'antrenör notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı','sorumlu PT','♧')}</section>
+  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${member.dietitian}` : 'sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
-  ${program.exercises.map((x,i)=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8"><span>${i+1}</span><div><strong>${x}</strong><small>Dinlenme 60–90 saniye</small></div></div>`).join('')}</article>
+  <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
-  <article class="card"><div class="card-title"><div><h2>Antrenör notları</h2><p>Program, beslenme ve takip görevlerin</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
+  <article class="card"><div class="card-title"><div><h2>Bakım ekibi notları</h2><p>Antrenör ve diyetisyenin program, beslenme ve takip görevleri</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
+  ${memberMakeupPanel(member)}
   <article class="card"><div class="card-title"><div><h2>Program seç</h2><p>Bugün takip etmek istediğin programı seç.</p></div><span class="badge">${state.programs.length} seçenek</span></div>
   <div class="choice-list">${state.programs.map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('')}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
@@ -3036,7 +3167,7 @@ function render(){
   updateBackendShell();
   updateAccountSummary();
   if(isFormeraAdmin()){app.innerHTML=pilotPage();return bind()}
-  if(state.role==='trainer'){app.innerHTML=trainerDashboard();return bind()}
+  if(state.role==='trainer' || state.role==='dietitian'){app.innerHTML=trainerDashboard();return bind()}
   if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
   app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='growth'?growthPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
 }
@@ -3046,9 +3177,16 @@ function openMemberModal(member){
   memberForm.dataset.editingId = member?.id || '';
   memberModalEyebrow.textContent = member ? 'KAYIT DÜZENLE' : 'YENİ KAYIT';
   memberModalTitle.textContent = member ? 'Üye bilgilerini düzenle' : 'Yeni üye ekle';
+  const trainerSelect = memberForm.elements.trainer;
+  const dietitianSelect = memberForm.elements.dietitian;
+  const trainers = state.team.filter(item=>item.accountRole !== 'dietitian');
+  const dietitians = state.team.filter(item=>item.accountRole === 'dietitian');
+  trainerSelect.innerHTML = trainers.map(item=>`<option value="${escapeAttr(item.name)}">${escapeAttr(item.name)}</option>`).join('') || '<option value="Atanmadı">Atanmadı</option>';
+  dietitianSelect.innerHTML = `<option value="Atanmadı">Şimdilik atanmadı</option>${dietitians.map(item=>`<option value="${escapeAttr(item.name)}">${escapeAttr(item.name)}</option>`).join('')}`;
   if(member){
     memberForm.elements.name.value = member.name;
     memberForm.elements.trainer.value = member.trainer;
+    memberForm.elements.dietitian.value = member.dietitian || 'Atanmadı';
     memberForm.elements.package.value = `${parseSessions(member.sessions).total} Seans`;
     memberForm.elements.phone.value = member.phone || '';
     memberForm.elements.email.value = member.email || '';
@@ -3169,9 +3307,11 @@ function openSessionModal(){
   sessionForm.elements.date.value = state.calendarDate || todayISO();
   sessionForm.elements.time.value = '09:00';
   sessionForm.elements.member.value = state.members[0]?.name || '';
+  sessionForm.elements.trainer.innerHTML = state.team.filter(item=>item.accountRole !== 'dietitian').map(item=>`<option value="${escapeAttr(item.name)}">${escapeAttr(item.name)}</option>`).join('') || '<option value="Atanmadı">Atanmadı</option>';
   sessionForm.elements.program.value = state.programs[0]?.title || '';
   if(sessionForm.elements.sessionType) sessionForm.elements.sessionType.value = 'one_to_one';
   if(sessionForm.elements.capacity) sessionForm.elements.capacity.value = '1';
+  if(sessionForm.elements.isMakeupSlot) sessionForm.elements.isMakeupSlot.checked = false;
   sessionModal.showModal();
 }
 
@@ -3217,6 +3357,61 @@ function cancelSession(id){
   showToast(`${session.member} seansı iptal edildi.`);
 }
 
+function toggleMakeup(){
+  if(state.role !== 'owner') return;
+  const studio = activeStudio();
+  studio.makeupEnabled = !studio.makeupEnabled;
+  saveStudios();
+  render();
+  showToast(studio.makeupEnabled ? 'Telafi dersi talep akışı açıldı. Uygun kontenjanları takvimden oluşturabilirsin.' : 'Telafi dersi talep akışı kapatıldı.');
+}
+
+function createMakeupRequest(memberId, missedSessionId){
+  const studio = activeStudio();
+  const member = state.members.find(item=>item.id === memberId);
+  const missed = state.sessions.find(item=>item.id === missedSessionId);
+  if(!studio.makeupEnabled || !member || !missed || missed.status !== 'cancelled') return showToast('Bu seans için telafi talebi oluşturulamıyor.');
+  const activeCount = state.makeupRequests.filter(item=>item.memberId === memberId && ['pending','approved'].includes(item.status) && new Date(item.createdAt).getMonth() === new Date().getMonth()).length;
+  if(activeCount >= studio.makeupMaxPerMonth) return showToast(`Bu ay en fazla ${studio.makeupMaxPerMonth} telafi talebi açılabilir.`);
+  const note = prompt('İstersen kısa bir not ekle (zorunlu değil):') || '';
+  const request = normalizeMakeupRequest({id:makeId(),studioId:studio.id,memberId,member:member.name,missedSessionId,note,status:'pending'});
+  state.makeupRequests.unshift(request);
+  saveMakeupRequests();
+  render();
+  showToast('Telafi talebin işletmeci onayına gönderildi.');
+}
+
+function approveMakeupRequest(id){
+  const request = state.makeupRequests.find(item=>item.id === id);
+  if(!request || state.role !== 'owner') return;
+  const slot = state.sessions.find(item=>item.isMakeupSlot && item.status === 'scheduled' && !item.memberId && item.reserved < item.capacity);
+  if(!slot) return showToast('Önce takvimden boş bir “Telafi dersi kontenjanı” oluşturmalısın.');
+  const member = state.members.find(item=>item.id === request.memberId || item.name === request.member);
+  if(!member) return showToast('Üye kaydı bulunamadı.');
+  slot.memberId = member.id;
+  slot.member = member.name;
+  slot.reserved = Math.min(slot.capacity, Math.max(1, slot.reserved + 1));
+  request.status = 'approved';
+  request.requestedSessionId = slot.id;
+  request.reviewedByProfileId = state.backend.profile?.id || null;
+  request.reviewedAt = new Date().toISOString();
+  saveSessions();
+  saveMakeupRequests();
+  render();
+  showToast(`${member.name} için ${slot.date} ${slot.time} telafi dersi onaylandı.`);
+}
+
+function rejectMakeupRequest(id){
+  const request = state.makeupRequests.find(item=>item.id === id);
+  if(!request || state.role !== 'owner') return;
+  request.status = 'rejected';
+  request.reviewedByProfileId = state.backend.profile?.id || null;
+  request.reviewedAt = new Date().toISOString();
+  saveMakeupRequests();
+  render();
+  showToast('Telafi talebi reddedildi.');
+}
+
 function deleteSession(id){
   const session = state.sessions.find(x=>x.id === id);
   if(!session) return;
@@ -3248,6 +3443,7 @@ function copyReport(){
 
 function openTrainerModal(){
   trainerForm.reset();
+  trainerForm.elements.teamRole.value = 'trainer';
   trainerModal.showModal();
 }
 
@@ -3263,9 +3459,9 @@ function openMemberTaskModal(memberName=''){
   memberTaskForm.reset();
   const trainerSelect = memberTaskForm.elements.trainer;
   const memberSelect = memberTaskForm.elements.member;
-  const trainerName = state.role === 'trainer' ? state.trainerName : state.team[0]?.name || 'Ece';
-  const visibleMembers = state.role === 'trainer'
-    ? state.members.filter(member=>member.trainer === trainerName)
+  const trainerName = (state.role === 'trainer' || state.role === 'dietitian') ? state.trainerName : state.team[0]?.name || 'Ece';
+  const visibleMembers = (state.role === 'trainer' || state.role === 'dietitian')
+    ? state.members.filter(member=>isMemberAssignedToSpecialist(member, trainerName))
     : state.members;
   memberSelect.innerHTML = visibleMembers.map(member=>`<option value="${escapeAttr(member.name)}">${escapeAttr(member.name)}</option>`).join('');
   trainerSelect.innerHTML = state.team.map(trainer=>`<option value="${escapeAttr(trainer.name)}">${escapeAttr(trainer.name)}</option>`).join('');
@@ -4277,6 +4473,7 @@ memberForm.onsubmit=async e=>{
     initials: initialsFromName(name),
     avatarDataUrl,
     trainer:data.get('trainer'),
+    dietitian:data.get('dietitian') || 'Atanmadı',
     last: current?.last || 'Henüz gelmedi',
     sessions,
     status: current?.status || 'Yeni',
@@ -4341,19 +4538,24 @@ programForm.onsubmit=e=>{
 sessionForm.onsubmit=e=>{
   e.preventDefault();
   const data = new FormData(e.currentTarget);
+  const isMakeupSlot = data.get('isMakeupSlot') === 'on';
+  const memberName = isMakeupSlot ? 'Telafi kontenjanı' : data.get('member').trim();
+  if(!isMakeupSlot && !memberName) return showToast('Seans için bir üye seçmelisin.');
   const session = normalizeSession({
     id: makeId(),
     date: data.get('date'),
     time: data.get('time'),
-    member: data.get('member').trim(),
+    member: memberName,
+    memberId: isMakeupSlot ? null : memberIdByName(memberName),
     trainer: data.get('trainer'),
     program: data.get('program').trim() || 'Genel PT',
     room: data.get('room'),
     sessionType: data.get('sessionType'),
     capacity: data.get('capacity'),
-    reserved: 1,
+    reserved: isMakeupSlot ? 0 : 1,
     waitlist: 0,
-    status: 'scheduled'
+    status: 'scheduled',
+    isMakeupSlot
   });
   state.sessions.push(session);
   state.calendarDate = session.date;
@@ -4361,7 +4563,7 @@ sessionForm.onsubmit=e=>{
   sessionModal.close();
   e.currentTarget.reset();
   render();
-  showToast(`${session.member} için ${session.time} seansı eklendi.`);
+  showToast(isMakeupSlot ? `${session.time} için telafi dersi kontenjanı açıldı.` : `${session.member} için ${session.time} seansı eklendi.`);
 };
 
 trainerForm.onsubmit=async e=>{
@@ -4374,7 +4576,8 @@ trainerForm.onsubmit=async e=>{
     id: makeId(),
     profileId: makeId(),
     name: data.get('name').trim(),
-    role: data.get('role').trim(),
+    accountRole: data.get('teamRole'),
+    role: data.get('teamRole') === 'dietitian' ? 'Diyetisyen' : 'PT Coach',
     specialty: data.get('specialty').trim(),
     phone: data.get('phone').trim(),
     commission: data.get('commission'),

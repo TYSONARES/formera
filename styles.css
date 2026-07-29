@@ -280,3 +280,12 @@
 @media(max-width:760px){.business-hero,.business-diagnosis,.business-opportunities{grid-template-columns:1fr}.business-score{justify-self:start;width:112px;height:112px}.business-score strong{font-size:28px}}
 
 .success-badge{background:#e5f7c8;color:#2b713f;white-space:nowrap}
+
+.check-row{display:flex!important;align-items:flex-start;gap:11px;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#f8f9f4;cursor:pointer}
+.check-row input{width:18px;height:18px;margin:2px 0 0;accent-color:#2d7b50}
+.check-row strong,.check-row small{display:block}.check-row small{margin-top:3px;color:var(--muted);line-height:1.45}
+.exercise-row{grid-template-columns:30px 50px 1fr!important;align-items:center!important}
+.exercise-preview{display:block;width:48px;height:40px;border-radius:11px;object-fit:cover;background:#172018}
+.exercise-hint{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.5}
+.makeup-list{display:grid;gap:10px}.makeup-request{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:12px;background:#f8f9f4}.makeup-request small{display:block;color:var(--muted);margin-top:4px;line-height:1.4}.makeup-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.makeup-slot-note{color:#2b713f;font-weight:800}
+@media(max-width:620px){.exercise-row{grid-template-columns:27px 44px 1fr!important}.exercise-preview{width:42px;height:36px}.makeup-request{grid-template-columns:1fr}.makeup-actions{justify-content:flex-start}}
