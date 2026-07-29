@@ -270,6 +270,7 @@ const loginEyebrow = document.querySelector('#loginEyebrow');
 const loginWelcomeText = document.querySelector('#loginWelcomeText');
 const signupSupabaseButton = document.querySelector('#signupSupabase');
 const googleSignInButton = document.querySelector('#googleSignIn');
+const googleLoginDivider = document.querySelector('#googleLoginDivider');
 const logoutSupabaseButton = document.querySelector('#logoutSupabase');
 const switchSupabaseAccountButton = document.querySelector('#switchSupabaseAccount');
 const togglePasswordButton = document.querySelector('#togglePassword');
@@ -1808,7 +1809,9 @@ function updateSupabaseModalMode(){
       ? `${loginRoleMeta().label} davetini tamamla`
       : 'İşletme hesabı oluştur';
   }
-  if(googleSignInButton) googleSignInButton.hidden = adminMode;
+  // Google OAuth kimlik bilgileri bağlanana kadar kontrol görünür olmamalı.
+  if(googleSignInButton) googleSignInButton.hidden = true;
+  if(googleLoginDivider) googleLoginDivider.hidden = true;
   if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
   if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
