@@ -1809,9 +1809,9 @@ function updateSupabaseModalMode(){
       ? `${loginRoleMeta().label} davetini tamamla`
       : 'İşletme hesabı oluştur';
   }
-  // Google OAuth kimlik bilgileri bağlanana kadar kontrol görünür olmamalı.
-  if(googleSignInButton) googleSignInButton.hidden = true;
-  if(googleLoginDivider) googleLoginDivider.hidden = true;
+  // Kurucu/admin girişinde Google sosyal girişi sunulmaz; diğer roller için etkin kalır.
+  if(googleSignInButton) googleSignInButton.hidden = adminMode;
+  if(googleLoginDivider) googleLoginDivider.hidden = adminMode;
   if(switchSupabaseAccountButton) switchSupabaseAccountButton.hidden = adminMode;
   if(logoutSupabaseButton) logoutSupabaseButton.hidden = adminMode && !state.backend.connected;
   if(adminMode){
