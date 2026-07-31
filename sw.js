@@ -1,10 +1,13 @@
-const CACHE_NAME = 'formera-pwa-v41';
+const CACHE_NAME = 'formera-pwa-v42';
 const CORE_ASSETS = [
   './',
   './index.html',
+  './privacy.html',
+  './terms.html',
   './dashboard.html',
   './config.js',
   './landing.css',
+  './legal.css',
   './styles.css',
   './app.js',
   './pwa.js',
