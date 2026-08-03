@@ -75,6 +75,8 @@ Sağ üstteki rol düğmesiyle şu görünümler arasında geçiş yapılabilir:
 7. Supabase Project URL ve anon public key değerlerini gir
 8. Owner email/şifre ile giriş yapıp canlı veriyi yükle
 
+Ekip bakım akışı ve işletmeci kontrollü telafi dersleri için `supabase/care-makeups.sql` dosyasını SQL Editor’da bir kez çalıştırın. Bu kurulumla diyetisyen rolü eklenir; işletmeci üyeye antrenör ve diyetisyen atayabilir, telafi kontenjanını açıp kapatabilir ve üye yalnızca kendi iptal edilen seansı için talep oluşturabilir.
+
 Logo, marka rengi, işletme iletişim bilgileri ve üye/antrenör avatarlarını canlı veride saklamak için mevcut projede ayrıca `supabase/branding.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
 Gerçek antrenör/üye girişleri için ayrıca `supabase/role-accounts.sql` dosyasını SQL Editor’da bir kez çalıştırın. İşletmeci üye veya antrenör kaydına giriş e-postası eklediğinde, kullanıcı aynı e-postayla hesap oluşturup giriş yapınca kendi rol ekranına yönlenir.

@@ -314,6 +314,15 @@ revoke execute on function public.is_care_specialist() from public;
 revoke execute on function public.can_support_member(uuid) from public;
 revoke execute on function public.can_access_program(uuid) from public;
 revoke execute on function public.validate_makeup_request() from public;
+-- Supabase may also grant EXECUTE directly to anon. Remove that route explicitly:
+-- these helpers are only used by authenticated RLS policies; the trigger needs no
+-- callable API permission at all.
+revoke execute on function public.is_dietitian() from anon;
+revoke execute on function public.is_care_specialist() from anon;
+revoke execute on function public.can_support_member(uuid) from anon;
+revoke execute on function public.can_access_program(uuid) from anon;
+revoke execute on function public.validate_makeup_request() from anon;
+revoke execute on function public.validate_makeup_request() from authenticated;
 grant execute on function public.is_dietitian() to authenticated;
 grant execute on function public.is_care_specialist() to authenticated;
 grant execute on function public.can_support_member(uuid) to authenticated;
