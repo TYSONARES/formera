@@ -90,6 +90,12 @@ SQL Editor → New query → `formera-admins.sql` içeriğini yapıştır → `A
 
 Bu tablo sadece giriş yapan kullanıcının kendi admin yetkisini okuyabileceği şekilde RLS ile korunur. Admin hesabı oluşturma yetkisi uygulama içinden müşterilere verilmez.
 
+İlk kez giriş yapan işletmecinin demo verisi yerine doğrudan işletme kurulumuna yönlenmesi için:
+
+SQL Editor → New query → `studio-onboarding.sql` içeriğini yapıştır → Run.
+
+Bu dosya yalnızca `studios.setup_completed` alanını ekler. Kurulum tamamlanınca işletme adı, logo ve karşılama metni gerçek stüdyo bilgileriyle görünür.
+
 Anon/public RPC erişimini sertleştirmek için:
 
 SQL Editor → New query → `security-hardening.sql` içeriğini yapıştır → Run.

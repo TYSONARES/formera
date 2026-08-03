@@ -10,6 +10,7 @@ create table if not exists public.studios (
   initials text,
   location text,
   status text default 'Demo',
+  setup_completed boolean not null default false,
   logo_data_url text,
   accent_color text default '#d9ff64',
   address text,

@@ -283,6 +283,7 @@ let signatureDrawing = false;
 let selectedLoginRole = localStorage.getItem('formera_login_role') || 'owner';
 let onboardingStep = 0;
 let onboardingLiveSetup = false;
+let onboardingRequired = false;
 
 function makeId(){
   return crypto?.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -626,6 +627,7 @@ function normalizeStudio(studio){
     instagram: studio.instagram || '',
     website: studio.website || '',
     mapUrl: studio.mapUrl || studio.map_url || '',
+    setupComplete: Boolean(studio.setupComplete ?? studio.setup_completed),
     makeupEnabled: Boolean(studio.makeupEnabled ?? studio.makeup_enabled),
     makeupNoticeHours: Math.max(0, Number(studio.makeupNoticeHours ?? studio.makeup_notice_hours) || 12),
     makeupMaxPerMonth: Math.max(0, Number(studio.makeupMaxPerMonth ?? studio.makeup_max_per_month) || 1)
@@ -929,6 +931,7 @@ function mapRemoteStudio(studio){
     instagram: studio.instagram,
     website: studio.website,
     mapUrl: studio.map_url,
+    setupComplete: studio.setup_completed,
     makeupEnabled: studio.makeup_enabled,
     makeupNoticeHours: studio.makeup_notice_hours,
     makeupMaxPerMonth: studio.makeup_max_per_month
@@ -1103,6 +1106,10 @@ async function initSupabase(){
   if(error) return remoteError(error, 'Oturum okunamadı.');
   state.backend.user = data.session?.user || null;
   if(state.backend.user) await loadRemoteData();
+  else {
+    state.backend.loading = false;
+    render();
+  }
   updateBackendShell();
 }
 
@@ -1131,7 +1138,7 @@ async function loadRemoteData(){
     updateBackendShell();
     if(state.backend.needsStudioSetup){
       supabaseModal?.close();
-      setTimeout(()=>openOnboardingModal({fresh:true, liveSetup:true}), 80);
+      openOnboardingModal({fresh:true, liveSetup:true, required:true});
       showToast('Hesabın hazır. İlk stüdyonu oluşturarak canlı panele geçebilirsin.');
     }
     return;
@@ -1186,6 +1193,7 @@ async function loadRemoteData(){
   const firstStudio = studiosResult.data?.[0] || {};
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
   state.backend.accountsReady = (profilesResult.data || []).some(item=>'email' in item) || (membersResult.data || []).some(item=>'profile_id' in item);
+  state.backend.needsStudioSetup = profile.role === 'owner' && Boolean(firstStudio.id) && !Boolean(firstStudio.setup_completed);
 
   const profilesById = Object.fromEntries((profilesResult.data || []).map(item=>[item.id, item]));
   const memberNamesById = Object.fromEntries((membersResult.data || []).map(item=>[item.id, item.full_name]));
@@ -1247,6 +1255,11 @@ async function loadRemoteData(){
   state.backend.loading = false;
   state.backend.error = '';
   persistAllData();
+  if(state.backend.needsStudioSetup && profile.role === 'owner'){
+    supabaseModal?.close();
+    openOnboardingModal({fresh:true, required:true});
+    showToast('Formera’ya hoş geldin. Önce işletmeni tanıyalım.');
+  }
   render();
   const expectedRole = selectedLoginRole;
   if(expectedRole && expectedRole !== profile.role){
@@ -1503,7 +1516,8 @@ function syncStudiosToSupabase(){
         name: studio.name,
         initials: studio.initials,
         location: studio.location,
-        status: studio.status
+        status: studio.status,
+        setup_completed: Boolean(studio.setupComplete)
       };
       if(state.backend.brandingReady){
         row.logo_data_url = studio.logoDataUrl || null;
@@ -1701,9 +1715,18 @@ function updateStudioShell(){
   const avatar = document.querySelector('#studioAvatar');
   const name = document.querySelector('#studioName');
   const location = document.querySelector('#studioLocation');
+  const sidebarBrand = document.querySelector('#sidebarStudioBrand');
+  const sidebarAvatar = document.querySelector('#sidebarStudioAvatar');
+  const sidebarName = document.querySelector('#sidebarStudioName');
+  const brand = document.querySelector('.sidebar-brand');
+  const useStudioBrand = Boolean(state.backend.connected && state.role === 'owner' && studio.setupComplete && !isFormeraAdmin());
   setAvatarElement(avatar, studio.initials, studio.logoDataUrl);
   if(name) name.textContent = studio.name;
   if(location) location.textContent = studio.location;
+  setAvatarElement(sidebarAvatar, studio.initials, studio.logoDataUrl);
+  if(sidebarName) sidebarName.textContent = studio.name;
+  if(sidebarBrand) sidebarBrand.hidden = !useStudioBrand;
+  brand?.classList.toggle('has-studio-brand', useStudioBrand);
   document.documentElement.style.setProperty('--acid', studio.accentColor || '#d9ff64');
 }
 
@@ -2153,12 +2176,19 @@ function ownerSetupGuide(){
 }
 
 function dashboard(){
+  if(state.backend.configured && state.backend.loading){
+    return `<section class="empty-state"><span class="eyebrow">FORMERA</span><h1>İşletme alanın hazırlanıyor</h1><p>Giriş ve işletme profili kontrol ediliyor.</p></section>`;
+  }
+  const studio = activeStudio();
+  const ownerName = String(state.backend.profile?.full_name || state.backend.user?.user_metadata?.full_name || '').trim().split(/\s+/)[0];
+  const greeting = ownerName ? `Hoş geldin, ${escapeAttr(ownerName)} 👋` : 'Hoş geldin 👋';
+  const locationLabel = studio.location && studio.location !== 'Konum eklenmedi' ? `${escapeAttr(studio.location)} · ` : '';
   const riskyCount = state.members.filter(m=>m.type !== 'good').length;
   const finance = financeSummary();
   const chartRows = weeklyChartData();
   const maxChartValue = Math.max(...chartRows.flatMap(row=>[row[1], row[2]]), 1);
   const sessions = sessionSummary();
-  return `<div class="welcome"><div><span class="eyebrow">${activeStudio().name} · 28. Hafta</span><h1>Günaydın, Ömer 👋</h1><p>${activeStudio().location} işletme paneli hazır. İşte dikkat isteyen noktalar.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
+  return `<div class="welcome"><div><span class="eyebrow">${escapeAttr(studio.name)} · BUGÜN</span><h1>${greeting}</h1><p>${locationLabel}${escapeAttr(studio.name)} için günün akışı burada. Rehberden sıradaki kısa adımla başlayabilirsin.</p></div><button class="primary" data-action="new-member">+ Yeni üye</button></div>
   <section class="metrics">
     ${metric('Aktif üye',String(state.members.length),'↑ canlı veri','♙')}
     ${metric('Haftalık gelir',formatCurrency(finance.income),'canlı kayıt','₺')}
@@ -3192,7 +3222,8 @@ function updateWorkspaceNav(){
   document.querySelectorAll('[data-studio-nav]').forEach(item=>item.hidden = isAdmin);
   document.querySelectorAll('[data-admin-nav]').forEach(item=>item.hidden = !isAdmin || !canAccessFormeraAdmin());
   const studioCard = document.querySelector('.studio-card');
-  if(studioCard) studioCard.hidden = isAdmin;
+  const ownCompletedStudio = Boolean(state.backend.connected && state.role === 'owner' && activeStudio().setupComplete);
+  if(studioCard) studioCard.hidden = isAdmin || ownCompletedStudio;
 }
 
 function updateSecondaryNav(){
@@ -3622,10 +3653,12 @@ function updateOnboardingStep(){
   const next = document.querySelector('#onboardingNext');
   const finish = document.querySelector('#onboardingFinish');
   const copy = document.querySelector('#onboardingCopyInvites');
+  const skip = document.querySelector('#onboardingSkip');
   if(back) back.style.display = onboardingStep === 0 ? 'none' : '';
   if(next) next.style.display = onboardingStep >= 4 ? 'none' : '';
   if(finish) finish.style.display = onboardingStep >= 4 ? '' : 'none';
   if(copy) copy.style.display = onboardingStep >= 4 ? '' : 'none';
+  if(skip) skip.style.display = onboardingRequired ? 'none' : '';
 }
 
 function prefillOnboarding(){
@@ -3654,19 +3687,23 @@ function prefillOnboarding(){
   onboardingForm.elements.programExercises.value = Array.isArray(program.exercises) ? program.exercises.join('\n') : '';
 }
 
-function openOnboardingModal({fresh=false, liveSetup=false}={}){
+function openOnboardingModal({fresh=false, liveSetup=false, required=false}={}){
   if(!onboardingModal || !onboardingForm) return;
+  if(onboardingModal.open) return;
   onboardingLiveSetup = Boolean(liveSetup);
+  onboardingRequired = Boolean(required);
   if(fresh){
     onboardingForm.reset();
-    const ownerName = state.backend.user?.email?.split('@')[0] || '';
+    const ownerName = state.backend.profile?.full_name || state.backend.user?.user_metadata?.full_name || state.backend.user?.email?.split('@')[0] || '';
     onboardingForm.elements.ownerName.value = ownerName;
   }
   else prefillOnboarding();
   const eyebrow = document.querySelector('#onboardingEyebrow');
   const title = document.querySelector('#onboardingTitle');
-  if(eyebrow) eyebrow.textContent = onboardingLiveSetup ? 'CANLI KURULUM' : 'İLK KURULUM';
-  if(title) title.textContent = onboardingLiveSetup ? 'İlk stüdyonu 5 adımda kur' : 'Salonunu 5 adımda hazırla';
+  if(eyebrow) eyebrow.textContent = onboardingLiveSetup ? 'CANLI KURULUM' : onboardingRequired ? 'FORMERA’YA HOŞ GELDİN' : 'İLK KURULUM';
+  if(title) title.textContent = onboardingLiveSetup ? 'İlk stüdyonu 5 adımda kur' : onboardingRequired ? 'İşletmeni birlikte kuralım' : 'Salonunu 5 adımda hazırla';
+  const close = document.querySelector('#onboardingClose');
+  if(close) close.hidden = onboardingRequired;
   onboardingStep = 0;
   updateOnboardingStep();
   onboardingModal.showModal();
@@ -3724,6 +3761,15 @@ async function provisionLiveStudio({studio, trainer, member, program, ownerName}
       }
     });
     if(error || !data?.studio || !data?.profile) throw new Error(await readableFunctionError(error, 'Stüdyo oluşturulamadı.'));
+
+    const {data: completedStudio, error: completionError} = await db
+      .from('studios')
+      .update({setup_completed:true, status:studio.status})
+      .eq('id', data.studio.id)
+      .select('*')
+      .single();
+    if(completionError) throw new Error(completionError.message || 'Kurulum durumu kaydedilemedi.');
+    data.studio = completedStudio;
 
     state.backend.profile = data.profile;
     state.backend.studioId = data.studio.id;
@@ -3834,7 +3880,8 @@ async function completeOnboarding(form){
     address: data.get('studioAddress').trim(),
     instagram: data.get('studioInstagram').trim(),
     logoDataUrl,
-    status: 'Kurulum tamamlandı'
+    status: 'Kurulum tamamlandı',
+    setupComplete: true
   });
 
   const trainer = normalizeTrainer({
@@ -3879,8 +3926,10 @@ async function completeOnboarding(form){
     try{
       await provisionLiveStudio({studio:updatedStudio, trainer, member, program, ownerName:data.get('ownerName').trim()});
       state.page = 'dashboard';
+      state.backend.needsStudioSetup = false;
       localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
       onboardingModal.close();
+      onboardingRequired = false;
       form.reset();
       render();
       showToast('Canlı stüdyo hazır. Bu panel yalnızca kendi verilerinle çalışıyor.');
@@ -3900,10 +3949,12 @@ async function completeOnboarding(form){
   state.programs = [program, ...state.programs.filter(item=>item.title !== program.title)];
   state.programSelections[member.name] = program.id;
   state.page = 'dashboard';
+  state.backend.needsStudioSetup = false;
   localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
   persistAllData();
   onboardingModal.close();
   onboardingLiveSetup = false;
+  onboardingRequired = false;
   form.reset();
   render();
   showToast('İlk kurulum tamamlandı. Davetleri üye ve ekip kartlarından kopyalayabilirsin.');
@@ -4771,11 +4822,20 @@ document.querySelector('#backendStatus')?.addEventListener('click', openSupabase
 document.querySelector('#closeSupabaseModal')?.addEventListener('click', ()=>supabaseModal?.close());
 document.querySelectorAll('.modal').forEach(modal=>{
   modal.addEventListener('click', event=>{
-    if(event.target === modal) modal.close();
+    if(event.target !== modal) return;
+    if(modal === onboardingModal && onboardingRequired){
+      showToast('Panele geçmeden önce işletme profilini tamamla.');
+      return;
+    }
+    modal.close();
   });
   modal.querySelectorAll('.modal-close, button[value="cancel"]').forEach(button=>{
     button.addEventListener('click', event=>{
       event.preventDefault();
+      if(modal === onboardingModal && onboardingRequired){
+        showToast('Panele geçmeden önce işletme profilini tamamla.');
+        return;
+      }
       modal.close();
     });
   });
@@ -4807,6 +4867,10 @@ document.querySelector('#switchSupabaseAccount')?.addEventListener('click', even
 });
 document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
   event.preventDefault();
+  if(onboardingRequired){
+    showToast('Panele geçmeden önce işletme profilini tamamla.');
+    return;
+  }
   if(onboardingLiveSetup){
     onboardingModal?.close();
     showToast('Kurulumu daha sonra aynı işletme hesabıyla giriş yaparak sürdürebilirsin.');
@@ -4815,6 +4879,11 @@ document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
   localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
   onboardingModal?.close();
   showToast('İlk kurulum daha sonra Pilot araçlarından açılabilir.');
+});
+onboardingModal?.addEventListener('cancel', event=>{
+  if(!onboardingRequired) return;
+  event.preventDefault();
+  showToast('Panele geçmeden önce işletme profilini tamamla.');
 });
 document.querySelector('#onboardingBack')?.addEventListener('click', event=>{
   event.preventDefault();
@@ -4906,6 +4975,11 @@ enhanceSmartCaseFields();
 const initialInvite = inviteEnrollment();
 if(initialInvite) selectedLoginRole = initialInvite.role;
 setLoginRole(selectedLoginRole);
+const initialSupabaseConfig = readSupabaseConfig();
+if(initialSupabaseConfig){
+  state.backend.configured = true;
+  state.backend.loading = true;
+}
 render();
 initSupabase().finally(()=>{
   if(initialInvite && !state.backend.connected) openSupabaseModal();

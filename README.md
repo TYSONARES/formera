@@ -79,6 +79,8 @@ Ekip bakım akışı ve işletmeci kontrollü telafi dersleri için `supabase/ca
 
 Logo, marka rengi, işletme iletişim bilgileri ve üye/antrenör avatarlarını canlı veride saklamak için mevcut projede ayrıca `supabase/branding.sql` dosyasını SQL Editor’da bir kez çalıştırın.
 
+İlk kez giriş yapan işletmeciyi demo ekranı yerine zorunlu işletme kurulum sihirbazına yönlendirmek için `supabase/studio-onboarding.sql` dosyasını SQL Editor’da bir kez çalıştırın. Bu adım tamamlanınca işletmenin kendi adı, logosu ve “powered by formera” imzası sol menüde görünür.
+
 Gerçek antrenör/üye girişleri için ayrıca `supabase/role-accounts.sql` dosyasını SQL Editor’da bir kez çalıştırın. İşletmeci üye veya antrenör kaydına giriş e-postası eklediğinde, kullanıcı aynı e-postayla hesap oluşturup giriş yapınca kendi rol ekranına yönlenir.
 
 İşletmeci üye veya antrenör listesinde hesap durumunu görebilir: `E-posta yok`, `Davet bekliyor`, `Hesap bağlı`. E-posta eklenen kişiler için `Davet` butonu giriş metnini panoya kopyalar.

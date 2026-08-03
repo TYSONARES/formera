@@ -234,6 +234,26 @@
 .business-score{position:relative;z-index:1;display:grid;place-items:center;text-align:center;width:136px;height:136px;border-radius:34px;background:linear-gradient(135deg,rgba(217,255,100,.18),rgba(255,255,255,.05));border:1px solid rgba(217,255,100,.22);justify-self:end}
 .business-score strong{font:900 34px Manrope;color:var(--acid)}
 
+/* Kurulum tamamlandığında stüdyo markası açılan sol menüde görünür. */
+.sidebar-studio-brand{align-items:center;gap:10px;min-width:0;color:#fff}
+.sidebar-studio-brand[hidden]{display:none!important}
+.sidebar-studio-avatar{flex:0 0 auto}
+.sidebar-studio-copy{min-width:0}
+.sidebar-studio-copy strong,.sidebar-studio-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-studio-copy strong{font:700 13px Manrope;color:#fff}
+.sidebar-studio-copy small{font-size:9px;color:#92988a;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.brand.has-studio-brand .sidebar-studio-brand{display:none!important}
+.brand.has-studio-brand .dashboard-brand-logo{display:none!important}
+@media(min-width:761px){
+  .app-shell.sidebar-expanded .brand.has-studio-brand .dashboard-brand-mark{display:block!important;width:27px;height:27px}
+  .app-shell.sidebar-expanded .brand.has-studio-brand .sidebar-studio-brand{display:flex!important}
+  .app-shell:not(.sidebar-expanded) .brand.has-studio-brand .dashboard-brand-mark{display:block!important}
+}
+@media(max-width:760px){
+  .sidebar.open .brand.has-studio-brand .dashboard-brand-mark{display:block!important;width:27px;height:27px}
+  .sidebar.open .brand.has-studio-brand .sidebar-studio-brand{display:flex!important}
+}
+
 /* Sadeleştirilmiş bilgi mimarisi: ikincil araçlar tek bir açılır grupta kalır. */
 .nav-more-toggle{border:0;background:transparent;color:#aeb3a7;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:10px;font:500 14px "DM Sans";cursor:pointer;text-align:left}
 .nav-more-toggle span{font-size:19px;width:20px;text-align:center}

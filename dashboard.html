@@ -15,15 +15,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260729-4" />
+  <link rel="stylesheet" href="styles.css?v=20260803-1" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <button class="sidebar-close" type="button" aria-label="Sol menüyü kapat">×</button>
-      <a class="brand" href="#" aria-label="Formera ana sayfa">
+      <a class="brand sidebar-brand" href="#" aria-label="Formera ana sayfa">
         <img class="dashboard-brand-mark" src="assets/formera-favicon.svg?v=20260726-3" alt="" aria-hidden="true" height="32" />
         <img class="dashboard-brand-logo" src="assets/formera-logo.svg?v=20260726-3" alt="Formera" height="32" />
+        <span class="sidebar-studio-brand" id="sidebarStudioBrand" hidden>
+          <span class="studio-avatar sidebar-studio-avatar" id="sidebarStudioAvatar">NF</span>
+          <span class="sidebar-studio-copy"><strong id="sidebarStudioName">Stüdyo</strong><small>powered by formera</small></span>
+        </span>
       </a>
 
       <nav class="nav" aria-label="Ana menü">
@@ -200,7 +204,7 @@
     <form method="dialog" id="onboardingForm">
       <div class="modal-head">
         <div><span class="eyebrow" id="onboardingEyebrow">İLK KURULUM</span><h2 id="onboardingTitle">Salonunu 5 adımda hazırla</h2></div>
-        <button value="cancel" class="modal-close" aria-label="Kapat">×</button>
+        <button value="cancel" class="modal-close" id="onboardingClose" aria-label="Kapat">×</button>
       </div>
       <div class="onboarding-progress" aria-label="Kurulum adımları">
         <span class="active">1</span><span>2</span><span>3</span><span>4</span><span>5</span>
@@ -306,6 +310,6 @@
   <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260730-1"></script>
+  <script src="app.js?v=20260803-1"></script>
 </body>
 </html>
