@@ -118,6 +118,10 @@ Bir sonraki backend adımında:
 
 Antrenör ve üye hesapları, işletmecinin ilk kurulumda girdiği e-posta ile önceden hazırlanır. Bu kişiler aynı e-postayla hesap oluşturup giriş yaptığında mevcut `claim_profile_by_email` akışı kendi rollerine yönlendirir.
 
+Kurulum tamamlanınca bu kişilere davet e-postası göndermek için `send-onboarding-invites` Edge Function'ı kullanılır. Function yalnızca giriş yapmış işletme sahibinin kendi stüdyosu için çağrılabilir; `service_role` anahtarı tarayıcıya hiç gönderilmez.
+
+E-postanın Formera diliyle gitmesi için Supabase Dashboard → **Authentication → Emails → Invite user** alanına `invite-email-template.html` içeriğini yapıştırıp kaydet. Şablondaki `{{ .ConfirmationURL }}` davete özel güvenli giriş bağlantısıdır.
+
 ## 8. Frontend bağlantısı
 
 Yayımlanan `config.js` dosyasında yalnızca Supabase **publishable** anahtarı bulunur. Bu anahtar tarayıcıda görünür olması için tasarlanmıştır; veri erişimi RLS politikalarıyla korunur. `service_role` anahtarını hiçbir zaman repoya, tarayıcıya veya istemci koduna ekleme.

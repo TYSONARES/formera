@@ -133,13 +133,13 @@
 .owner-setup-step strong,.owner-setup-step small{display:block}
 .owner-setup-step small{color:var(--muted);font-size:11px;line-height:1.45;margin-top:5px}
 .owner-setup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-#onboardingFinish,#onboardingCopyInvites{display:none}
+#onboardingFinish{display:none;min-width:200px}
 .invite-note{background:#f8f9f4;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:11px;line-height:1.45;margin:8px 0 0;padding:10px}
 .account-line{display:block;color:var(--muted);font-size:11px;margin-top:5px}
 .team-badges{display:flex;gap:6px;align-items:flex-end;flex-direction:column}
 .member-row{grid-template-columns:1.35fr .65fr .65fr auto auto auto auto}
 @media(max-width:760px){.task-row{grid-template-columns:1fr auto}.task-row .row-actions{grid-column:1 / -1}}
-@media(max-width:760px){.setup-summary{grid-template-columns:1fr}.onboarding-actions{justify-content:flex-start;flex-wrap:wrap}}
+@media(max-width:760px){.setup-summary{grid-template-columns:1fr}.onboarding-actions{justify-content:flex-start;flex-wrap:wrap}.onboarding-actions #onboardingFinish{min-width:0}}
 @media(max-width:1050px){.owner-setup-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.owner-setup-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.team-badges{align-items:flex-start;flex-direction:row;grid-column:1 / -1}.member-row .status{justify-self:start}}

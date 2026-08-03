@@ -3652,13 +3652,11 @@ function updateOnboardingStep(){
   const back = document.querySelector('#onboardingBack');
   const next = document.querySelector('#onboardingNext');
   const finish = document.querySelector('#onboardingFinish');
-  const copy = document.querySelector('#onboardingCopyInvites');
   const skip = document.querySelector('#onboardingSkip');
   if(back) back.style.display = onboardingStep === 0 ? 'none' : '';
   if(next) next.style.display = onboardingStep >= 4 ? 'none' : '';
-  if(finish) finish.style.display = onboardingStep >= 4 ? '' : 'none';
-  if(copy) copy.style.display = onboardingStep >= 4 ? '' : 'none';
-  if(skip) skip.style.display = onboardingRequired ? 'none' : '';
+  if(finish) finish.style.display = onboardingStep >= 4 ? 'inline-flex' : 'none';
+  if(skip) skip.style.display = '';
 }
 
 function prefillOnboarding(){
@@ -3703,34 +3701,50 @@ function openOnboardingModal({fresh=false, liveSetup=false, required=false}={}){
   if(eyebrow) eyebrow.textContent = onboardingLiveSetup ? 'CANLI KURULUM' : onboardingRequired ? 'FORMERA’YA HOŞ GELDİN' : 'İLK KURULUM';
   if(title) title.textContent = onboardingLiveSetup ? 'İlk stüdyonu 5 adımda kur' : onboardingRequired ? 'İşletmeni birlikte kuralım' : 'Salonunu 5 adımda hazırla';
   const close = document.querySelector('#onboardingClose');
-  if(close) close.hidden = onboardingRequired;
+  if(close) close.hidden = false;
   onboardingStep = 0;
   updateOnboardingStep();
   onboardingModal.showModal();
 }
 
-async function copyOnboardingInvites(){
-  if(!onboardingForm) return;
-  const data = new FormData(onboardingForm);
-  const trainerEmail = data.get('trainerEmail')?.trim();
-  const memberEmail = data.get('memberEmail')?.trim();
-  const studioName = data.get('studioName')?.trim() || activeStudio().name;
-  const invites = [];
-  if(trainerEmail){
-    invites.push(inviteText({name:data.get('trainerName')?.trim() || 'Antrenör', email:trainerEmail}, 'antrenör').replace(activeStudio().name, studioName));
+function closeOnboardingForLater(){
+  const isLiveSetup = onboardingLiveSetup || onboardingRequired;
+  onboardingModal?.close();
+  if(isLiveSetup){
+    showToast('Kurulum kapatıldı. Aynı işletme hesabıyla giriş yaptığında kaldığın yerden devam edebilirsin.');
   }
-  if(memberEmail){
-    invites.push(inviteText({name:data.get('memberName')?.trim() || 'Üye', email:memberEmail}, 'üye').replace(activeStudio().name, studioName));
+}
+
+function onboardingInviteCandidates({trainer, member}){
+  return [
+    {email:trainer?.email, fullName:trainer?.name, role:'trainer'},
+    {email:member?.email, fullName:member?.name, role:'member'}
+  ].filter(invite=>String(invite.email || '').includes('@'));
+}
+
+async function sendOnboardingInvites({trainer, member}){
+  const invites = onboardingInviteCandidates({trainer, member});
+  const db = state.backend.client;
+  if(!invites.length || !db || state.backend.profile?.role !== 'owner'){
+    return {sent:0, failed:0, skipped:true};
   }
-  if(!invites.length){
-    showToast('Davet kopyalamak için antrenör veya üye e-postası gir.');
-    return;
-  }
+  const {data, error} = await db.functions.invoke('send-onboarding-invites', {body:{invites}});
+  if(error) throw new Error(await readableFunctionError(error, 'Davet e-postaları gönderilemedi.'));
+  return data || {sent:0, failed:invites.length};
+}
+
+async function notifyOnboardingInvites({trainer, member}){
+  const requested = onboardingInviteCandidates({trainer, member}).length;
+  if(!requested) return;
   try{
-    await navigator.clipboard?.writeText(invites.join('\n\n---\n\n'));
-    showToast('Antrenör/üye davet metinleri kopyalandı.');
-  }catch(e){
-    showToast('Davet metinleri kopyalanamadı. Tarayıcı izin vermedi.');
+    const result = await sendOnboardingInvites({trainer, member});
+    const sent = Number(result?.sent || 0);
+    const failed = Number(result?.failed || 0);
+    if(sent) showToast(`${sent} davet e-postası gönderildi.`);
+    if(failed) showToast(`${failed} davet e-postası gönderilemedi. Ekip veya üye listesinden davet bağlantısını paylaşabilirsin.`);
+  }catch(error){
+    console.warn('Onboarding invite delivery failed', error);
+    showToast('Kurulum tamamlandı; davet e-postası gönderilemedi. Ekip veya üye listesinden davet bağlantısını paylaşabilirsin.');
   }
 }
 
@@ -3933,6 +3947,7 @@ async function completeOnboarding(form){
       form.reset();
       render();
       showToast('Canlı stüdyo hazır. Bu panel yalnızca kendi verilerinle çalışıyor.');
+      await notifyOnboardingInvites({trainer, member});
       onboardingLiveSetup = false;
       window.setTimeout(()=>openTrialModal(), 180);
     }catch(error){
@@ -3957,7 +3972,8 @@ async function completeOnboarding(form){
   onboardingRequired = false;
   form.reset();
   render();
-  showToast('İlk kurulum tamamlandı. Davetleri üye ve ekip kartlarından kopyalayabilirsin.');
+  showToast('İlk kurulum tamamlandı. Hoş geldin!');
+  await notifyOnboardingInvites({trainer, member});
 }
 
 function openTrialModal(){
@@ -4823,8 +4839,8 @@ document.querySelector('#closeSupabaseModal')?.addEventListener('click', ()=>sup
 document.querySelectorAll('.modal').forEach(modal=>{
   modal.addEventListener('click', event=>{
     if(event.target !== modal) return;
-    if(modal === onboardingModal && onboardingRequired){
-      showToast('Panele geçmeden önce işletme profilini tamamla.');
+    if(modal === onboardingModal){
+      closeOnboardingForLater();
       return;
     }
     modal.close();
@@ -4832,8 +4848,8 @@ document.querySelectorAll('.modal').forEach(modal=>{
   modal.querySelectorAll('.modal-close, button[value="cancel"]').forEach(button=>{
     button.addEventListener('click', event=>{
       event.preventDefault();
-      if(modal === onboardingModal && onboardingRequired){
-        showToast('Panele geçmeden önce işletme profilini tamamla.');
+      if(modal === onboardingModal){
+        closeOnboardingForLater();
         return;
       }
       modal.close();
@@ -4867,13 +4883,8 @@ document.querySelector('#switchSupabaseAccount')?.addEventListener('click', even
 });
 document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
   event.preventDefault();
-  if(onboardingRequired){
-    showToast('Panele geçmeden önce işletme profilini tamamla.');
-    return;
-  }
-  if(onboardingLiveSetup){
-    onboardingModal?.close();
-    showToast('Kurulumu daha sonra aynı işletme hesabıyla giriş yaparak sürdürebilirsin.');
+  if(onboardingLiveSetup || onboardingRequired){
+    closeOnboardingForLater();
     return;
   }
   localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
@@ -4881,9 +4892,8 @@ document.querySelector('#onboardingSkip')?.addEventListener('click', event=>{
   showToast('İlk kurulum daha sonra Pilot araçlarından açılabilir.');
 });
 onboardingModal?.addEventListener('cancel', event=>{
-  if(!onboardingRequired) return;
   event.preventDefault();
-  showToast('Panele geçmeden önce işletme profilini tamamla.');
+  closeOnboardingForLater();
 });
 document.querySelector('#onboardingBack')?.addEventListener('click', event=>{
   event.preventDefault();
@@ -4901,10 +4911,6 @@ document.querySelector('#onboardingNext')?.addEventListener('click', event=>{
   }
   onboardingStep = Math.min(4, onboardingStep + 1);
   updateOnboardingStep();
-});
-document.querySelector('#onboardingCopyInvites')?.addEventListener('click', event=>{
-  event.preventDefault();
-  copyOnboardingInvites();
 });
 togglePasswordButton?.addEventListener('click', event=>{
   event.preventDefault();

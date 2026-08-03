@@ -204,7 +204,7 @@
     <form method="dialog" id="onboardingForm">
       <div class="modal-head">
         <div><span class="eyebrow" id="onboardingEyebrow">İLK KURULUM</span><h2 id="onboardingTitle">Salonunu 5 adımda hazırla</h2></div>
-        <button value="cancel" class="modal-close" id="onboardingClose" aria-label="Kapat">×</button>
+        <button type="button" class="modal-close" id="onboardingClose" aria-label="Kapat">×</button>
       </div>
       <div class="onboarding-progress" aria-label="Kurulum adımları">
         <span class="active">1</span><span>2</span><span>3</span><span>4</span><span>5</span>
@@ -237,7 +237,7 @@
       </section>
       <section class="onboarding-step" data-step="4">
         <h3>Hazırız</h3>
-        <p class="modal-note">Kurulumu bitirdiğinde işletme bilgileri güncellenecek, ilk antrenör/üye/program oluşturulacak ve davet metinlerini listelerden kopyalayabileceksin.</p>
+        <p class="modal-note">İşletme profilin, ilk antrenörün, üyen ve programın hazır. Giriş e-postası girilen ekip üyelerine Formera’ya katılım bağlantısı gönderilir.</p>
         <div class="setup-summary">
           <div><span>1</span><strong>İşletme profili</strong><small>Logo, adres ve iletişim</small></div>
           <div><span>2</span><strong>Ekip + üye</strong><small>Giriş e-postalarıyla hazır</small></div>
@@ -245,11 +245,10 @@
         </div>
       </section>
       <div class="modal-actions onboarding-actions">
-        <button type="button" class="secondary" id="onboardingSkip">Sonra yap</button>
+        <button type="button" class="secondary" id="onboardingSkip">Kurulumu sonra tamamla</button>
         <button type="button" class="secondary" id="onboardingBack">Geri</button>
-        <button type="button" class="secondary" id="onboardingCopyInvites">Davetleri kopyala</button>
         <button type="button" class="primary" id="onboardingNext">İleri</button>
-        <button type="submit" class="primary" id="onboardingFinish">Kur ve panele geç</button>
+        <button type="submit" class="primary" id="onboardingFinish">Hoş geldin, panele geç</button>
       </div>
     </form>
   </dialog>
