@@ -8,7 +8,7 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5500'
 ]);
 
-type InviteRole = 'trainer' | 'member';
+type InviteRole = 'trainer' | 'dietitian' | 'member';
 type InvitePayload = { email?: unknown; fullName?: unknown; role?: unknown };
 
 const text = (value: unknown, limit = 160) => String(value ?? '').trim().slice(0, limit);
@@ -56,11 +56,17 @@ Deno.serve(async request => {
   }
 
   const invites = (Array.isArray(body.invites) ? body.invites : [])
-    .slice(0, 2)
+    .slice(0, 10)
     .map(invite => ({
       email: text(invite.email, 254).toLocaleLowerCase('tr-TR'),
       fullName: text(invite.fullName, 100),
-      role: invite.role === 'trainer' ? 'trainer' as InviteRole : invite.role === 'member' ? 'member' as InviteRole : null
+      role: invite.role === 'trainer'
+        ? 'trainer' as InviteRole
+        : invite.role === 'dietitian'
+          ? 'dietitian' as InviteRole
+          : invite.role === 'member'
+            ? 'member' as InviteRole
+            : null
     }))
     .filter(invite => invite.role && emailIsValid(invite.email));
   if (!invites.length) return json(request, { error: 'Gönderilecek geçerli bir davet e-postası yok.' }, 422);

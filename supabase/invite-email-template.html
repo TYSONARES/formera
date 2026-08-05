@@ -1,6 +1,35 @@
-<h2>Formera'ya davet edildin</h2>
-<p>İşletmen seni Formera'ya davet etti.</p>
-<p>Programını, görevlerini ve stüdyo akışını kendi hesabından takip etmek için aşağıdaki bağlantıyı aç.</p>
-<p><a href="{{ .ConfirmationURL }}">Formera'ya giriş yap</a></p>
-<p>Bu bağlantı yalnızca davet edildiğin e-posta adresi için geçerlidir.</p>
-<p>Formera · Stüdyo operasyon sistemi</p>
+<!doctype html>
+<html lang="tr">
+  <body style="margin:0;background:#f5f7f1;color:#161a14;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px;background:#f5f7f1;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:22px;overflow:hidden;">
+          <tr><td style="padding:26px 32px;background:#11170f;">
+            <a href="{{ .ConfirmationURL }}" style="color:#d5ff4f;text-decoration:none;font-size:22px;font-weight:700;letter-spacing:.2px;">FORMERA</a>
+            <div style="margin-top:7px;color:#b8c3af;font-size:12px;letter-spacing:1.2px;">STÜDYO OPERASYON SİSTEMİ</div>
+          </td></tr>
+          <tr><td style="padding:34px 32px 24px;">
+            {{ if eq .Data.invited_role "trainer" }}
+              <p style="margin:0 0 10px;color:#497d56;font-size:13px;font-weight:700;letter-spacing:1.1px;">FORMERA EKİBİ</p>
+              <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;">Ekibe hoş geldin</h1>
+              <p style="margin:0;color:#566050;font-size:16px;line-height:1.6;">İşletmen seni Formera ekibine davet etti. Danışanların, görevlerin ve günlük akışın kendi hesabında hazır olacak.</p>
+            {{ else if eq .Data.invited_role "dietitian" }}
+              <p style="margin:0 0 10px;color:#497d56;font-size:13px;font-weight:700;letter-spacing:1.1px;">FORMERA EKİBİ</p>
+              <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;">Bakım ekibine hoş geldin</h1>
+              <p style="margin:0;color:#566050;font-size:16px;line-height:1.6;">İşletmen seni Formera bakım ekibine davet etti. Beslenme notları ve ortak üye takibi kendi hesabında olacak.</p>
+            {{ else }}
+              <p style="margin:0 0 10px;color:#497d56;font-size:13px;font-weight:700;letter-spacing:1.1px;">FORMERA</p>
+              <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;">Hoş geldin</h1>
+              <p style="margin:0;color:#566050;font-size:16px;line-height:1.6;">İşletmen seni Formera'ya davet etti. Antrenman programını, seanslarını ve ekip notlarını kendi hesabından takip edebilirsin.</p>
+            {{ end }}
+            <p style="margin:28px 0;">
+              <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 22px;background:#d5ff4f;border-radius:12px;color:#151a12;font-size:16px;font-weight:700;text-decoration:none;">Formera'ya giriş yap →</a>
+            </p>
+            <p style="margin:0;color:#7a8374;font-size:13px;line-height:1.5;">Bu kişisel davet bağlantısı yalnızca bu e-posta adresi için geçerlidir.</p>
+          </td></tr>
+          <tr><td style="padding:20px 32px;background:#f4f6f0;color:#75806e;font-size:12px;">Formera · İşletmen, ekibin ve üye akışın aynı ritimde.</td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>

@@ -385,7 +385,8 @@ function weeklyChartData(){
 }
 
 function normalizeProgram(program){
-  const exercises = Array.isArray(program.exercises)
+  const hasExplicitExercises = Array.isArray(program.exercises);
+  const exercises = hasExplicitExercises
     ? program.exercises
     : String(program.exercises || '').split('\n').map(x=>x.trim()).filter(Boolean);
   return {
@@ -396,7 +397,9 @@ function normalizeProgram(program){
     level: program.level || 'Başlangıç',
     duration: Number(program.duration) || 40,
     assigned: program.assigned || 'Atanmadı',
-    exercises: exercises.length ? exercises : ['Isınma · 8 dk','Ana çalışma · 25 dk','Soğuma · 7 dk']
+    // Boş bir dizi özellikle verilmişse üyeye henüz program atanmadığını gösterir;
+    // varsayılan egzersizleri göstermeyerek başka bir üyenin planıyla karışmasını önler.
+    exercises: exercises.length ? exercises : (hasExplicitExercises ? [] : ['Isınma · 8 dk','Ana çalışma · 25 dk','Soğuma · 7 dk'])
   };
 }
 
@@ -1136,6 +1139,7 @@ async function loadRemoteData(){
       ? ''
       : 'Bu e-postaya bağlı işletmeci/antrenör/üye profili bulunamadı. İşletme hesabı için kurulum davetiyle devam et.';
     updateBackendShell();
+    render();
     if(state.backend.needsStudioSetup){
       supabaseModal?.close();
       openOnboardingModal({fresh:true, liveSetup:true, required:true});
@@ -1376,7 +1380,7 @@ async function signUpSupabase(email, password){
   const {data, error} = await state.backend.client.auth.signUp({
     email,
     password,
-    options: {emailRedirectTo: `${window.location.origin}${window.location.pathname}`}
+    options: {emailRedirectTo: authRedirectUrl()}
   });
   state.backend.loading = false;
   if(error){
@@ -1589,10 +1593,10 @@ function syncSessionsToSupabase(){
   })));
 }
 
-function syncTeamToSupabase(){
+async function syncTeamToSupabase(){
   const studioId = studioIdForRemote();
   if(!studioId) return;
-  syncRemote('profiles', state.team.map(trainer=>{
+  await syncRemote('profiles', state.team.map(trainer=>{
     const row = {
       id: trainer.profileId || trainer.id,
       studio_id: studioId,
@@ -1976,9 +1980,25 @@ function currentMember(){
     return state.members.find(member=>member.profileId === profile.id)
       || state.members.find(member=>member.email && profile.email && member.email.toLocaleLowerCase('tr') === profile.email.toLocaleLowerCase('tr'))
       || state.members.find(member=>member.name === profile.full_name)
-      || state.members[0];
+      || normalizeMember({
+        id:`pending-member-${profile.id || 'account'}`,
+        profileId:profile.id,
+        name:profile.full_name || 'Üye',
+        email:profile.email || '',
+        trainer:'Atanmadı',
+        dietitian:'Atanmadı',
+        sessions:'0 / 0',
+        status:'Hesabın hazırlanıyor',
+        type:'warn',
+        last:'Henüz planlanmadı'
+      });
   }
-  return memberByName('Selin Aksoy') || state.members[0] || normalizeMember({});
+  return memberByName('Selin Aksoy') || normalizeMember({
+    name:'Üye',
+    email:'',
+    status:'Aktif',
+    plan:'Henüz program yok'
+  });
 }
 
 function memberSignature(memberName){
@@ -2053,6 +2073,49 @@ async function copyInvite(kind, id){
   }
 }
 
+function inviteRoleForPerson(kind, person){
+  if(kind === 'member') return 'member';
+  return person?.accountRole === 'dietitian' ? 'dietitian' : 'trainer';
+}
+
+async function sendAccountInvite(kind, id, {quiet=false}={}){
+  const person = kind === 'trainer'
+    ? state.team.find(trainer=>trainer.id === id || trainer.profileId === id)
+    : state.members.find(member=>member.id === id || member.profileId === id);
+  if(!person) return false;
+  if(!person.email){
+    if(!quiet) showToast(`${person.name} için önce giriş e-postası ekle.`);
+    return false;
+  }
+  if(!state.backend.connected || state.backend.profile?.role !== 'owner'){
+    if(!quiet) showToast('E-posta daveti göndermek için işletmeci hesabıyla canlı giriş yapmalısın.');
+    return false;
+  }
+  if(person.authUserId){
+    if(!quiet) showToast(`${person.name} hesabı zaten etkin. Giriş bağlantısını Davet metniyle paylaşabilirsin.`);
+    return false;
+  }
+  try{
+    // Davet linki gitmeden önce role bağlı profilin canlıda oluştuğundan emin ol.
+    // Böylece daveti kabul eden kişi ilk açılışta doğru üyelik/ekip alanına düşer.
+    if(kind === 'member') await syncMembersToSupabase();
+    else await syncTeamToSupabase();
+    const result = await sendOnboardingInvites({
+      trainer: kind === 'trainer' ? {email:person.email, name:person.name, role:inviteRoleForPerson(kind, person)} : null,
+      member: kind === 'member' ? {email:person.email, name:person.name, role:'member'} : null
+    });
+    if(Number(result?.sent || 0)){
+      if(!quiet) showToast(`${person.name} için Formera davet e-postası gönderildi.`);
+      return true;
+    }
+    if(!quiet) showToast(`${person.name} için davet e-postası gönderilemedi. E-posta adresini ve SMTP ayarını kontrol et.`);
+  }catch(error){
+    console.warn('Account invite delivery failed', error);
+    if(!quiet) showToast('Davet e-postası gönderilemedi. SMTP ayarını ve e-posta adresini kontrol et.');
+  }
+  return false;
+}
+
 function memberRows(items=state.members){
   return items.map(m=>{
     const signature = memberSignature(m.name);
@@ -2065,7 +2128,8 @@ function memberRows(items=state.members){
     <span class="status ${account.className}">${account.label}</span>
     <span class="status ${signature ? 'good' : 'warn'}">${signature ? 'İmzalı' : 'İmza yok'}</span>
     <div class="row-actions">
-      <button class="mini-button" data-action="copy-member-invite" data-member-id="${m.id}">Davet</button>
+      <button class="mini-button" data-action="send-member-invite" data-member-id="${m.id}">E-posta gönder</button>
+      <button class="mini-button" data-action="copy-member-invite" data-member-id="${m.id}">Bağlantıyı kopyala</button>
       <button class="mini-button" data-action="checkin-member" data-member-id="${m.id}">Geldi</button>
       <button class="mini-button" data-action="sign-member" data-member-id="${m.id}">İmza al</button>
       <button class="mini-button" data-action="edit-member" data-member-id="${m.id}">Düzenle</button>
@@ -2177,7 +2241,14 @@ function ownerSetupGuide(){
 
 function dashboard(){
   if(state.backend.configured && state.backend.loading){
-    return `<section class="empty-state"><span class="eyebrow">FORMERA</span><h1>İşletme alanın hazırlanıyor</h1><p>Giriş ve işletme profili kontrol ediliyor.</p></section>`;
+    const invite = inviteEnrollment();
+    const role = state.backend.profile?.role || invite?.role || selectedLoginRole;
+    const message = role === 'member'
+      ? {title:'Formera’ya hoş geldin', text:'Programın ve seansların hazırlanıyor.'}
+      : role === 'trainer' || role === 'dietitian'
+        ? {title:'Ekibe hoş geldin', text:'Danışanların ve görevlerin hazırlanıyor.'}
+        : {title:'Formera’ya hoş geldin', text:'İşletme bilgilerin kontrol ediliyor; hemen ardından panelin açılacak.'};
+    return `<section class="empty-state"><span class="eyebrow">FORMERA</span><h1>${message.title}</h1><p>${message.text}</p></section>`;
   }
   const studio = activeStudio();
   const ownerName = String(state.backend.profile?.full_name || state.backend.user?.user_metadata?.full_name || '').trim().split(/\s+/)[0];
@@ -2637,7 +2708,7 @@ function teamCards(){
         <div><span>Aktif üye</span><strong>${stats.activeMembers}</strong></div>
         <div><span>Gelir katkısı</span><strong>${formatCurrency(stats.revenue)}</strong></div>
       </div>
-      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Davet</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
+      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="send-trainer-invite" data-trainer-id="${trainer.id}">E-posta gönder</button><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Bağlantıyı kopyala</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
     </article>`;
   }).join('');
 }
@@ -2748,9 +2819,15 @@ function teamPage(){
 
 function selectedProgramForMember(memberName){
   const selectedId = state.programSelections[memberName];
-  return state.programs.find(program=>program.id === selectedId)
+  return state.programs.find(program=>program.id === selectedId && program.assigned === memberName)
     || state.programs.find(program=>program.assigned === memberName)
-    || state.programs[0]
+    || (state.backend.profile?.role === 'member' ? normalizeProgram({
+      title:'Henüz program atanmadı',
+      goal:'Antrenörün programını atadığında burada göreceksin',
+      level:'Bekliyor',
+      duration:0,
+      exercises:[]
+    }) : state.programs[0])
     || normalizeProgram({});
 }
 
@@ -2802,7 +2879,23 @@ function trainerOwnTaskRows(){
 }
 
 function trainerDashboard(){
-  const trainer = state.team.find(item=>item.name === state.trainerName) || state.team[0] || normalizeTrainer({name:'Ece'});
+  const accountProfile = state.backend.profile;
+  const isLiveSpecialist = accountProfile && ['trainer','dietitian'].includes(accountProfile.role);
+  const trainer = isLiveSpecialist
+    ? state.team.find(item=>item.profileId === accountProfile.id)
+      || state.team.find(item=>item.email && accountProfile.email && item.email.toLocaleLowerCase('tr') === accountProfile.email.toLocaleLowerCase('tr'))
+      || state.team.find(item=>item.name === accountProfile.full_name)
+      || normalizeTrainer({
+        id:`pending-specialist-${accountProfile.id}`,
+        profileId:accountProfile.id,
+        name:accountProfile.full_name || (accountProfile.role === 'dietitian' ? 'Diyetisyen' : 'Antrenör'),
+        email:accountProfile.email || '',
+        role:accountProfile.role === 'dietitian' ? 'Diyetisyen' : 'Antrenör',
+        accountRole:accountProfile.role,
+        specialty:accountProfile.role === 'dietitian' ? 'Beslenme takibi' : 'Üye takibi'
+      })
+    : state.team.find(item=>item.name === state.trainerName)
+      || normalizeTrainer({name:state.trainerName || 'Antrenör'});
   state.trainerName = trainer.name;
   const stats = trainerStats(trainer.name);
   const clients = state.members.filter(member=>isMemberAssignedToSpecialist(member, trainer.name));
@@ -3174,7 +3267,7 @@ function pilotPage(){
   </section>`;
 }
 
-function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">NORTHFIT STUDIO</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>İlk pilot kapsamındaki veri yapısı bu ekrana bağlanacak.</p></div></div></article>`}
+function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">${escapeAttr(activeStudio().name)}</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>Bu bölüm için ilk işlem veya kayıt henüz eklenmedi.</p></div></div></article>`}
 
 function memberDashboard(){
   const member = currentMember();
@@ -3187,6 +3280,7 @@ function memberDashboard(){
   const weeklyDone = memberSessions.filter(session=>session.status === 'done').length;
   const actions = memberTasksForMember(memberName);
   const openActions = actions.filter(task=>task.status === 'open').length;
+  const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${member.dietitian}` : 'sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
@@ -3195,8 +3289,8 @@ function memberDashboard(){
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
   <article class="card"><div class="card-title"><div><h2>Bakım ekibi notları</h2><p>Antrenör ve diyetisyenin program, beslenme ve takip görevleri</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
   ${memberMakeupPanel(member)}
-  <article class="card"><div class="card-title"><div><h2>Program seç</h2><p>Bugün takip etmek istediğin programı seç.</p></div><span class="badge">${state.programs.length} seçenek</span></div>
-  <div class="choice-list">${state.programs.map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('')}</div></article>
+  <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>
+  <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
   <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
@@ -3717,9 +3811,12 @@ function closeOnboardingForLater(){
 
 function onboardingInviteCandidates({trainer, member}){
   return [
-    {email:trainer?.email, fullName:trainer?.name, role:'trainer'},
+    {email:trainer?.email, fullName:trainer?.name, role:trainer?.role || trainer?.accountRole || 'trainer'},
     {email:member?.email, fullName:member?.name, role:'member'}
-  ].filter(invite=>String(invite.email || '').includes('@'));
+  ].map(invite=>({
+    ...invite,
+    role: invite.role === 'dietitian' || invite.role === 'Diyetisyen' ? 'dietitian' : invite.role === 'member' ? 'member' : 'trainer'
+  })).filter(invite=>String(invite.email || '').includes('@'));
 }
 
 async function sendOnboardingInvites({trainer, member}){
@@ -4236,6 +4333,7 @@ function bind(){
     if(action==='new-member') return openMemberModal();
     if(action==='edit-member') return openMemberModal(state.members.find(m=>m.id === b.dataset.memberId));
     if(action==='delete-member') return deleteMember(b.dataset.memberId);
+    if(action==='send-member-invite') return sendAccountInvite('member', b.dataset.memberId);
     if(action==='copy-member-invite') return copyInvite('member', b.dataset.memberId);
     if(action==='checkin-member') return checkInMember(b.dataset.memberId);
     if(action==='export-members') return exportMembers();
@@ -4261,6 +4359,7 @@ function bind(){
     if(action==='copy-growth-plan') return copyBusinessPlan();
     if(action==='add-trainer') return openTrainerModal();
     if(action==='delete-trainer') return deleteTrainer(b.dataset.trainerId);
+    if(action==='send-trainer-invite') return sendAccountInvite('trainer', b.dataset.trainerId);
     if(action==='copy-trainer-invite') return copyInvite('trainer', b.dataset.trainerId);
     if(action==='add-trainer-task') return openTrainerTaskModal();
     if(action==='complete-trainer-task') return completeTrainerTask(b.dataset.taskId);
@@ -4621,7 +4720,8 @@ memberForm.onsubmit=async e=>{
   e.currentTarget.reset();
   e.currentTarget.dataset.editingId = '';
   render();
-  showToast(email ? `${name} kaydedildi. Davet metnini üye listesinden kopyalayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
+  if(!current && email) await sendAccountInvite('member', member.id, {quiet:true});
+  showToast(email ? `${name} kaydedildi. Davet e-postasını üye listesinden yeniden gönderebilir veya bağlantıyı kopyalayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
 };
 
 financeForm.onsubmit=e=>{
@@ -4719,7 +4819,8 @@ trainerForm.onsubmit=async e=>{
   trainerModal.close();
   e.currentTarget.reset();
   render();
-  showToast(email ? `${trainer.name} ekibe eklendi. Davet metnini ekip kartından kopyalayabilirsin.` : `${trainer.name} ekibe eklendi.`);
+  if(email) await sendAccountInvite('trainer', trainer.id, {quiet:true});
+  showToast(email ? `${trainer.name} ekibe eklendi. Davet e-postasını ekip kartından yeniden gönderebilir veya bağlantıyı kopyalayabilirsin.` : `${trainer.name} ekibe eklendi.`);
 };
 
 trainerTaskForm.onsubmit=e=>{

@@ -64,7 +64,7 @@ SQL Editor → New query → `role-accounts.sql` içeriğini yapıştır → Run
 
 Bu dosya, işletmecinin üye/antrenör kaydına eklediği e-posta ile Supabase Auth kullanıcısını ilk girişte otomatik eşleştirir.
 
-Uygulama tarafında işletmeci üye/antrenör listesinde hesap durumunu görür ve `Davet` butonuyla giriş metnini kopyalayabilir.
+Uygulama tarafında işletmeci üye/antrenör/diyetisyen listesinde hesap durumunu görür; **E-posta gönder** ile Formera davetini iletebilir veya **Bağlantıyı kopyala** ile kişisel davet linkini paylaşabilir.
 
 Antrenör görevleri ve işletmeci önerileri için:
 
@@ -120,7 +120,9 @@ Antrenör ve üye hesapları, işletmecinin ilk kurulumda girdiği e-posta ile �
 
 Kurulum tamamlanınca bu kişilere davet e-postası göndermek için `send-onboarding-invites` Edge Function'ı kullanılır. Function yalnızca giriş yapmış işletme sahibinin kendi stüdyosu için çağrılabilir; `service_role` anahtarı tarayıcıya hiç gönderilmez.
 
-E-postanın Formera diliyle gitmesi için Supabase Dashboard → **Authentication → Emails → Invite user** alanına `invite-email-template.html` içeriğini yapıştırıp kaydet. Şablondaki `{{ .ConfirmationURL }}` davete özel güvenli giriş bağlantısıdır.
+E-postanın Formera diliyle gitmesi için Supabase Dashboard → **Authentication → Emails → Invite user** alanına `invite-email-template.html` içeriğini yapıştırıp kaydet; konu satırı için `invite-email-subject.txt` içeriğini kullan. Şablon, davet rolüne göre **"Ekibe hoş geldin"**, **"Bakım ekibine hoş geldin"** veya **"Hoş geldin"** metnini gösterir. `{{ .ConfirmationURL }}` davete özel güvenli giriş bağlantısıdır.
+
+> Önemli: Bu şablon e-postanın görünümünü ve dilini Formera yapar. Gönderen adının/alan adının `Supabase Auth` yerine Formera görünmesi için Supabase Authentication → SMTP Settings altında Formera'ya ait doğrulanmış bir SMTP göndereni tanımlanmalıdır. Adımlar için `email-smtp-setup.md` dosyasını uygula. Bu, gerçek müşteri davetleri başlamadan önce tamamlanmalıdır.
 
 ## 8. Frontend bağlantısı
 
