@@ -1194,7 +1194,19 @@ async function loadRemoteData(){
   state.backend.careReady = !makeupTableMissing;
   const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
-  const firstStudio = studiosResult.data?.[0] || {};
+  let firstStudio = studiosResult.data?.[0] || {};
+  // Eski canlı kurulumlarda stüdyo ve ekip oluşturulmasına rağmen
+  // setup_completed işareti yazılmadan kalmış olabilir. Bu durumdaki
+  // sahipleri yeniden kurulum sihirbazına göndermek yerine mevcut
+  // işletmelerini güvenle tamamlanmış kabul ediyoruz.
+  if (profile.role === 'owner' && firstStudio.id && !firstStudio.setup_completed) {
+    const { data: recovery, error: recoveryError } = await db.rpc('recover_owner_onboarding');
+    if (!recoveryError && recovery?.found) {
+      firstStudio = { ...firstStudio, setup_completed: true };
+    } else if (recoveryError) {
+      console.warn('Kurulum durumu onarılamadı', recoveryError);
+    }
+  }
   state.backend.brandingReady = 'logo_data_url' in firstStudio || 'accent_color' in firstStudio;
   state.backend.accountsReady = (profilesResult.data || []).some(item=>'email' in item) || (membersResult.data || []).some(item=>'profile_id' in item);
   state.backend.needsStudioSetup = profile.role === 'owner' && Boolean(firstStudio.id) && !Boolean(firstStudio.setup_completed);
@@ -1261,8 +1273,11 @@ async function loadRemoteData(){
   persistAllData();
   if(state.backend.needsStudioSetup && profile.role === 'owner'){
     supabaseModal?.close();
-    openOnboardingModal({fresh:true, required:true});
-    showToast('Formera’ya hoş geldin. Önce işletmeni tanıyalım.');
+    // Bu durumda profil ve stüdyo zaten sunucuda vardır. Formu sıfırlamak,
+    // işletmeciyi yanlışlıkla yeniden kurulum yapıyormuş gibi gösteriyordu.
+    // Mevcut kaydı önden doldurup aynı stüdyoyu tamamlayan canlı akışa devam et.
+    openOnboardingModal({fresh:false, liveSetup:true, required:true});
+    showToast('Kurulumun kaldığı yerden devam ediyor. Mevcut işletme bilgilerin korundu.');
   }
   render();
   const expectedRole = selectedLoginRole;
@@ -3879,8 +3894,12 @@ async function provisionLiveStudio({studio, trainer, member, program, ownerName}
       .eq('id', data.studio.id)
       .select('*')
       .single();
-    if(completionError) throw new Error(completionError.message || 'Kurulum durumu kaydedilemedi.');
-    data.studio = completedStudio;
+    // Edge Function kurulum durumunu da günceller. İstemci tarafındaki bu
+    // ikinci güncelleme yalnızca eski dağıtımlar için bir emniyet ağıdır;
+    // burada alınan bir RLS hatası daha önce başarıyla kaydedilmiş verileri
+    // kullanıcıya "kurulum başarısız" gibi göstermemeli.
+    if(completionError) console.warn('Kurulum durumu istemci üzerinden güncellenemedi', completionError);
+    else data.studio = completedStudio;
 
     state.backend.profile = data.profile;
     state.backend.studioId = data.studio.id;

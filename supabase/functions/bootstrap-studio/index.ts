@@ -67,7 +67,8 @@ Deno.serve(async request => {
     instagram: text(payload.instagram, 120) || null,
     logo_data_url: logoDataUrl || null,
     accent_color: '#d9ff64',
-    status: 'Pilot kurulum'
+    status: 'Kurulum tamamlandı',
+    setup_completed: true
   };
   const ownerName = text(payload.ownerName, 100) || text(auth.user.email?.split('@')[0], 100) || 'İşletme sahibi';
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
