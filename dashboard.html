@@ -305,10 +305,38 @@
       <p class="formera-login-footer">İşletme hesabı açtığında kart bilgisi istemeden 14 günlük canlı deneme başlatırsın. Antrenör ve üye hesapları yalnızca kişisel davet bağlantısıyla etkinleştirilir. <a href="privacy.html" target="_blank" rel="noopener">Gizlilik Politikası</a> · <a href="terms.html" target="_blank" rel="noopener">Kullanım Koşulları</a></p>
     </div>
   </dialog>
+
+  <dialog class="modal" id="inviteModal" aria-labelledby="inviteModalTitle">
+    <form method="dialog" id="inviteForm" class="stack-form">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">DAVET GÖNDERİMİ</p>
+          <h3 id="inviteModalTitle">Formera davetini onayla</h3>
+        </div>
+        <button type="button" class="modal-close" value="cancel" aria-label="Kapat">×</button>
+      </div>
+      <p class="muted">Davet, yalnızca aşağıdaki gönderimi onayladığında e-posta olarak iletilir.</p>
+      <label>
+        Alıcı
+        <input id="inviteRecipient" type="text" readonly>
+      </label>
+      <label>
+        Gönderim önizlemesi
+        <textarea id="inviteMessage" rows="6" readonly></textarea>
+      </label>
+      <p class="helper-text">Alıcı, güvenli bağlantıdan şifresini belirler ve rolüne uygun Formera alanına yönlendirilir.</p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" value="cancel">Vazgeç</button>
+        <button type="submit" class="primary">Daveti gönder</button>
+      </div>
+    </form>
+  </dialog>
+
   <input id="fullBackupImport" type="file" accept="application/json" hidden>
   <script src="config.js?v=20260728-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260803-1"></script>
+  <script src="app.js?v=20260812-1"></script>
+
 </body>
 </html>

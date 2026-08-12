@@ -258,6 +258,10 @@ const studioBrandForm = document.querySelector('#studioBrandForm');
 const onboardingModal = document.querySelector('#onboardingModal');
 const onboardingForm = document.querySelector('#onboardingForm');
 const trialModal = document.querySelector('#trialModal');
+const inviteModal = document.querySelector('#inviteModal');
+const inviteForm = document.querySelector('#inviteForm');
+const inviteRecipient = document.querySelector('#inviteRecipient');
+const inviteMessage = document.querySelector('#inviteMessage');
 const aiAssistantModal = document.querySelector('#aiAssistantModal');
 const aiAssistantBody = document.querySelector('#aiAssistantBody');
 const supabaseModal = document.querySelector('#supabaseModal');
@@ -1203,6 +1207,13 @@ async function loadRemoteData(){
     const { data: recovery, error: recoveryError } = await db.rpc('recover_owner_onboarding');
     if (!recoveryError && recovery?.found) {
       firstStudio = { ...firstStudio, setup_completed: true };
+      const { error: setupPersistError } = await db
+        .from('studios')
+        .update({ setup_completed: true })
+        .eq('id', firstStudio.id);
+      if (setupPersistError) {
+        console.warn('Kurulum durumu kalıcı olarak güncellenemedi', setupPersistError);
+      }
     } else if (recoveryError) {
       console.warn('Kurulum durumu onarılamadı', recoveryError);
     }
@@ -1223,7 +1234,10 @@ async function loadRemoteData(){
     }
   });
 
-  state.studios = (studiosResult.data || []).map(mapRemoteStudio);
+  const resolvedStudios = (studiosResult.data || []).map(studio => (
+    studio.id === firstStudio.id ? firstStudio : studio
+  ));
+  state.studios = resolvedStudios.map(mapRemoteStudio);
   state.activeStudioId = studioId;
   state.team = (profilesResult.data || [])
     .filter(item=>item.role === 'trainer' || item.role === 'dietitian')
@@ -2093,10 +2107,48 @@ function inviteRoleForPerson(kind, person){
   return person?.accountRole === 'dietitian' ? 'dietitian' : 'trainer';
 }
 
-async function sendAccountInvite(kind, id, {quiet=false}={}){
+function invitePerson(kind, id){
   const person = kind === 'trainer'
     ? state.team.find(trainer=>trainer.id === id || trainer.profileId === id)
     : state.members.find(member=>member.id === id || member.profileId === id);
+  return person || null;
+}
+
+function inviteRoleLabel(kind, person){
+  if(kind === 'member') return 'üye';
+  return person?.accountRole === 'dietitian' ? 'diyetisyen' : 'antrenör';
+}
+
+function openInviteComposer(kind, id){
+  const person = invitePerson(kind, id);
+  if(!person) return false;
+  if(!person.email){
+    showToast(`${person.name} için önce giriş e-postası ekle.`);
+    return false;
+  }
+  if(!state.backend.connected || state.backend.profile?.role !== 'owner'){
+    showToast('E-posta daveti göndermek için işletmeci hesabıyla canlı giriş yapmalısın.');
+    return false;
+  }
+  if(person.authUserId){
+    showToast(`${person.name} hesabı zaten etkin. Giriş bağlantısını Davet metniyle paylaşabilirsin.`);
+    return false;
+  }
+  if(!inviteModal || !inviteForm || !inviteRecipient || !inviteMessage){
+    showToast('Davet penceresi açılamadı. Sayfayı yenileyip yeniden dene.');
+    return false;
+  }
+  const studioName = activeStudio()?.name || 'İşletmen';
+  inviteForm.dataset.kind = kind;
+  inviteForm.dataset.personId = id;
+  inviteRecipient.value = `${person.name} <${person.email}>`;
+  inviteMessage.value = `Merhaba ${person.name},\n\n${studioName}, seni Formera'daki ${inviteRoleLabel(kind, person)} alanına davet ediyor.\n\nDavetini kabul et bağlantısıyla şifreni belirleyip giriş yapabilirsin.\n\nFormera`;
+  inviteModal.showModal();
+  return true;
+}
+
+async function deliverAccountInvite(kind, id, {quiet=false}={}){
+  const person = invitePerson(kind, id);
   if(!person) return false;
   if(!person.email){
     if(!quiet) showToast(`${person.name} için önce giriş e-postası ekle.`);
@@ -2129,6 +2181,10 @@ async function sendAccountInvite(kind, id, {quiet=false}={}){
     if(!quiet) showToast('Davet e-postası gönderilemedi. SMTP ayarını ve e-posta adresini kontrol et.');
   }
   return false;
+}
+
+function sendAccountInvite(kind, id){
+  return openInviteComposer(kind, id);
 }
 
 function memberRows(items=state.members){
@@ -3847,17 +3903,9 @@ async function sendOnboardingInvites({trainer, member}){
 
 async function notifyOnboardingInvites({trainer, member}){
   const requested = onboardingInviteCandidates({trainer, member}).length;
-  if(!requested) return;
-  try{
-    const result = await sendOnboardingInvites({trainer, member});
-    const sent = Number(result?.sent || 0);
-    const failed = Number(result?.failed || 0);
-    if(sent) showToast(`${sent} davet e-postası gönderildi.`);
-    if(failed) showToast(`${failed} davet e-postası gönderilemedi. Ekip veya üye listesinden davet bağlantısını paylaşabilirsin.`);
-  }catch(error){
-    console.warn('Onboarding invite delivery failed', error);
-    showToast('Kurulum tamamlandı; davet e-postası gönderilemedi. Ekip veya üye listesinden davet bağlantısını paylaşabilirsin.');
-  }
+  if(!requested) return {sent:0, queued:0};
+  showToast('Davetler hazır. Ekip veya üye listesinden “E-posta gönder”e basıp gönderimi onaylayabilirsin.');
+  return {sent:0, queued:requested};
 }
 
 async function readableFunctionError(error, fallback){
@@ -4739,8 +4787,7 @@ memberForm.onsubmit=async e=>{
   e.currentTarget.reset();
   e.currentTarget.dataset.editingId = '';
   render();
-  if(!current && email) await sendAccountInvite('member', member.id, {quiet:true});
-  showToast(email ? `${name} kaydedildi. Davet e-postasını üye listesinden yeniden gönderebilir veya bağlantıyı kopyalayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
+  showToast(email ? `${name} kaydedildi. Üye listesinden “E-posta gönder”e basıp daveti onaylayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
 };
 
 financeForm.onsubmit=e=>{
@@ -4838,8 +4885,7 @@ trainerForm.onsubmit=async e=>{
   trainerModal.close();
   e.currentTarget.reset();
   render();
-  if(email) await sendAccountInvite('trainer', trainer.id, {quiet:true});
-  showToast(email ? `${trainer.name} ekibe eklendi. Davet e-postasını ekip kartından yeniden gönderebilir veya bağlantıyı kopyalayabilirsin.` : `${trainer.name} ekibe eklendi.`);
+  showToast(email ? `${trainer.name} ekibe eklendi. Ekip kartından “E-posta gönder”e basıp daveti onaylayabilirsin.` : `${trainer.name} ekibe eklendi.`);
 };
 
 trainerTaskForm.onsubmit=e=>{
@@ -4975,6 +5021,27 @@ document.querySelectorAll('.modal').forEach(modal=>{
       modal.close();
     });
   });
+});
+
+inviteForm?.addEventListener('submit', async event=>{
+  event.preventDefault();
+  const {kind, personId} = inviteForm.dataset;
+  if(!kind || !personId) return;
+  const submitButton = inviteForm.querySelector('button[type="submit"]');
+  const originalLabel = submitButton?.textContent;
+  if(submitButton){
+    submitButton.disabled = true;
+    submitButton.textContent = 'Gönderiliyor…';
+  }
+  try{
+    const sent = await deliverAccountInvite(kind, personId);
+    if(sent) inviteModal?.close();
+  }finally{
+    if(submitButton){
+      submitButton.disabled = false;
+      submitButton.textContent = originalLabel;
+    }
+  }
 });
 document.querySelector('#clearSupabaseConfig')?.addEventListener('click', async event=>{
   event.preventDefault();
