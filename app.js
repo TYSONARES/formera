@@ -231,6 +231,26 @@ if(savedProgramSelections){
 
 const money = new Intl.NumberFormat('tr-TR');
 const app = document.querySelector('#appContent');
+let lastMotionPageKey = '';
+let pageEntranceTimer;
+
+function pageMotionKey(){
+  return `${state.workspace || 'studio'}:${state.role || 'owner'}:${state.page || 'dashboard'}:${isFormeraAdmin() ? 'admin' : ''}`;
+}
+
+function applyPageEntrance(){
+  if(!app) return;
+  clearTimeout(pageEntranceTimer);
+  app.classList.remove('motion-page-enter');
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+  const key = pageMotionKey();
+  if(key === lastMotionPageKey) return;
+  lastMotionPageKey = key;
+  void app.offsetWidth;
+  app.classList.add('motion-page-enter');
+  pageEntranceTimer = window.setTimeout(() => app.classList.remove('motion-page-enter'), 760);
+}
 const toast = document.querySelector('#toast');
 const memberModal = document.querySelector('#memberModal');
 const memberForm = document.querySelector('#memberForm');
@@ -3421,10 +3441,14 @@ function render(){
   updateRoleShell();
   updateBackendShell();
   updateAccountSummary();
-  if(isFormeraAdmin()){app.innerHTML=pilotPage();return bind()}
-  if(state.role==='trainer' || state.role==='dietitian'){app.innerHTML=trainerDashboard();return bind()}
-  if(state.role==='member'){app.innerHTML=memberDashboard();return bind()}
-  app.innerHTML=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='growth'?growthPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]); bind();
+  let content;
+  if(isFormeraAdmin()) content=pilotPage();
+  else if(state.role==='trainer' || state.role==='dietitian') content=trainerDashboard();
+  else if(state.role==='member') content=memberDashboard();
+  else content=state.page==='dashboard'?dashboard():state.page==='members'?memberPage():state.page==='programs'?programsPage():state.page==='calendar'?calendarPage():state.page==='finance'?financePage():state.page==='reports'?reportsPage():state.page==='growth'?growthPage():state.page==='team'?teamPage():state.page==='pilot'?pilotPage():genericPage(...pages[state.page]);
+  app.innerHTML=content;
+  bind();
+  applyPageEntrance();
 }
 
 function openMemberModal(member){
@@ -3808,6 +3832,9 @@ function confirmResetDemoData(){
 
 function updateOnboardingStep(){
   if(!onboardingModal) return;
+  const previousStep = Number(onboardingForm?.dataset.motionStep ?? onboardingStep);
+  onboardingForm?.setAttribute('data-motion-direction', onboardingStep >= previousStep ? 'forward' : 'back');
+  onboardingForm?.setAttribute('data-motion-step', String(onboardingStep));
   onboardingForm?.querySelectorAll('.onboarding-step').forEach((step,index)=>{
     step.classList.toggle('active', index === onboardingStep);
   });
