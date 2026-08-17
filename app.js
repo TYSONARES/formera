@@ -1283,6 +1283,25 @@ async function loadRemoteData(){
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length
     ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
     : localPilotLeads.filter(lead=>lead.source === 'landing');
+
+  // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
+  // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
+  // yazılır. Bu liste olmadan, yerelde olup sunucuda olmayan bir satır
+  // (henüz oluşturulmamış üye profili gibi) sessizce hiç yazılmazdı.
+  resetRemoteSignatures();
+  setServerRowKeys('studios', (studiosResult.data || []).map(row=>row.id));
+  setServerRowKeys('profiles', (profilesResult.data || []).map(row=>row.id));
+  setServerRowKeys('members', (membersResult.data || []).map(row=>row.id));
+  setServerRowKeys('programs', (programsResult.data || []).map(row=>row.id));
+  setServerRowKeys('sessions', (sessionsResult.data || []).map(row=>row.id));
+  setServerRowKeys('finance_entries', (financeResult.data || []).map(row=>row.id));
+  setServerRowKeys('signatures', (signaturesResult.data || []).map(row=>row.id));
+  setServerRowKeys('member_program_selections', (selectionsResult.data || []).map(row=>row.member_id));
+  setServerRowKeys('trainer_tasks', taskTableMissing ? [] : (trainerTasksResult.data || []).map(row=>row.id));
+  setServerRowKeys('member_tasks', memberTaskTableMissing ? [] : (memberTasksResult.data || []).map(row=>row.id));
+  setServerRowKeys('makeup_requests', makeupTableMissing ? [] : (makeupRequestsResult.data || []).map(row=>row.id));
+  setServerRowKeys('pilot_leads', pilotLeadTableMissing ? [] : remotePilotLeads.map(lead=>lead.id));
+
   state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
     const adminAccess = await verifyFormeraAdminAccess(db);
@@ -1308,6 +1327,10 @@ async function loadRemoteData(){
   state.backend.connected = true;
   state.backend.loading = false;
   state.backend.error = '';
+  // Sunucudan gelen satırların imzasını önden doldur; böylece hemen ardından
+  // gelen persistAllData bu satırları "değişmemiş" görür ve sunucuya geri
+  // yazmaz. Sunucuda bulunmayan satırlar kirli kalır, normal akışta yazılır.
+  await primeRemoteSignatures();
   persistAllData();
   if(state.backend.needsStudioSetup && profile.role === 'owner'){
     supabaseModal?.close();
@@ -1476,6 +1499,9 @@ async function signOutSupabase(){
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
+  // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
+  // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
+  resetRemoteSignatures();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1499,6 +1525,9 @@ async function switchSupabaseAccount(){
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
+  // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
+  // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
+  resetRemoteSignatures();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1512,12 +1541,102 @@ async function switchSupabaseAccount(){
   }
 }
 
+// --- Satır bazlı senkronizasyon ------------------------------------------
+// Önceden her kayıt işlemi ilgili tablonun TAMAMINI upsert ediyordu. Üç sonucu
+// vardı: (1) iki cihaz açıkken sonra kaydeden, diğerinin dokunmadığı satırları
+// da geri yazdığı için onun düzenlemesini siliyordu; (2) 300 üyeli bir salonda
+// tek bir telefon düzeltmesi 300 satır (avatarlarla birlikte megabaytlar)
+// gönderiyordu; (3) girişte loadRemoteData'nın hemen ardından persistAllData
+// çalıştığı için sunucudan yeni çekilen veri olduğu gibi sunucuya geri
+// yazılıyordu.
+//
+// Çözüm: her satırın en son BAŞARIYLA gönderilen hali imzalanır. Yalnızca
+// imzası değişen satır ağa çıkar. İmza, yazma başarılı olduktan sonra
+// güncellenir; hata durumunda satır "kirli" kalır ve sonraki kayıtta tekrar
+// denenir (eskiden hata sonrası satır sessizce kayboluyordu).
+const remoteRowSignatures = new Map();   // tablo -> Map(satırAnahtarı -> imza)
+let remoteSyncPrimeOnly = false;
+
+// Girişte sunucudan GERÇEKTEN gelen satırların anahtarları. Prime yalnızca bu
+// kümedeki satırları "gönderilmiş" sayar; yerelde olup sunucuda olmayan bir
+// satır (örn. henüz yazılmamış üye profili veya landing'den gelen lead) kirli
+// kalır ve normal akışta yazılır.
+const serverRowKeys = new Map();         // tablo -> Set(satırAnahtarı)
+
+function setServerRowKeys(table, keys){
+  serverRowKeys.set(table, new Set((keys || []).filter(Boolean)));
+}
+
+function signatureStore(table){
+  if(!remoteRowSignatures.has(table)) remoteRowSignatures.set(table, new Map());
+  return remoteRowSignatures.get(table);
+}
+
+function rowSignature(row){
+  return JSON.stringify(row);
+}
+
+function resetRemoteSignatures(){
+  remoteRowSignatures.clear();
+  serverRowKeys.clear();
+}
+
+// Prime modunda: satır sunucudan geldiyse imzasını kaydet, gelmediyse dokunma.
+function markPrimedRows(table, rows, keyOf){
+  const known = serverRowKeys.get(table);
+  if(!known) return;
+  markRowsSynced(table, rows.filter(row=>known.has(keyOf(row))), keyOf);
+}
+
+// Sunucudan çekilen veriyi "zaten gönderilmiş" olarak işaretler. persistAllData
+// öncesinde çağrılır ve ağa hiçbir istek çıkarmaz. Async sync'ler burada
+// bilinçli olarak await edilir: bayrak, hepsi bitene kadar açık kalmalı.
+async function primeRemoteSignatures(){
+  remoteSyncPrimeOnly = true;
+  try{
+    await syncMembersToSupabase();
+    await syncTeamToSupabase();
+    await syncProgramSelectionsToSupabase();
+    syncStudiosToSupabase();
+    syncFinanceToSupabase();
+    syncProgramsToSupabase();
+    syncSessionsToSupabase();
+    syncTrainerTasksToSupabase();
+    syncMemberTasksToSupabase();
+    syncMakeupRequestsToSupabase();
+    syncPilotLeadsToSupabase();
+    syncSignaturesToSupabase();
+  }finally{
+    remoteSyncPrimeOnly = false;
+  }
+}
+
+// Gönderilmesi gereken satırları ayıklar. keyOf, tablodaki benzersiz anahtarı
+// verir (çoğu tabloda id, member_program_selections'ta member_id).
+function pendingRows(table, rows, keyOf){
+  const store = signatureStore(table);
+  return rows.filter(row=>store.get(keyOf(row)) !== rowSignature(row));
+}
+
+function markRowsSynced(table, rows, keyOf){
+  const store = signatureStore(table);
+  rows.forEach(row=>store.set(keyOf(row), rowSignature(row)));
+}
+
 async function syncRemote(table, rows){
   if(!isSupabaseReady()) return;
   const validRows = rows.filter(row=>row.id && isUuid(row.id));
   if(!validRows.length) return;
-  const {error} = await state.backend.client.from(table).upsert(validRows, {onConflict:'id'});
-  remoteError(error);
+  const keyOf = row=>row.id;
+  const pending = pendingRows(table, validRows, keyOf);
+  if(!pending.length) return;
+  if(remoteSyncPrimeOnly){
+    markPrimedRows(table, pending, keyOf);
+    return;
+  }
+  const {error} = await state.backend.client.from(table).upsert(pending, {onConflict:'id'});
+  if(error) return remoteError(error);
+  markRowsSynced(table, pending, keyOf);
 }
 
 async function syncMembersToSupabase(){
@@ -1760,10 +1879,20 @@ async function syncProgramSelectionsToSupabase(){
     .map(([memberName, programId])=>({member_id: memberIdByName(memberName), program_id: programId}))
     .filter(row=>isUuid(row.member_id) && isUuid(row.program_id));
   if(!rows.length) return;
+  // Bu tabloda benzersiz anahtar id değil member_id.
+  const table = 'member_program_selections';
+  const keyOf = row=>row.member_id;
+  const pending = pendingRows(table, rows, keyOf);
+  if(!pending.length) return;
+  if(remoteSyncPrimeOnly){
+    markPrimedRows(table, pending, keyOf);
+    return;
+  }
   const {error} = await state.backend.client
-    .from('member_program_selections')
-    .upsert(rows, {onConflict:'member_id'});
-  remoteError(error);
+    .from(table)
+    .upsert(pending, {onConflict:'member_id'});
+  if(error) return remoteError(error);
+  markRowsSynced(table, pending, keyOf);
 }
 
 async function deleteRemoteRow(table, id){
