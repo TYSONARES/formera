@@ -9,6 +9,26 @@
   <meta name="apple-mobile-web-app-title" content="Formera" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Formera — PT Stüdyoları İçin Operasyon Asistanı</title>
+  <link rel="canonical" href="https://formera.me/" />
+
+  <!-- Link önizlemesi: WhatsApp / Instagram DM / LinkedIn paylaşımlarında
+       başlık, açıklama ve görsel çıkması için. Bunlar olmadan paylaşılan
+       bağlantı boş bir kart olarak görünüyordu. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Formera" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta property="og:url" content="https://formera.me/" />
+  <meta property="og:title" content="Formera — PT stüdyoları için operasyon asistanı" />
+  <meta property="og:description" content="İşletmeci, antrenör ve üyeyi tek akışta buluşturan panel: üye takibi, program, seans planı, gelir-gider ve haftalık rapor." />
+  <meta property="og:image" content="https://formera.me/assets/kettlebell-stage.jpg" />
+  <meta property="og:image:width" content="1800" />
+  <meta property="og:image:height" content="1012" />
+  <meta property="og:image:alt" content="Formera panelinin tanıtım görseli" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Formera — PT stüdyoları için operasyon asistanı" />
+  <meta name="twitter:description" content="İşletmeci, antrenör ve üyeyi tek akışta buluşturan panel: üye takibi, program, seans planı, gelir-gider ve haftalık rapor." />
+  <meta name="twitter:image" content="https://formera.me/assets/kettlebell-stage.jpg" />
+
   <link rel="manifest" href="manifest.webmanifest?v=20260726-2" />
   <link rel="icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
   <link rel="shortcut icon" href="favicon.svg?v=20260726-2" type="image/svg+xml" />
@@ -219,7 +239,13 @@
             <small id="leadPreviewMeta">Başvuru özeti, demo ve pilot akışına göre hazırlanır.</small>
             <small class="lead-recommendation" id="leadPreviewRecommendation">Paket önerisi üye sayısı ve önceliğe göre hesaplanır.</small>
           </div>
-          <button class="primary full" type="submit">Pilot başvurusunu kaydet</button>
+          <label class="lead-consent">
+            <input type="checkbox" name="consent" id="leadConsent" required>
+            <span>Başvurumla ilgili benimle iletişime geçilmesi için
+              <a href="privacy.html" target="_blank" rel="noopener">aydınlatma metnini</a>
+              okudum ve ad, telefon ve stüdyo bilgimin bu amaçla işlenmesini kabul ediyorum.</span>
+          </label>
+          <button class="primary full" type="submit">Pilot başvurusunu gönder</button>
           <button class="secondary full" type="button" id="copyLeadMessage">Başvuru özetini kopyala</button>
           <p class="lead-status" id="leadStatus" role="status"></p>
         </form>
@@ -300,7 +326,10 @@
       <a href="terms.html">Kullanım koşulları</a>
     </div>
   </footer>
-  <script src="landing.js?v=20260727-1"></script>
+  <!-- config.js landing'de de gerekli: başvuru Supabase'e buradaki bağlantı
+       bilgisiyle, WhatsApp'a ise FORMERA_CONTACT.whatsapp ile gidiyor. -->
+  <script src="config.js?v=20260817-1"></script>
+  <script src="landing.js?v=20260817-1"></script>
   <script src="pwa.js?v=20260726-2"></script>
 </body>
 </html>

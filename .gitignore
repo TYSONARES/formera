@@ -7,3 +7,10 @@ dist/
 formera/
 formeraya-control-center/
 ai-vos/
+
+# graphify bilgi grafı çıktısı (yeniden üretilebilir: `graphify update .`)
+graphify-out/
+
+# python / test araçları
+__pycache__/
+.pytest_cache/

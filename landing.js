@@ -126,6 +126,64 @@
     };
   }
 
+  // --- Başvuruyu gerçekten dışarı gönderen katman -------------------------
+  // Önceki sürümde başvuru yalnızca ziyaretçinin kendi localStorage'ına
+  // yazılıyordu; yani hiçbir başvuru Formera'ya ulaşmıyordu. Artık iki kanal
+  // var: kalıcı kayıt için Supabase, anında haber için WhatsApp.
+
+  function whatsappNumber(){
+    return String(window.FORMERA_CONTACT?.whatsapp || '').replace(/\D/g, '');
+  }
+
+  function supabaseTarget(){
+    const cfg = window.FORMERA_SUPABASE;
+    if(!cfg?.url || !cfg?.anonKey) return null;
+    return {url: String(cfg.url).replace(/\/+$/, ''), key: cfg.anonKey};
+  }
+
+  // Supabase REST'e doğrudan fetch: tek bir insert için landing sayfasına
+  // 200 KB'lık supabase-js paketini yüklemeye değmez.
+  async function sendLeadToSupabase(lead){
+    const target = supabaseTarget();
+    if(!target) return false;
+    try{
+      const response = await fetch(`${target.url}/rest/v1/landing_leads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': target.key,
+          'Authorization': `Bearer ${target.key}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          contact_name: lead.name,
+          studio_name: lead.studio,
+          city: lead.city,
+          phone: lead.phone || null,
+          members: lead.members,
+          goal: lead.goal,
+          package_code: lead.packageCode,
+          timeline: field('timeline', 'Bu hafta'),
+          value: lead.value,
+          source: 'landing',
+          consent_at: new Date().toISOString(),
+          user_agent: String(navigator.userAgent || '').slice(0, 400)
+        })
+      });
+      return response.ok;
+    }catch(error){
+      console.warn('Başvuru Supabase’e ulaştırılamadı.', error);
+      return false;
+    }
+  }
+
+  function openWhatsApp(){
+    const number = whatsappNumber();
+    if(!number) return false;
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(leadMessage())}`, '_blank', 'noopener');
+    return true;
+  }
+
   function saveLeadToDashboard(){
     const lead = leadPayload();
     try{
@@ -195,11 +253,40 @@
     }
   }
 
-  form.addEventListener('submit', event => {
+  const submitButton = form.querySelector('button[type="submit"]');
+
+  form.addEventListener('submit', async event => {
     event.preventDefault();
     if(!form.reportValidity()) return;
-    const saved = saveLeadToDashboard();
-    setStatus(saved ? 'Pilot başvurusu kaydedildi. Başvuru özetini ayrıca kopyalayabilirsiniz.' : 'Başvuru özeti hazırlandı; bu cihazdaki CRM kaydı oluşturulamadı.', saved ? 'success' : 'warning');
+
+    const lead = leadPayload();
+    if(submitButton){
+      submitButton.disabled = true;
+      submitButton.dataset.idleLabel = submitButton.textContent;
+      submitButton.textContent = 'Gönderiliyor...';
+    }
+    setStatus('Başvurun gönderiliyor...', 'info');
+
+    const delivered = await sendLeadToSupabase(lead);
+    saveLeadToDashboard();
+    const whatsappOpened = openWhatsApp();
+
+    if(submitButton){
+      submitButton.disabled = false;
+      submitButton.textContent = submitButton.dataset.idleLabel || 'Pilot başvurusunu gönder';
+    }
+
+    // Mesaj gerçeği yansıtmalı. Eskiden hiçbir yere ulaşmayan başvuru için
+    // "kaydedildi" deniyordu; başvuran kişi aranmayı bekliyordu.
+    if(delivered && whatsappOpened){
+      setStatus('Başvurun bize ulaştı ve WhatsApp penceresi açıldı. Mesajı göndererek hemen konuşmaya başlayabilirsin.', 'success');
+    }else if(delivered){
+      setStatus('Başvurun bize ulaştı. En kısa sürede dönüş yapacağız.', 'success');
+    }else if(whatsappOpened){
+      setStatus('WhatsApp penceresi açıldı; mesajı göndererek başvurunu tamamla.', 'warning');
+    }else{
+      setStatus('Başvuru şu anda gönderilemedi. “Başvuru özetini kopyala” ile metni alıp bize iletebilirsin.', 'warning');
+    }
   });
 
   copyButton?.addEventListener('click', async () => {
@@ -207,8 +294,8 @@
     const message = leadMessage();
     try{
       await navigator.clipboard.writeText(message);
-      const saved = saveLeadToDashboard();
-      setStatus(saved ? 'Başvuru özeti kopyalandı ve pilot CRM’e eklendi.' : 'Başvuru özeti kopyalandı; CRM kaydı oluşturulamadı.', saved ? 'success' : 'warning');
+      saveLeadToDashboard();
+      setStatus('Başvuru özeti kopyalandı. WhatsApp veya e-posta ile bize iletebilirsin.', 'success');
     }catch(error){
       setStatus('Kopyalama olmadı. Başvuru bilgilerini kontrol edip tekrar dene.', 'warning');
     }

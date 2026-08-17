@@ -806,9 +806,13 @@ function currentSupabaseConfigFromForm(){
 function setSupabaseClientFromConfig(config){
   if(!config?.url || !config?.anonKey) return false;
   if(!window.supabase?.createClient){
-    state.backend.error = 'Supabase kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.';
+    // Kütüphane yüklenemediğinde açılış ekranı "hazırlanıyor" durumunda asılı
+    // kalmamalı: loading sıfırlanır ve panel yerel verilerle yeniden çizilir.
+    state.backend.error = 'Canlı veri kütüphanesi yüklenemedi. Panel şimdilik bu cihazdaki verilerle açıldı; bağlantını kontrol edip sayfayı yenile.';
     state.backend.configured = Boolean(config);
+    state.backend.loading = false;
     updateBackendShell();
+    render();
     notify(state.backend.error, 'error');
     return false;
   }
@@ -1520,10 +1524,15 @@ async function syncMembersToSupabase(){
   const studioId = studioIdForRemote();
   if(!studioId) return;
   if(state.backend.accountsReady){
+    // profileId üretimi tek bir yerde olmalı. Burada `|| makeId()` ile üretmek,
+    // id geri yazılmadığı için her senkronizasyonda yeni bir profiles satırı
+    // oluşturma riskini taşıyordu; ensureAccountProfileIds id'yi bir kez üretip
+    // state'e yazar, böylece upsert hep aynı satırı günceller.
+    ensureAccountProfileIds();
     const profileRows = state.members
-      .filter(member=>member.email || member.profileId)
+      .filter(member=>member.profileId)
       .map(member=>({
-        id: member.profileId || makeId(),
+        id: member.profileId,
         studio_id: studioId,
         full_name: member.name,
         role: 'member',
@@ -1969,11 +1978,25 @@ function updateRoleShell(){
 }
 
 function metric(title, value, delta, icon, down=false){
-  return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
+  return `<article class="metric"><div class="metric-head"><span>${esc(title)}</span><span class="metric-icon">${icon}</span></div><strong>${esc(value)}</strong><span class="delta ${down?'down':''}">${esc(delta)} <em>geçen haftaya göre</em></span></article>`;
 }
 
+// Panel içeriği innerHTML ile basıldığı için kullanıcı kaynaklı her değer
+// buradan geçmek zorundadır. Tek tırnak da kaçırılır: avatarStyle değeri
+// url('...') içine girdiğinden tek tırnak olmadan CSS'ten çıkış mümkündü.
 function escapeAttr(value=''){
-  return String(value).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  return String(value)
+    .replaceAll('&','&amp;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;');
+}
+
+// Şablonlarda okunabilirlik için kısa ad. Fonksiyon bildirimi olarak tanımlı
+// ki hoisting sayesinde dosyanın herhangi bir yerinden güvenle çağrılabilsin.
+function esc(value=''){
+  return escapeAttr(value);
 }
 
 function avatarStyle(imageDataUrl){
@@ -2212,11 +2235,11 @@ function memberRows(items=state.members){
     const signature = memberSignature(m.name);
     const account = accountStatusMeta(m);
     return `<div class="member-row">
-    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small><small>${escapeAttr(account.detail)}</small></div></div>
-    <span><small class="cell-label">Son ziyaret</small><br>${m.last}</span>
-    <span><small class="cell-label">Seans</small><br>${m.sessions}</span>
-    <span class="status ${m.type}">${m.status}</span>
-    <span class="status ${account.className}">${account.label}</span>
+    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${esc(m.name)}</strong><small>PT: ${esc(m.trainer)}${m.phone ? ` · ${esc(m.phone)}` : ''}</small><small>${escapeAttr(account.detail)}</small></div></div>
+    <span><small class="cell-label">Son ziyaret</small><br>${esc(m.last)}</span>
+    <span><small class="cell-label">Seans</small><br>${esc(m.sessions)}</span>
+    <span class="status ${esc(m.type)}">${esc(m.status)}</span>
+    <span class="status ${esc(account.className)}">${esc(account.label)}</span>
     <span class="status ${signature ? 'good' : 'warn'}">${signature ? 'İmzalı' : 'İmza yok'}</span>
     <div class="row-actions">
       <button class="mini-button" data-action="send-member-invite" data-member-id="${m.id}">E-posta gönder</button>
@@ -2256,7 +2279,7 @@ function makeupRequestRows(requests, {owner=false}={}){
   return requests.map(request=>{
     const missed = state.sessions.find(session=>session.id === request.missedSessionId);
     const requested = state.sessions.find(session=>session.id === request.requestedSessionId);
-    return `<div class="makeup-request"><div><strong>${request.member}</strong><small>${missed ? `${formatDateTR(missed.date)} · ${missed.time} kaçırılan seans` : 'Kaçırılan seans'}${request.note ? ` · ${request.note}` : ''}${requested ? ` · Telafi: ${formatDateTR(requested.date)} ${requested.time}` : ''}</small></div><div class="makeup-actions"><span class="status ${request.status === 'approved' ? 'good' : request.status === 'rejected' ? 'risk' : 'warn'}">${makeupStatusLabel(request.status)}</span>${owner && request.status === 'pending' ? `<button class="mini-button" data-action="approve-makeup" data-makeup-id="${request.id}">Onayla</button><button class="mini-button danger" data-action="reject-makeup" data-makeup-id="${request.id}">Reddet</button>` : ''}</div></div>`;
+    return `<div class="makeup-request"><div><strong>${esc(request.member)}</strong><small>${missed ? `${formatDateTR(missed.date)} · ${missed.time} kaçırılan seans` : 'Kaçırılan seans'}${request.note ? ` · ${esc(request.note)}` : ''}${requested ? ` · Telafi: ${formatDateTR(requested.date)} ${requested.time}` : ''}</small></div><div class="makeup-actions"><span class="status ${request.status === 'approved' ? 'good' : request.status === 'rejected' ? 'risk' : 'warn'}">${makeupStatusLabel(request.status)}</span>${owner && request.status === 'pending' ? `<button class="mini-button" data-action="approve-makeup" data-makeup-id="${request.id}">Onayla</button><button class="mini-button danger" data-action="reject-makeup" data-makeup-id="${request.id}">Reddet</button>` : ''}</div></div>`;
   }).join('') || `<div class="empty-mini">${owner ? 'Onay bekleyen telafi talebi yok.' : 'Henüz telafi talebin yok.'}</div>`;
 }
 
@@ -2272,20 +2295,20 @@ function memberMakeupPanel(member){
   const missed = state.sessions.filter(session=>session.memberId === member.id || session.member === member.name).filter(session=>session.status === 'cancelled');
   const requests = state.makeupRequests.filter(request=>request.memberId === member.id || request.member === member.name);
   if(!studio.makeupEnabled) return '';
-  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi</h2><p>İşletmenin onayladığı uygun kontenjanlar için talep oluştur.</p></div><span class="badge">İsteğe bağlı</span></div>${missed.map(session=>`<div class="makeup-request"><div><strong>${formatDateTR(session.date)} · ${session.time}</strong><small>${session.program} · ${session.room}</small></div><div class="makeup-actions"><button class="mini-button" data-action="request-makeup" data-session-id="${session.id}" data-member-id="${member.id}">Telafi iste</button></div></div>`).join('') || `<div class="empty-mini">Telafi talebi oluşturulabilecek iptal edilmiş seansın yok.</div>`}<div class="makeup-list">${makeupRequestRows(requests)}</div></article>`;
+  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi</h2><p>İşletmenin onayladığı uygun kontenjanlar için talep oluştur.</p></div><span class="badge">İsteğe bağlı</span></div>${missed.map(session=>`<div class="makeup-request"><div><strong>${formatDateTR(session.date)} · ${esc(session.time)}</strong><small>${esc(session.program)} · ${esc(session.room)}</small></div><div class="makeup-actions"><button class="mini-button" data-action="request-makeup" data-session-id="${session.id}" data-member-id="${member.id}">Telafi iste</button></div></div>`).join('') || `<div class="empty-mini">Telafi talebi oluşturulabilecek iptal edilmiş seansın yok.</div>`}<div class="makeup-list">${makeupRequestRows(requests)}</div></article>`;
 }
 
 function compactSessionRows(items=sessionsForDate()){
   return items.slice(0,4).map(session=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
     <span>${session.time}</span>
-    <div><strong>${session.member} · ${session.program}</strong><small>${session.trainer} ile · ${session.room} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
+    <div><strong>${esc(session.member)} · ${esc(session.program)}</strong><small>${esc(session.trainer)} ile · ${esc(session.room)} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
 }
 
 function studioPilotRows(){
   return state.studios.map(studio=>`<button class="studio-pilot ${studio.id === state.activeStudioId ? 'active' : ''}" data-action="select-studio" data-studio-id="${studio.id}">
     ${avatarMarkup(studio.initials, studio.logoDataUrl, 'studio-avatar')}
-    <div><strong>${studio.name}</strong><small>${studio.location} · ${studio.status}</small></div>
+    <div><strong>${esc(studio.name)}</strong><small>${esc(studio.location)} · ${esc(studio.status)}</small></div>
   </button>`).join('');
 }
 
@@ -2391,7 +2414,7 @@ function financeRows(items=state.finance){
     .slice()
     .sort((a,b)=>b.date.localeCompare(a.date))
     .map(entry=>`<div class="finance-row">
-      <div><strong>${entry.title}</strong><small>${entry.category} · ${new Date(entry.date).toLocaleDateString('tr-TR')}</small></div>
+      <div><strong>${esc(entry.title)}</strong><small>${esc(entry.category)} · ${new Date(entry.date).toLocaleDateString('tr-TR')}</small></div>
       <span class="status ${entry.status === 'pending' ? 'warn' : 'good'}">${entry.status === 'pending' ? 'Bekliyor' : 'Ödendi'}</span>
       <strong class="${entry.type === 'expense' ? 'money-out' : 'money-in'}">${entry.type === 'expense' ? '−' : '+'}${formatCurrency(entry.amount)}</strong>
       <button class="mini-button danger" data-action="delete-finance" data-finance-id="${entry.id}">Sil</button>
@@ -2519,15 +2542,15 @@ function exercisePreviewPath(exercise=''){
 }
 
 function exerciseRow(exercise,index,{member=false}={}){
-  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${exercise}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
+  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${esc(exercise)}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
 }
 
 function programCards(){
   return state.programs.map(program=>{
     const assignedMember = memberByName(program.assigned);
     return `<article class="program-card">
-    <div class="card-title"><div><h2>${program.title}</h2><p>${program.goal} · ${program.duration} dk</p></div><span class="badge">${program.level}</span></div>
-    <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
+    <div class="card-title"><div><h2>${esc(program.title)}</h2><p>${esc(program.goal)} · ${esc(program.duration)} dk</p></div><span class="badge">${esc(program.level)}</span></div>
+    <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${esc(program.assigned)}</strong><small>Atanan üye</small></div></div>
     <div class="program-exercises">
       ${program.exercises.slice(0,4).map((exercise,index)=>exerciseRow(exercise,index)).join('')}
     </div>
@@ -2544,8 +2567,8 @@ function programsPage(){
 function sessionRows(items=sessionsForDate()){
   const canManageBookings = state.role === 'owner' || isFormeraAdmin();
   return items.map(session=>`<div class="session-row">
-    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
-    <div><strong>${session.member}</strong><small>${session.program} · PT ${session.trainer} · ${sessionCapacityLabel(session)}</small></div>
+    <div class="session-time"><strong>${esc(session.time)}</strong><small>${esc(session.room)}</small></div>
+    <div><strong>${esc(session.member)}</strong><small>${esc(session.program)} · PT ${esc(session.trainer)} · ${sessionCapacityLabel(session)}</small></div>
     <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
     <div class="row-actions">
       ${canManageBookings && session.status === 'scheduled' ? `<button class="mini-button" data-action="reserve-session" data-session-id="${session.id}">Rezervasyon ekle</button>` : ''}
@@ -2728,7 +2751,7 @@ function growthPage(){
   <section class="dashboard-grid">
     <article class="card">
       <div class="card-title"><div><h2>AI teşhisi</h2><p>Mevcut salon verisinden çıkan iş durumu</p></div><span class="badge">${businessModeLabel(health.mode)}</span></div>
-      <div class="business-diagnosis">${businessDiagnosisItems().map(item=>`<div class="${item.tone}"><span>${item.label}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+      <div class="business-diagnosis">${businessDiagnosisItems().map(item=>`<div class="${esc(item.tone)}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong><small>${esc(item.note)}</small></div>`).join('')}</div>
     </article>
     <article class="card">
       <div class="card-title"><div><h2>7 günlük aksiyon planı</h2><p>İşletmeci ve ekip için uygulanabilir sıra</p></div><button class="secondary" data-action="copy-growth-plan">Kopyala</button></div>
@@ -2736,7 +2759,7 @@ function growthPage(){
     </article>
     <article class="card">
       <div class="card-title"><div><h2>Büyüme fırsatları</h2><p>Gelir artırma ve kayıp azaltma alanları</p></div><span class="badge">Opsiyonel</span></div>
-      <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${item.title}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+      <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${esc(item.title)}</span><strong>${esc(item.value)}</strong><small>${esc(item.note)}</small></div>`).join('')}</div>
     </article>
     ${internalPricingCard}
   </section>`;
@@ -2790,7 +2813,7 @@ function teamCards(){
     return `<article class="team-card">
       <div class="team-head">
         ${avatarMarkup(initialsFromName(trainer.name), trainer.avatarDataUrl)}
-        <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p><small class="account-line">${escapeAttr(account.detail)}</small></div>
+        <div><h2>${esc(trainer.name)}</h2><p>${esc(trainer.role)} · ${esc(trainer.specialty)}</p><small class="account-line">${escapeAttr(account.detail)}</small></div>
         <div class="team-badges"><span class="badge">%${trainer.commission} prim</span><span class="status ${account.className}">${account.label}</span></div>
       </div>
       <div class="team-stats">
@@ -2799,7 +2822,7 @@ function teamCards(){
         <div><span>Aktif üye</span><strong>${stats.activeMembers}</strong></div>
         <div><span>Gelir katkısı</span><strong>${formatCurrency(stats.revenue)}</strong></div>
       </div>
-      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="send-trainer-invite" data-trainer-id="${trainer.id}">E-posta gönder</button><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Bağlantıyı kopyala</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
+      <div class="team-footer"><small>${esc(trainer.phone || 'Telefon eklenmedi')} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="send-trainer-invite" data-trainer-id="${trainer.id}">E-posta gönder</button><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Bağlantıyı kopyala</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
     </article>`;
   }).join('');
 }
@@ -2849,7 +2872,7 @@ function trainerTaskRows(items=state.trainerTasks){
     .slice()
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
-      <div><strong>${task.title}</strong><small>${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${esc(task.trainer)} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
       <div class="row-actions">
         ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
@@ -2874,7 +2897,7 @@ function memberTaskRows(items, {owner=false}={}){
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row member-task ${task.status === 'done' ? 'done' : ''}">
       <span class="task-type ${task.type}">${memberTaskTypeIcon(task.type)}</span>
-      <div><strong>${task.title}</strong><small>${memberTaskTypeLabel(task.type)} · ${task.member} · ${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${memberTaskTypeLabel(task.type)} · ${esc(task.member)} · ${esc(task.trainer)} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : memberTaskTypeStatus(task.type)}">${task.status === 'done' ? 'Tamamlandı' : memberTaskTypeLabel(task.type)}</span>
       <div class="row-actions">
         ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-member-task" data-member-task-id="${task.id}">Tamamla</button>`}
@@ -2925,8 +2948,8 @@ function selectedProgramForMember(memberName){
 function trainerSessionRows(){
   const sessions = sessionsForDate().filter(session=>session.trainer === state.trainerName);
   return sessions.map(session=>`<div class="session-row">
-    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
-    <div><strong>${session.member}</strong><small>${session.program} · ${sessionStatusLabel(session.status)}</small></div>
+    <div class="session-time"><strong>${esc(session.time)}</strong><small>${esc(session.room)}</small></div>
+    <div><strong>${esc(session.member)}</strong><small>${esc(session.program)} · ${sessionStatusLabel(session.status)}</small></div>
     <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
     <div class="row-actions">
       <button class="mini-button" data-action="complete-session" data-session-id="${session.id}">Tamamla</button>
@@ -2938,10 +2961,10 @@ function trainerSessionRows(){
 function trainerClientRows(){
   const clients = state.members.filter(member=>isMemberAssignedToSpecialist(member, state.trainerName));
   return clients.map(member=>`<div class="member-row">
-    <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
+    <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${esc(member.name)}</strong><small>${esc(member.phone || 'Telefon yok')}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
     <span><small class="cell-label">Seans</small><br>${member.sessions}</span>
-    <span class="status ${member.type}">${member.status}</span>
+    <span class="status ${esc(member.type)}">${esc(member.status)}</span>
     <div class="row-actions"><button class="mini-button" data-action="add-member-task" data-member-name="${escapeAttr(member.name)}">Aksiyon</button><button class="mini-button" data-action="checkin-member" data-member-id="${member.id}">Geldi</button></div>
   </div>`).join('') || `<div class="empty-mini">Henüz atanmış danışan yok.</div>`;
 }
@@ -2949,7 +2972,7 @@ function trainerClientRows(){
 function trainerProgramRows(){
   const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && isMemberAssignedToSpecialist(member, state.trainerName)));
   return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
-    <span>▤</span><div><strong>${program.title}</strong><small>${program.assigned} · ${program.duration} dk · ${program.level}</small></div>
+    <span>▤</span><div><strong>${esc(program.title)}</strong><small>${esc(program.assigned)} · ${esc(program.duration)} dk · ${esc(program.level)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
 }
 
@@ -2963,7 +2986,7 @@ function trainerOwnTaskRows(){
     .slice()
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
-      <div><strong>${task.title}</strong><small>${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
       ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
     </div>`).join('') || `<div class="empty-mini">İşletmeciden atanmış görev yok.</div>`;
@@ -2996,7 +3019,7 @@ function trainerDashboard(){
   const openClientActions = clientActions.filter(task=>task.status === 'open').length;
   const specialistLabel = trainer.accountRole === 'dietitian' ? 'DİYETİSYEN' : 'ANTRENÖR';
   const actionLabel = trainer.accountRole === 'dietitian' ? 'Beslenme notu' : 'Üye aksiyonu';
-  return `<div class="welcome"><div><span class="eyebrow">${specialistLabel} ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve ekip notlarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ ${actionLabel}</button>${trainer.accountRole === 'dietitian' ? '' : '<button class="primary" data-action="add-session">+ Seans planla</button>'}</div></div>
+  return `<div class="welcome"><div><span class="eyebrow">${specialistLabel} ALANI · ${esc(activeStudio().name)}</span><h1>Merhaba ${esc(trainer.name)}, bugünün akışı hazır.</h1><p>${esc(trainer.specialty)} uzmanlığı için atanmış danışan ve ekip notlarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ ${actionLabel}</button>${trainer.accountRole === 'dietitian' ? '' : '<button class="primary" data-action="add-session">+ Seans planla</button>'}</div></div>
   <section class="metrics">
     ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
     ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
@@ -3333,7 +3356,7 @@ function pilotPage(){
       </div>
       <div class="report-list">
         <div><span>Son yedek zamanı</span><strong>${new Date(payload.exportedAt).toLocaleString('tr-TR')}</strong></div>
-        <div><span>Aktif stüdyo</span><strong>${activeStudio().name}</strong></div>
+        <div><span>Aktif stüdyo</span><strong>${esc(activeStudio().name)}</strong></div>
         <div><span>Yedek formatı</span><strong>Formera v${payload.version}</strong></div>
       </div>
     </article>
@@ -3372,8 +3395,8 @@ function memberDashboard(){
   const actions = memberTasksForMember(memberName);
   const openActions = actions.filter(task=>task.status === 'open').length;
   const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
-  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${member.dietitian}` : 'sorumlu PT','♧')}</section>
+  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
+  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
@@ -3381,7 +3404,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Bakım ekibi notları</h2><p>Antrenör ve diyetisyenin program, beslenme ve takip görevleri</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
   ${memberMakeupPanel(member)}
   <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>
-  <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
+  <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${esc(memberName)}"><strong>${esc(item.title)}</strong><small>${esc(item.goal)} · ${esc(item.duration)} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
   <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
@@ -5201,9 +5224,22 @@ if(initialSupabaseConfig){
   state.backend.loading = true;
 }
 render();
-initSupabase().finally(()=>{
-  if(initialInvite && !state.backend.connected) openSupabaseModal();
-});
+initSupabase()
+  .catch(error=>{
+    // Beklenmeyen bir ağ/kütüphane hatası açılışı kilitlememeli.
+    console.warn('Canlı bağlantı başlatılamadı.', error);
+    state.backend.error = 'Canlı veri bağlantısı kurulamadı. Panel bu cihazdaki verilerle açıldı.';
+  })
+  .finally(()=>{
+    // Son savunma hattı: initSupabase hangi yoldan dönerse dönsün açılış
+    // ekranı "hazırlanıyor" durumunda asılı kalamaz.
+    if(state.backend.loading){
+      state.backend.loading = false;
+      updateBackendShell();
+      render();
+    }
+    if(initialInvite && !state.backend.connected) openSupabaseModal();
+  });
 if(!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !readSupabaseConfig()){
   setTimeout(()=>openOnboardingModal(), 450);
 }

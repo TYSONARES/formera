@@ -755,6 +755,34 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
   border-radius:12px;
   padding:9px 10px;
 }
+/* KVKK açık rıza kutusu: .lead-form label / input kurallarını ezmesi gerekiyor,
+   aksi halde checkbox tam genişlikte bir metin kutusuna dönüşüyor. */
+/* Özgüllük notu: .lead-form label (0,1,1) bu bloğu ezdiği için seçici
+   .lead-form .lead-consent (0,2,0) olarak yazılmalı. */
+.lead-form .lead-consent{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:start;
+  gap:10px;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:500;
+  line-height:1.5;
+}
+.lead-form .lead-consent input[type="checkbox"]{
+  width:18px;
+  min-width:18px;
+  height:18px;
+  margin:1px 0 0;
+  padding:0;
+  border-radius:6px;
+  accent-color:var(--acid);
+  cursor:pointer;
+}
+.lead-form .lead-consent span{display:block;font-weight:500}
+.lead-form .lead-consent a{color:var(--acid);text-decoration:underline}
+
 .lead-status{
   min-height:18px;
   margin:0;
