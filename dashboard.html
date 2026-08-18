@@ -12,16 +12,17 @@
   <link rel="icon" href="favicon.svg?v=20260726-3" type="image/svg+xml" />
   <link rel="shortcut icon" href="favicon.svg?v=20260726-3" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="favicon.svg?v=20260726-3" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
+  <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
   <link rel="stylesheet" href="styles.css?v=20260813-1" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <button class="sidebar-close" type="button" aria-label="Sol menüyü kapat">×</button>
-      <a class="brand sidebar-brand" href="#" aria-label="Formera ana sayfa">
+      <a class="brand sidebar-brand" href="./" aria-label="Formera ana sayfa">
         <img class="dashboard-brand-mark" src="assets/formera-favicon.svg?v=20260726-3" alt="" aria-hidden="true" height="32" />
         <img class="dashboard-brand-logo" src="assets/formera-logo.svg?v=20260726-3" alt="Formera" height="32" />
         <span class="sidebar-studio-brand" id="sidebarStudioBrand" hidden>
@@ -70,7 +71,17 @@
         </div>
       </header>
 
-      <section class="content" id="appContent"></section>
+      <section class="content" id="appContent">
+          <!-- JS çalışmazsa/engellenirse panel boş ekran olarak kalamaz.
+               Bu blok ilk render'da JS tarafından değiştirilir; gizleme
+               JS'in opt-in'idir, tersi değil. -->
+          <section class="empty-state" id="appFallback">
+            <span class="eyebrow">FORMERA</span>
+            <h1>Panel yüklenemedi</h1>
+            <p>Bu sayfa çalışmak için JavaScript'e ihtiyaç duyuyor. Tarayıcında JavaScript kapalıysa aç, açıksa sayfayı yenile.</p>
+            <p>Sorun sürerse <a href="./">tanıtım sayfasına</a> dönebilir veya <a href="mailto:destek@formera.me">destek@formera.me</a> adresine yazabilirsin.</p>
+          </section>
+        </section>
     </main>
   </div>
 
