@@ -77,3 +77,11 @@ Doğruladığı beş şey:
 > `0012_member_program_access.sql`'den sonra çalıştırılırsa bu değer sessizce
 > `0` olur ve tüm üyeler programlarını göremez. Ölçtük: doğru sırada 1,
 > yanlış sırada 0.
+
+## sql/diagnose.sql — canlı veritabanı durum raporu
+
+Supabase SQL Editor'a yapıştırıp çalıştırın. **Hiçbir şeyi değiştirmez**,
+yalnızca hangi migration'ın eksik olduğunu söyler.
+
+Altı satır döner; her biri ya `tamam` ya da çalıştırılması gereken dosyanın
+adını gösterir. Hem düzeltilmiş hem bozuk veritabanında test edildi.
