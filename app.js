@@ -80,6 +80,105 @@ const starterPilotLeads = [
   {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2990}
 ];
 
+// --- Demo modu ve canlı mod ayrımı ---------------------------------------
+// Panel eskiden her açılışta demo verisini ve localStorage'daki işletme
+// verisini koşulsuz yüklüyordu. Sonuç: kullanıcı çıkış yaptıktan sonra bile
+// üye adı, telefonu ve e-postası ekranda kalıyordu; sayfa yenilense bile
+// localStorage'dan geri geliyordu. Ortak cihazda bu doğrudan kişisel veri
+// sızıntısıdır.
+//
+// Artık kural şu: canlı Supabase yapılandırması varsa veri YALNIZCA sunucudan
+// gelir. Demo verisi ancak açık talep varsa (?demo=1) yüklenir.
+
+// Çıkışta temizlenecek işletme verisi anahtarları. Bağlantı ayarı ve rol
+// tercihi burada YOKTUR; onlar kişisel veri değildir ve tekrar girişte gerekir.
+const BUSINESS_STORAGE_KEYS = [
+  STORAGE_KEY,
+  FINANCE_STORAGE_KEY,
+  PROGRAM_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+  TEAM_STORAGE_KEY,
+  STUDIO_STORAGE_KEY,
+  ACTIVE_STUDIO_STORAGE_KEY,
+  SIGNATURE_STORAGE_KEY,
+  PROGRAM_SELECTION_STORAGE_KEY,
+  TRAINER_TASK_STORAGE_KEY,
+  MEMBER_TASK_STORAGE_KEY,
+  MAKEUP_REQUEST_STORAGE_KEY,
+  PILOT_LEAD_STORAGE_KEY
+];
+
+const DEMO_MODE_STORAGE_KEY = 'formera_demo_mode';
+
+function requestedDemoMode(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('demo') === '1' || window.location.hash === '#demo';
+}
+
+// Demo tercihi sekme boyunca korunur ki panel içi gezinmede kaybolmasın.
+function isDemoMode(){
+  try{
+    if(requestedDemoMode()){
+      sessionStorage.setItem(DEMO_MODE_STORAGE_KEY, 'true');
+      return true;
+    }
+    return sessionStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'true';
+  }catch(error){
+    return requestedDemoMode();
+  }
+}
+
+function hasLiveBackendConfig(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_STORAGE_KEY) || 'null');
+    if(saved?.url && saved?.anonKey) return true;
+  }catch(error){}
+  return Boolean(window.FORMERA_SUPABASE?.url && window.FORMERA_SUPABASE?.anonKey);
+}
+
+// Canlı yapılandırma varsa ve demo istenmediyse: yerel işletme verisi ne
+// okunur ne yazılır. Tek kaynak sunucudur.
+// Canlı oturum açık mı. state yerine ayrı bayrak: usesLocalBusinessData,
+// state'in kendi tanımı içinde de çağrılıyor ve o anda state TDZ'de olduğu için
+// `typeof state` bile ReferenceError fırlatıyor.
+let liveSessionActive = false;
+
+function usesLocalBusinessData(){
+  // Canlı oturum açıldıysa demo bayrağı ne olursa olsun yerel yazma kapalıdır.
+  // Aksi halde kullanıcı önce ?demo=1 açıp sonra aynı sekmede gerçek hesabıyla
+  // giriş yaptığında, gerçek üye verisi diske yazılırdı.
+  if(liveSessionActive) return false;
+  return isDemoMode() || !hasLiveBackendConfig();
+}
+
+// Canlı oturum açılınca demo kalıntısı bırakma.
+function exitDemoMode(){
+  try{ sessionStorage.removeItem(DEMO_MODE_STORAGE_KEY); }catch(error){}
+  clearBusinessStorage();
+}
+
+function clearBusinessStorage(){
+  BUSINESS_STORAGE_KEYS.forEach(key=>{
+    try{ localStorage.removeItem(key); }catch(error){}
+  });
+}
+
+function emptyBusinessState(){
+  state.members = [];
+  state.finance = [];
+  state.programs = [];
+  state.sessions = [];
+  state.team = [];
+  state.trainerTasks = [];
+  state.memberTasks = [];
+  state.makeupRequests = [];
+  state.pilotLeads = [];
+  state.signatures = [];
+  state.programSelections = {};
+  state.studios = [];
+  state.activeStudioId = null;
+}
+
 function initialPageFromUrl(){
   const allowedPages = ['dashboard','members','programs','calendar','finance','reports','growth','team','pilot'];
   const params = new URLSearchParams(window.location.search);
@@ -124,17 +223,21 @@ const state = {
   page: initialPageFromUrl(),
   workspace: initialWorkspaceFromUrl(),
   calendarDate: todayISO(),
-  members: starterMembers.map(normalizeMember),
-  finance: starterFinance.map(normalizeFinanceEntry),
-  programs: starterPrograms.map(normalizeProgram),
-  sessions: starterSessions.map(normalizeSession),
-  team: starterTeam.map(normalizeTrainer),
-  trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
-  memberTasks: starterMemberTasks.map(normalizeMemberTask),
+  // Demo verisi yalnızca demo modunda yüklenir. Canlı yapılandırmada panel
+  // boş açılır ve içerik yalnızca başarılı oturumdan sonra sunucudan gelir.
+  members: usesLocalBusinessData() ? starterMembers.map(normalizeMember) : [],
+  finance: usesLocalBusinessData() ? starterFinance.map(normalizeFinanceEntry) : [],
+  programs: usesLocalBusinessData() ? starterPrograms.map(normalizeProgram) : [],
+  sessions: usesLocalBusinessData() ? starterSessions.map(normalizeSession) : [],
+  team: usesLocalBusinessData() ? starterTeam.map(normalizeTrainer) : [],
+  trainerTasks: usesLocalBusinessData() ? starterTrainerTasks.map(normalizeTrainerTask) : [],
+  memberTasks: usesLocalBusinessData() ? starterMemberTasks.map(normalizeMemberTask) : [],
   makeupRequests: [],
-  pilotLeads: starterPilotLeads.map(normalizePilotLead),
-  studios: starterStudios.map(normalizeStudio),
-  activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
+  pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
+  studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
+  activeStudioId: usesLocalBusinessData()
+    ? (localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1')
+    : null,
   signatures: [],
   programSelections: {},
   backend: {
@@ -157,73 +260,89 @@ const state = {
   }
 };
 
-const savedMembers = localStorage.getItem(STORAGE_KEY);
+// Yerel işletme verisi okuma kapısı. Canlı yapılandırmada (demo değilse)
+// localStorage'daki üye/finans/program kayıtları OKUNMAZ; panel boş açılır ve
+// içerik yalnızca oturum açıldıktan sonra sunucudan gelir.
+// Yerel işletme verisi yazma kapısı. Canlı modda kişisel veri diske hiç
+// yazılmaz; böylece ortak cihazda çıkış sonrası geri gelemez.
+function writeBusinessStore(key, value){
+  if(!usesLocalBusinessData()) return;
+  try{ localStorage.setItem(key, value); }catch(error){
+    console.warn('Yerel kayıt yapılamadı.', error);
+  }
+}
+
+function readBusinessStore(key){
+  return usesLocalBusinessData() ? localStorage.getItem(key) : null;
+}
+
+const savedMembers = readBusinessStore(STORAGE_KEY);
 if(savedMembers){
   try{ state.members = JSON.parse(savedMembers).map(normalizeMember); }
   catch(e){ console.warn('Kayıtlı üyeler okunamadı.'); }
 }
 
-const savedMakeupRequests = localStorage.getItem(MAKEUP_REQUEST_STORAGE_KEY);
+const savedMakeupRequests = readBusinessStore(MAKEUP_REQUEST_STORAGE_KEY);
 if(savedMakeupRequests){
   try{ state.makeupRequests = JSON.parse(savedMakeupRequests).map(normalizeMakeupRequest); }
   catch(e){ console.warn('Kayıtlı telafi talepleri okunamadı.'); }
 }
 
-const savedFinance = localStorage.getItem(FINANCE_STORAGE_KEY);
+const savedFinance = readBusinessStore(FINANCE_STORAGE_KEY);
 if(savedFinance){
   try{ state.finance = JSON.parse(savedFinance).map(normalizeFinanceEntry); }
   catch(e){ console.warn('Kayıtlı finans hareketleri okunamadı.'); }
 }
 
-const savedPrograms = localStorage.getItem(PROGRAM_STORAGE_KEY);
+const savedPrograms = readBusinessStore(PROGRAM_STORAGE_KEY);
 if(savedPrograms){
   try{ state.programs = JSON.parse(savedPrograms).map(normalizeProgram); }
   catch(e){ console.warn('Kayıtlı programlar okunamadı.'); }
 }
 
-const savedSessions = localStorage.getItem(SESSION_STORAGE_KEY);
+const savedSessions = readBusinessStore(SESSION_STORAGE_KEY);
 if(savedSessions){
   try{ state.sessions = JSON.parse(savedSessions).map(normalizeSession); }
   catch(e){ console.warn('Kayıtlı seanslar okunamadı.'); }
 }
 
-const savedTeam = localStorage.getItem(TEAM_STORAGE_KEY);
+const savedTeam = readBusinessStore(TEAM_STORAGE_KEY);
 if(savedTeam){
   try{ state.team = JSON.parse(savedTeam).map(normalizeTrainer); }
   catch(e){ console.warn('Kayıtlı ekip okunamadı.'); }
 }
 
-const savedTrainerTasks = localStorage.getItem(TRAINER_TASK_STORAGE_KEY);
+const savedTrainerTasks = readBusinessStore(TRAINER_TASK_STORAGE_KEY);
 if(savedTrainerTasks){
   try{ state.trainerTasks = JSON.parse(savedTrainerTasks).map(normalizeTrainerTask); }
   catch(e){ console.warn('Kayıtlı antrenör görevleri okunamadı.'); }
 }
 
-const savedMemberTasks = localStorage.getItem(MEMBER_TASK_STORAGE_KEY);
+const savedMemberTasks = readBusinessStore(MEMBER_TASK_STORAGE_KEY);
 if(savedMemberTasks){
   try{ state.memberTasks = JSON.parse(savedMemberTasks).map(normalizeMemberTask); }
   catch(e){ console.warn('Kayıtlı üye aksiyonları okunamadı.'); }
 }
 
-const savedPilotLeads = localStorage.getItem(PILOT_LEAD_STORAGE_KEY);
+const savedPilotLeads = readBusinessStore(PILOT_LEAD_STORAGE_KEY);
 if(savedPilotLeads){
   try{ state.pilotLeads = JSON.parse(savedPilotLeads).map(normalizePilotLead); }
   catch(e){ console.warn('Kayıtlı pilot leadleri okunamadı.'); }
 }
 
-const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
+const savedStudios = readBusinessStore(STUDIO_STORAGE_KEY);
 if(savedStudios){
   try{ state.studios = JSON.parse(savedStudios).map(normalizeStudio); }
   catch(e){ console.warn('Kayıtlı stüdyolar okunamadı.'); }
 }
 
-const savedSignatures = localStorage.getItem(SIGNATURE_STORAGE_KEY);
+const savedSignatures = readBusinessStore(SIGNATURE_STORAGE_KEY);
 if(savedSignatures){
   try{ state.signatures = JSON.parse(savedSignatures).map(normalizeSignature); }
   catch(e){ console.warn('Kayıtlı imzalar okunamadı.'); }
 }
 
-const savedProgramSelections = localStorage.getItem(PROGRAM_SELECTION_STORAGE_KEY);
+const savedProgramSelections = readBusinessStore(PROGRAM_SELECTION_STORAGE_KEY);
 if(savedProgramSelections){
   try{ state.programSelections = JSON.parse(savedProgramSelections); }
   catch(e){ console.warn('Kayıtlı program seçimleri okunamadı.'); }
@@ -361,7 +480,7 @@ function normalizeMember(member){
 
 function saveMembers(){
   ensureAccountProfileIds();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.members));
+  writeBusinessStore(STORAGE_KEY, JSON.stringify(state.members));
   syncMembersToSupabase();
 }
 
@@ -379,7 +498,7 @@ function normalizeFinanceEntry(entry){
 }
 
 function saveFinance(){
-  localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
+  writeBusinessStore(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
   syncFinanceToSupabase();
 }
 
@@ -428,7 +547,7 @@ function normalizeProgram(program){
 }
 
 function savePrograms(){
-  localStorage.setItem(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
+  writeBusinessStore(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
   syncProgramsToSupabase();
 }
 
@@ -466,7 +585,7 @@ function normalizeSession(session){
 }
 
 function saveSessions(){
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
+  writeBusinessStore(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
   syncSessionsToSupabase();
 }
 
@@ -527,13 +646,13 @@ function normalizeMakeupRequest(request){
 }
 
 function saveMakeupRequests(){
-  localStorage.setItem(MAKEUP_REQUEST_STORAGE_KEY, JSON.stringify(state.makeupRequests));
+  writeBusinessStore(MAKEUP_REQUEST_STORAGE_KEY, JSON.stringify(state.makeupRequests));
   syncMakeupRequestsToSupabase();
 }
 
 function saveTeam(){
   ensureAccountProfileIds();
-  localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state.team));
+  writeBusinessStore(TEAM_STORAGE_KEY, JSON.stringify(state.team));
   syncTeamToSupabase();
 }
 
@@ -554,7 +673,7 @@ function normalizeTrainerTask(task){
 }
 
 function saveTrainerTasks(){
-  localStorage.setItem(TRAINER_TASK_STORAGE_KEY, JSON.stringify(state.trainerTasks));
+  writeBusinessStore(TRAINER_TASK_STORAGE_KEY, JSON.stringify(state.trainerTasks));
   syncTrainerTasksToSupabase();
 }
 
@@ -577,7 +696,7 @@ function normalizeMemberTask(task){
 }
 
 function saveMemberTasks(){
-  localStorage.setItem(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
+  writeBusinessStore(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
   syncMemberTasksToSupabase();
 }
 
@@ -606,7 +725,7 @@ function savePilotLeads(){
   state.pilotLeads.forEach(lead=>{
     if(!isUuid(lead.id)) lead.id = makeId();
   });
-  localStorage.setItem(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
+  writeBusinessStore(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
   syncPilotLeadsToSupabase();
 }
 
@@ -666,12 +785,12 @@ function activeStudio(){
 }
 
 function saveStudios(){
-  localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
+  writeBusinessStore(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
   syncStudiosToSupabase();
 }
 
 function saveActiveStudio(){
-  localStorage.setItem(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
+  writeBusinessStore(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
 }
 
 function normalizeSignature(signature){
@@ -687,12 +806,12 @@ function normalizeSignature(signature){
 }
 
 function saveSignatures(){
-  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
+  writeBusinessStore(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
   syncSignaturesToSupabase();
 }
 
 function saveProgramSelections(){
-  localStorage.setItem(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
+  writeBusinessStore(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
   syncProgramSelectionsToSupabase();
 }
 
@@ -1327,6 +1446,9 @@ async function loadRemoteData(){
   state.backend.connected = true;
   state.backend.loading = false;
   state.backend.error = '';
+  // Demo oturumundan gerçek hesaba geçildiyse demo kalıntısını temizle.
+  liveSessionActive = true;
+  exitDemoMode();
   // Sunucudan gelen satırların imzasını önden doldur; böylece hemen ardından
   // gelen persistAllData bu satırları "değişmemiş" görür ve sunucuya geri
   // yazmaz. Sunucuda bulunmayan satırlar kirli kalır, normal akışta yazılır.
@@ -1502,6 +1624,12 @@ async function signOutSupabase(){
   // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
   // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
   resetRemoteSignatures();
+  // Kişisel veri hem ekrandan hem diskten gitmeli. Bunlar yapılmadığında
+  // çıkış sonrası üye adı/telefonu ekranda kalıyor ve sayfa yenilense bile
+  // localStorage'dan geri geliyordu.
+  liveSessionActive = false;
+  emptyBusinessState();
+  clearBusinessStorage();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1528,6 +1656,12 @@ async function switchSupabaseAccount(){
   // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
   // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
   resetRemoteSignatures();
+  // Kişisel veri hem ekrandan hem diskten gitmeli. Bunlar yapılmadığında
+  // çıkış sonrası üye adı/telefonu ekranda kalıyor ve sayfa yenilense bile
+  // localStorage'dan geri geliyordu.
+  liveSessionActive = false;
+  emptyBusinessState();
+  clearBusinessStorage();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();

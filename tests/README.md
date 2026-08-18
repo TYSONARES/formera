@@ -85,3 +85,16 @@ yalnızca hangi migration'ın eksik olduğunu söyler.
 
 Altı satır döner; her biri ya `tamam` ya da çalıştırılması gereken dosyanın
 adını gösterir. Hem düzeltilmiş hem bozuk veritabanında test edildi.
+
+## pii_leak_test.py — çıkış sonrası kişisel veri sızıntısı
+
+Sahte Supabase oturumuyla giriş yapar, üye adı/telefon/e-posta render edildiğini
+doğrular, sonra çıkış yapıp aynı verilerin **ekranda ve localStorage'da**
+kalmadığını kontrol eder. Sayfa yenilendikten sonra tekrar kontrol eder.
+
+```bash
+python3 -m http.server 8899        # ayrı terminalde
+python3 tests/pii_leak_test.py
+```
+
+Düzeltme öncesi bu test 7 kontrolün 6'sında sızıntı raporluyordu.
