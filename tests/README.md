@@ -51,3 +51,29 @@ python3 tests/sync_test.py
 > Not: Test `localStorage`'ı temizler. Gerçek verinizin olduğu bir tarayıcı
 > profilinde değil, ayrı bir Chromium örneğinde çalışır (Playwright kendi
 > profilini açar), bu yüzden mevcut demo verinize dokunmaz.
+
+## sql/run.sh — migration sırası ve RLS testi
+
+Migration'ları **boş bir yerel Postgres'e sırayla** uygular, sonra RLS
+senaryolarını çalıştırır. Supabase'e bağlanmaz, canlı veriye dokunmaz.
+
+```bash
+# yerel postgres (ornek)
+initdb -D /var/lib/postgresql/test -U postgres --auth=trust
+pg_ctl -D /var/lib/postgresql/test -o "-p 55432 -k /tmp" start
+
+PGPORT=55432 PGHOST=/tmp ./tests/sql/run.sh
+```
+
+Doğruladığı beş şey:
+
+1. Üye kendi atanmış programını görebiliyor (`1` dönmeli)
+2. İşletmeci kendi abonelik satırını **ekleyemiyor** (`permission denied`)
+3. Anon landing başvurusu **yazabiliyor** (`INSERT 0 1`)
+4. Anon başvuruları **okuyamıyor** (`permission denied`)
+5. KVKK onayı olmayan başvuru **reddediliyor** (`violates row-level security policy`)
+
+> 1. senaryo migration sırasının bekçisidir. `0011_care_makeups.sql`
+> `0012_member_program_access.sql`'den sonra çalıştırılırsa bu değer sessizce
+> `0` olur ve tüm üyeler programlarını göremez. Ölçtük: doğru sırada 1,
+> yanlış sırada 0.
