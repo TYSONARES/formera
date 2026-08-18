@@ -43,6 +43,7 @@ var olmasına bağlıdır — bu yüzden en sonda durur.
 | 0013 | formera_admins | Kurucu admin yetkisi |
 | 0014 | landing_leads | Landing başvuruları (yalnızca insert) |
 | 0015 | security_hardening | SECURITY DEFINER fonksiyonlarında revoke |
+| 0016 | recover_owner_onboarding | `recover_owner_onboarding()` fonksiyonu — app.js RPC ile çağırır |
 
 ## Çalıştırma
 
@@ -60,6 +61,12 @@ Sırayı 0001'den 0015'e doğru takip edin.
 ## Bu klasöre ne girmez
 
 Tek seferlik onarım ve demo verisi `supabase/ops/` altındadır
-(`seed.sql`, `recover-owner-onboarding.sql`, `repair-member-accounts.sql`).
+(`seed.sql`, `repair-member-accounts.sql`).
+
+> `recover-owner-onboarding.sql` önce buraya konmuştu; yanlıştı. Kalıcı bir
+> fonksiyon (`recover_owner_onboarding()`) tanımlıyor ve app.js onu RPC ile
+> çağırıyor, yani veritabanında bulunmak zorunda. `0016` olarak migration'lara
+> geri alındı — Supabase'in kendi kaydında da en son migration olarak bu
+> görünüyor.
 Bunlar şema değişikliği değildir, sırayla çalıştırılmaz, yalnızca gerektiğinde
 elle kullanılır.
