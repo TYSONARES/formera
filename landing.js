@@ -301,6 +301,30 @@
     }
   });
 
+  // --- Hero videosu: kosullu yukleme ---------------------------------------
+  // Dosya 7 MB. Dar ekranda, veri tasarrufu acikken, yavas baglantida veya
+  // hareket azaltma tercihinde hic indirilmez; poster gorseli (153 KB) yeterli.
+  function setupHeroVideo(){
+    const video = document.querySelector('#heroVideo');
+    if(!video || !video.dataset.src) return;
+    const conn = navigator.connection || navigator.webkitConnection || {};
+    const saveData = conn.saveData === true;
+    const slowLink = typeof conn.effectiveType === 'string' && /2g/.test(conn.effectiveType);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wideEnough = window.matchMedia('(min-width: 900px)').matches;
+    if(saveData || slowLink || reduceMotion || !wideEnough) return;
+    // Genis ekranda bile kritik kaynaklarla yarismasin: tarayici bosa
+    // dustugunde yuklensin. Poster zaten ilk boyamada gorunuyor.
+    const start = () => {
+      video.src = video.dataset.src;
+      const started = video.play();
+      if(started && typeof started.catch === 'function') started.catch(()=>{ /* otomatik oynatma engellenirse poster kalir */ });
+    };
+    if(typeof requestIdleCallback === 'function') requestIdleCallback(start, {timeout: 2500});
+    else setTimeout(start, 1200);
+  }
+  setupHeroVideo();
+
   form.addEventListener('input', updatePreview);
   form.addEventListener('change', updatePreview);
   updatePreview();

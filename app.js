@@ -2730,7 +2730,7 @@ function calendarPage(){
   </section>
   <section class="dashboard-grid">
     <article class="card">
-      <div class="card-title"><div><h2>${formatDateTR(selectedDate)}</h2><p>Günlük akış ve durumlar</p></div><input class="date-input" id="calendarDate" type="date" value="${selectedDate}"></div>
+      <div class="card-title"><div><h2>${formatDateTR(selectedDate)}</h2><p>Günlük akış ve durumlar</p></div><input class="date-input" id="calendarDate" type="date" value="${selectedDate}" aria-label="Takvim tarihi seç"></div>
       <div class="session-list">${sessionRows(sessionsForDate(selectedDate))}</div>
     </article>
     <article class="card ai-card">
