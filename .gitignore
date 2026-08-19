@@ -14,3 +14,8 @@ graphify-out/
 # python / test araçları
 __pycache__/
 .pytest_cache/
+
+# Veritabanı yedekleri — TÜM kişisel veriyi içerir, repoya asla girmez
+*.dump
+*.sql.gz
+*.backup
