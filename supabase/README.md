@@ -10,7 +10,7 @@ Supabase’te yeni bir proje aç. Bölge olarak kullanıcılarına yakın bir lo
 
 Supabase Dashboard içinde:
 
-SQL Editor → New query → `schema.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0001_schema.sql` içeriğini yapıştır → Run.
 
 Bu işlem şu tabloları oluşturur:
 
@@ -28,7 +28,7 @@ Bu işlem şu tabloları oluşturur:
 
 ## 3. RLS politikalarını çalıştır
 
-SQL Editor → New query → `policies.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0002_policies.sql` içeriğini yapıştır → Run.
 
 Bu dosya:
 
@@ -44,23 +44,23 @@ Bu dosya:
 
 Önce Supabase Authentication → Users ekranından owner kullanıcını oluştur.
 
-Sonra `seed.sql` dosyasında şu satırı kendi email adresinle değiştir:
+Sonra `ops/seed.sql` dosyasında şu satırı kendi email adresinle değiştir:
 
 ```sql
 where email = 'OWNER_EMAIL_ADRESINI_BURAYA_YAZ'
 ```
 
-Ardından SQL Editor’da `seed.sql` içeriğini çalıştır.
+Ardından SQL Editor’da `ops/seed.sql` içeriğini çalıştır.
 
 ## 5. Marka ve gerçek hesap alanlarını ekle
 
 Mevcut projede logo, işletme iletişim bilgileri ve avatarlar için:
 
-SQL Editor → New query → `branding.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0004_branding.sql` içeriğini yapıştır → Run.
 
 Antrenör/üye gerçek girişleri için:
 
-SQL Editor → New query → `role-accounts.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0003_role_accounts.sql` içeriğini yapıştır → Run.
 
 Bu dosya, işletmecinin üye/antrenör kaydına eklediği e-posta ile Supabase Auth kullanıcısını ilk girişte otomatik eşleştirir.
 
@@ -68,37 +68,37 @@ Uygulama tarafında işletmeci üye/antrenör/diyetisyen listesinde hesap durumu
 
 Antrenör görevleri ve işletmeci önerileri için:
 
-SQL Editor → New query → `trainer-tasks.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0007_trainer_tasks.sql` içeriğini yapıştır → Run.
 
 Antrenörün üyeye program/görev/beslenme notu göndermesi için:
 
-SQL Editor → New query → `member-tasks.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0008_member_tasks.sql` içeriğini yapıştır → Run.
 
 Landing ve Dashboard Pilot CRM lead’lerini canlı hesaba taşımak için:
 
-SQL Editor → New query → `pilot-leads.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0009_pilot_leads.sql` içeriğini yapıştır → Run.
 
 Pilotlarda manuel paket durumu ve ilerideki abonelik/webhook altyapısı için:
 
-SQL Editor → New query → `subscriptions.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0010_subscriptions.sql` içeriğini yapıştır → Run.
 
 Bu tablo ilk aşamada `activation_mode = 'manual'` ile kullanılır. İyzico hosted checkout ve webhook bağlandığında ödeme olaylarını yalnızca Supabase Edge Function yazmalıdır.
 
 Formera kurucu/admin panelini müşteri işletmeci hesaplarından ayırmak için:
 
-SQL Editor → New query → `formera-admins.sql` içeriğini yapıştır → `ADMIN_EMAIL_ADRESINI_BURAYA_YAZ` alanını kendi admin e-postanla değiştir → Run.
+SQL Editor → New query → `migrations/0013_formera_admins.sql` içeriğini yapıştır → `ADMIN_EMAIL_ADRESINI_BURAYA_YAZ` alanını kendi admin e-postanla değiştir → Run.
 
 Bu tablo sadece giriş yapan kullanıcının kendi admin yetkisini okuyabileceği şekilde RLS ile korunur. Admin hesabı oluşturma yetkisi uygulama içinden müşterilere verilmez.
 
 İlk kez giriş yapan işletmecinin demo verisi yerine doğrudan işletme kurulumuna yönlenmesi için:
 
-SQL Editor → New query → `studio-onboarding.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0005_studio_onboarding.sql` içeriğini yapıştır → Run.
 
 Bu dosya yalnızca `studios.setup_completed` alanını ekler. Kurulum tamamlanınca işletme adı, logo ve karşılama metni gerçek stüdyo bilgileriyle görünür.
 
 Anon/public RPC erişimini sertleştirmek için:
 
-SQL Editor → New query → `security-hardening.sql` içeriğini yapıştır → Run.
+SQL Editor → New query → `migrations/0015_security_hardening.sql` içeriğini yapıştır → Run.
 
 Bu dosya, RLS için gerekli helper fonksiyonlarını authenticated kullanıcıda çalışır bırakır; anonim/public RPC çağrılarını kapatır. Daha ileri seviye private schema refactor’ı ayrı test planıyla yapılmalıdır.
 

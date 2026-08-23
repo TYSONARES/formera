@@ -32,7 +32,13 @@ create unique index if not exists subscriptions_provider_subscription_uidx
 
 alter table public.subscriptions enable row level security;
 
-grant select, insert, update on public.subscriptions to authenticated;
+-- Abonelik satırı işletmecinin KENDİ paketini belirlediği yerdir; bu yüzden
+-- tarayıcıdan yazılamaz. İşletmeci yalnızca okur. Yazma yetkisi service_role
+-- (iyzico webhook'unu doğrulayan Edge Function) ve manuel admin işlemine aittir.
+-- Aksi halde müşteri konsoldan status='active', plan_code='studio_ai' yazıp
+-- ücretli paketi kendine açabilirdi.
+grant select on public.subscriptions to authenticated;
+revoke insert, update, delete on public.subscriptions from anon, authenticated;
 
 drop policy if exists "subscription_owner_select" on public.subscriptions;
 create policy "subscription_owner_select"
@@ -41,20 +47,9 @@ for select
 to authenticated
 using (public.is_owner() and studio_id = public.current_studio_id());
 
+-- Bu iki politika bilerek kaldırıldı: yazma yolu tarayıcıya kapalı.
 drop policy if exists "subscription_owner_insert" on public.subscriptions;
-create policy "subscription_owner_insert"
-on public.subscriptions
-for insert
-to authenticated
-with check (public.is_owner() and studio_id = public.current_studio_id());
-
 drop policy if exists "subscription_owner_update" on public.subscriptions;
-create policy "subscription_owner_update"
-on public.subscriptions
-for update
-to authenticated
-using (public.is_owner() and studio_id = public.current_studio_id())
-with check (public.is_owner() and studio_id = public.current_studio_id());
 
 -- Pilot için ilk manuel kayıt örneği (çalıştırmak zorunlu değildir):
 -- insert into public.subscriptions

@@ -755,6 +755,34 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
   border-radius:12px;
   padding:9px 10px;
 }
+/* KVKK açık rıza kutusu: .lead-form label / input kurallarını ezmesi gerekiyor,
+   aksi halde checkbox tam genişlikte bir metin kutusuna dönüşüyor. */
+/* Özgüllük notu: .lead-form label (0,1,1) bu bloğu ezdiği için seçici
+   .lead-form .lead-consent (0,2,0) olarak yazılmalı. */
+.lead-form .lead-consent{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:start;
+  gap:10px;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:500;
+  line-height:1.5;
+}
+.lead-form .lead-consent input[type="checkbox"]{
+  width:18px;
+  min-width:18px;
+  height:18px;
+  margin:1px 0 0;
+  padding:0;
+  border-radius:6px;
+  accent-color:var(--acid);
+  cursor:pointer;
+}
+.lead-form .lead-consent span{display:block;font-weight:500}
+.lead-form .lead-consent a{color:var(--acid);text-decoration:underline}
+
 .lead-status{
   min-height:18px;
   margin:0;
@@ -848,4 +876,25 @@ h2{font-size:clamp(34px,5vw,64px);line-height:1;margin:14px 0 0}
 }
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
+}
+
+/* --- Dar ekran düzeltmeleri (320px sınıfı cihazlar) -----------------------
+   Ölçüm: 320px'de landing 49px yatay taşıyordu (.footer-actions sarmıyordu);
+   768/1024'te dekoratif .motion-strip konteynerin 3px dışına taşıyordu.
+   overflow-x:clip kullanılıyor (hidden değil): kaydırma konteyneri
+   oluşturmadığı için position:sticky davranışını bozmaz. */
+body{overflow-x:clip}
+
+.footer-actions{flex-wrap:wrap;row-gap:10px}
+
+@media(max-width:380px){
+  .site-header{width:calc(100% - 16px);padding:9px 10px}
+  .brand-logo{max-width:124px;height:26px}
+  .hero{width:calc(100% - 16px);margin-top:28px}
+  h1{font-size:38px}
+  .hero-copy p{font-size:16px}
+  .hero-actions{flex-direction:column;align-items:stretch;gap:10px}
+  .footer-actions{gap:12px}
+  .pilot-benefits{gap:10px}
+  .lead-form{gap:10px}
 }

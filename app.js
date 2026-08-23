@@ -80,6 +80,105 @@ const starterPilotLeads = [
   {id:'lead_3', name:'Caner Soylu', studio:'Forma PT', city:'İstanbul', phone:'0532 600 60 60', members:'151–300', goal:'AI destekli pilot denemek', stage:'proposal', nextAction:'Studio AI teklifini gönder', value:2990}
 ];
 
+// --- Demo modu ve canlı mod ayrımı ---------------------------------------
+// Panel eskiden her açılışta demo verisini ve localStorage'daki işletme
+// verisini koşulsuz yüklüyordu. Sonuç: kullanıcı çıkış yaptıktan sonra bile
+// üye adı, telefonu ve e-postası ekranda kalıyordu; sayfa yenilense bile
+// localStorage'dan geri geliyordu. Ortak cihazda bu doğrudan kişisel veri
+// sızıntısıdır.
+//
+// Artık kural şu: canlı Supabase yapılandırması varsa veri YALNIZCA sunucudan
+// gelir. Demo verisi ancak açık talep varsa (?demo=1) yüklenir.
+
+// Çıkışta temizlenecek işletme verisi anahtarları. Bağlantı ayarı ve rol
+// tercihi burada YOKTUR; onlar kişisel veri değildir ve tekrar girişte gerekir.
+const BUSINESS_STORAGE_KEYS = [
+  STORAGE_KEY,
+  FINANCE_STORAGE_KEY,
+  PROGRAM_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+  TEAM_STORAGE_KEY,
+  STUDIO_STORAGE_KEY,
+  ACTIVE_STUDIO_STORAGE_KEY,
+  SIGNATURE_STORAGE_KEY,
+  PROGRAM_SELECTION_STORAGE_KEY,
+  TRAINER_TASK_STORAGE_KEY,
+  MEMBER_TASK_STORAGE_KEY,
+  MAKEUP_REQUEST_STORAGE_KEY,
+  PILOT_LEAD_STORAGE_KEY
+];
+
+const DEMO_MODE_STORAGE_KEY = 'formera_demo_mode';
+
+function requestedDemoMode(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('demo') === '1' || window.location.hash === '#demo';
+}
+
+// Demo tercihi sekme boyunca korunur ki panel içi gezinmede kaybolmasın.
+function isDemoMode(){
+  try{
+    if(requestedDemoMode()){
+      sessionStorage.setItem(DEMO_MODE_STORAGE_KEY, 'true');
+      return true;
+    }
+    return sessionStorage.getItem(DEMO_MODE_STORAGE_KEY) === 'true';
+  }catch(error){
+    return requestedDemoMode();
+  }
+}
+
+function hasLiveBackendConfig(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_STORAGE_KEY) || 'null');
+    if(saved?.url && saved?.anonKey) return true;
+  }catch(error){}
+  return Boolean(window.FORMERA_SUPABASE?.url && window.FORMERA_SUPABASE?.anonKey);
+}
+
+// Canlı yapılandırma varsa ve demo istenmediyse: yerel işletme verisi ne
+// okunur ne yazılır. Tek kaynak sunucudur.
+// Canlı oturum açık mı. state yerine ayrı bayrak: usesLocalBusinessData,
+// state'in kendi tanımı içinde de çağrılıyor ve o anda state TDZ'de olduğu için
+// `typeof state` bile ReferenceError fırlatıyor.
+let liveSessionActive = false;
+
+function usesLocalBusinessData(){
+  // Canlı oturum açıldıysa demo bayrağı ne olursa olsun yerel yazma kapalıdır.
+  // Aksi halde kullanıcı önce ?demo=1 açıp sonra aynı sekmede gerçek hesabıyla
+  // giriş yaptığında, gerçek üye verisi diske yazılırdı.
+  if(liveSessionActive) return false;
+  return isDemoMode() || !hasLiveBackendConfig();
+}
+
+// Canlı oturum açılınca demo kalıntısı bırakma.
+function exitDemoMode(){
+  try{ sessionStorage.removeItem(DEMO_MODE_STORAGE_KEY); }catch(error){}
+  clearBusinessStorage();
+}
+
+function clearBusinessStorage(){
+  BUSINESS_STORAGE_KEYS.forEach(key=>{
+    try{ localStorage.removeItem(key); }catch(error){}
+  });
+}
+
+function emptyBusinessState(){
+  state.members = [];
+  state.finance = [];
+  state.programs = [];
+  state.sessions = [];
+  state.team = [];
+  state.trainerTasks = [];
+  state.memberTasks = [];
+  state.makeupRequests = [];
+  state.pilotLeads = [];
+  state.signatures = [];
+  state.programSelections = {};
+  state.studios = [];
+  state.activeStudioId = null;
+}
+
 function initialPageFromUrl(){
   const allowedPages = ['dashboard','members','programs','calendar','finance','reports','growth','team','pilot'];
   const params = new URLSearchParams(window.location.search);
@@ -124,17 +223,21 @@ const state = {
   page: initialPageFromUrl(),
   workspace: initialWorkspaceFromUrl(),
   calendarDate: todayISO(),
-  members: starterMembers.map(normalizeMember),
-  finance: starterFinance.map(normalizeFinanceEntry),
-  programs: starterPrograms.map(normalizeProgram),
-  sessions: starterSessions.map(normalizeSession),
-  team: starterTeam.map(normalizeTrainer),
-  trainerTasks: starterTrainerTasks.map(normalizeTrainerTask),
-  memberTasks: starterMemberTasks.map(normalizeMemberTask),
+  // Demo verisi yalnızca demo modunda yüklenir. Canlı yapılandırmada panel
+  // boş açılır ve içerik yalnızca başarılı oturumdan sonra sunucudan gelir.
+  members: usesLocalBusinessData() ? starterMembers.map(normalizeMember) : [],
+  finance: usesLocalBusinessData() ? starterFinance.map(normalizeFinanceEntry) : [],
+  programs: usesLocalBusinessData() ? starterPrograms.map(normalizeProgram) : [],
+  sessions: usesLocalBusinessData() ? starterSessions.map(normalizeSession) : [],
+  team: usesLocalBusinessData() ? starterTeam.map(normalizeTrainer) : [],
+  trainerTasks: usesLocalBusinessData() ? starterTrainerTasks.map(normalizeTrainerTask) : [],
+  memberTasks: usesLocalBusinessData() ? starterMemberTasks.map(normalizeMemberTask) : [],
   makeupRequests: [],
-  pilotLeads: starterPilotLeads.map(normalizePilotLead),
-  studios: starterStudios.map(normalizeStudio),
-  activeStudioId: localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1',
+  pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
+  studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
+  activeStudioId: usesLocalBusinessData()
+    ? (localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1')
+    : null,
   signatures: [],
   programSelections: {},
   backend: {
@@ -157,73 +260,89 @@ const state = {
   }
 };
 
-const savedMembers = localStorage.getItem(STORAGE_KEY);
+// Yerel işletme verisi okuma kapısı. Canlı yapılandırmada (demo değilse)
+// localStorage'daki üye/finans/program kayıtları OKUNMAZ; panel boş açılır ve
+// içerik yalnızca oturum açıldıktan sonra sunucudan gelir.
+// Yerel işletme verisi yazma kapısı. Canlı modda kişisel veri diske hiç
+// yazılmaz; böylece ortak cihazda çıkış sonrası geri gelemez.
+function writeBusinessStore(key, value){
+  if(!usesLocalBusinessData()) return;
+  try{ localStorage.setItem(key, value); }catch(error){
+    console.warn('Yerel kayıt yapılamadı.', error);
+  }
+}
+
+function readBusinessStore(key){
+  return usesLocalBusinessData() ? localStorage.getItem(key) : null;
+}
+
+const savedMembers = readBusinessStore(STORAGE_KEY);
 if(savedMembers){
   try{ state.members = JSON.parse(savedMembers).map(normalizeMember); }
   catch(e){ console.warn('Kayıtlı üyeler okunamadı.'); }
 }
 
-const savedMakeupRequests = localStorage.getItem(MAKEUP_REQUEST_STORAGE_KEY);
+const savedMakeupRequests = readBusinessStore(MAKEUP_REQUEST_STORAGE_KEY);
 if(savedMakeupRequests){
   try{ state.makeupRequests = JSON.parse(savedMakeupRequests).map(normalizeMakeupRequest); }
   catch(e){ console.warn('Kayıtlı telafi talepleri okunamadı.'); }
 }
 
-const savedFinance = localStorage.getItem(FINANCE_STORAGE_KEY);
+const savedFinance = readBusinessStore(FINANCE_STORAGE_KEY);
 if(savedFinance){
   try{ state.finance = JSON.parse(savedFinance).map(normalizeFinanceEntry); }
   catch(e){ console.warn('Kayıtlı finans hareketleri okunamadı.'); }
 }
 
-const savedPrograms = localStorage.getItem(PROGRAM_STORAGE_KEY);
+const savedPrograms = readBusinessStore(PROGRAM_STORAGE_KEY);
 if(savedPrograms){
   try{ state.programs = JSON.parse(savedPrograms).map(normalizeProgram); }
   catch(e){ console.warn('Kayıtlı programlar okunamadı.'); }
 }
 
-const savedSessions = localStorage.getItem(SESSION_STORAGE_KEY);
+const savedSessions = readBusinessStore(SESSION_STORAGE_KEY);
 if(savedSessions){
   try{ state.sessions = JSON.parse(savedSessions).map(normalizeSession); }
   catch(e){ console.warn('Kayıtlı seanslar okunamadı.'); }
 }
 
-const savedTeam = localStorage.getItem(TEAM_STORAGE_KEY);
+const savedTeam = readBusinessStore(TEAM_STORAGE_KEY);
 if(savedTeam){
   try{ state.team = JSON.parse(savedTeam).map(normalizeTrainer); }
   catch(e){ console.warn('Kayıtlı ekip okunamadı.'); }
 }
 
-const savedTrainerTasks = localStorage.getItem(TRAINER_TASK_STORAGE_KEY);
+const savedTrainerTasks = readBusinessStore(TRAINER_TASK_STORAGE_KEY);
 if(savedTrainerTasks){
   try{ state.trainerTasks = JSON.parse(savedTrainerTasks).map(normalizeTrainerTask); }
   catch(e){ console.warn('Kayıtlı antrenör görevleri okunamadı.'); }
 }
 
-const savedMemberTasks = localStorage.getItem(MEMBER_TASK_STORAGE_KEY);
+const savedMemberTasks = readBusinessStore(MEMBER_TASK_STORAGE_KEY);
 if(savedMemberTasks){
   try{ state.memberTasks = JSON.parse(savedMemberTasks).map(normalizeMemberTask); }
   catch(e){ console.warn('Kayıtlı üye aksiyonları okunamadı.'); }
 }
 
-const savedPilotLeads = localStorage.getItem(PILOT_LEAD_STORAGE_KEY);
+const savedPilotLeads = readBusinessStore(PILOT_LEAD_STORAGE_KEY);
 if(savedPilotLeads){
   try{ state.pilotLeads = JSON.parse(savedPilotLeads).map(normalizePilotLead); }
   catch(e){ console.warn('Kayıtlı pilot leadleri okunamadı.'); }
 }
 
-const savedStudios = localStorage.getItem(STUDIO_STORAGE_KEY);
+const savedStudios = readBusinessStore(STUDIO_STORAGE_KEY);
 if(savedStudios){
   try{ state.studios = JSON.parse(savedStudios).map(normalizeStudio); }
   catch(e){ console.warn('Kayıtlı stüdyolar okunamadı.'); }
 }
 
-const savedSignatures = localStorage.getItem(SIGNATURE_STORAGE_KEY);
+const savedSignatures = readBusinessStore(SIGNATURE_STORAGE_KEY);
 if(savedSignatures){
   try{ state.signatures = JSON.parse(savedSignatures).map(normalizeSignature); }
   catch(e){ console.warn('Kayıtlı imzalar okunamadı.'); }
 }
 
-const savedProgramSelections = localStorage.getItem(PROGRAM_SELECTION_STORAGE_KEY);
+const savedProgramSelections = readBusinessStore(PROGRAM_SELECTION_STORAGE_KEY);
 if(savedProgramSelections){
   try{ state.programSelections = JSON.parse(savedProgramSelections); }
   catch(e){ console.warn('Kayıtlı program seçimleri okunamadı.'); }
@@ -361,7 +480,7 @@ function normalizeMember(member){
 
 function saveMembers(){
   ensureAccountProfileIds();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.members));
+  writeBusinessStore(STORAGE_KEY, JSON.stringify(state.members));
   syncMembersToSupabase();
 }
 
@@ -379,7 +498,7 @@ function normalizeFinanceEntry(entry){
 }
 
 function saveFinance(){
-  localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
+  writeBusinessStore(FINANCE_STORAGE_KEY, JSON.stringify(state.finance));
   syncFinanceToSupabase();
 }
 
@@ -428,7 +547,7 @@ function normalizeProgram(program){
 }
 
 function savePrograms(){
-  localStorage.setItem(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
+  writeBusinessStore(PROGRAM_STORAGE_KEY, JSON.stringify(state.programs));
   syncProgramsToSupabase();
 }
 
@@ -466,7 +585,7 @@ function normalizeSession(session){
 }
 
 function saveSessions(){
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
+  writeBusinessStore(SESSION_STORAGE_KEY, JSON.stringify(state.sessions));
   syncSessionsToSupabase();
 }
 
@@ -527,13 +646,13 @@ function normalizeMakeupRequest(request){
 }
 
 function saveMakeupRequests(){
-  localStorage.setItem(MAKEUP_REQUEST_STORAGE_KEY, JSON.stringify(state.makeupRequests));
+  writeBusinessStore(MAKEUP_REQUEST_STORAGE_KEY, JSON.stringify(state.makeupRequests));
   syncMakeupRequestsToSupabase();
 }
 
 function saveTeam(){
   ensureAccountProfileIds();
-  localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state.team));
+  writeBusinessStore(TEAM_STORAGE_KEY, JSON.stringify(state.team));
   syncTeamToSupabase();
 }
 
@@ -554,7 +673,7 @@ function normalizeTrainerTask(task){
 }
 
 function saveTrainerTasks(){
-  localStorage.setItem(TRAINER_TASK_STORAGE_KEY, JSON.stringify(state.trainerTasks));
+  writeBusinessStore(TRAINER_TASK_STORAGE_KEY, JSON.stringify(state.trainerTasks));
   syncTrainerTasksToSupabase();
 }
 
@@ -577,7 +696,7 @@ function normalizeMemberTask(task){
 }
 
 function saveMemberTasks(){
-  localStorage.setItem(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
+  writeBusinessStore(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
   syncMemberTasksToSupabase();
 }
 
@@ -606,7 +725,7 @@ function savePilotLeads(){
   state.pilotLeads.forEach(lead=>{
     if(!isUuid(lead.id)) lead.id = makeId();
   });
-  localStorage.setItem(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
+  writeBusinessStore(PILOT_LEAD_STORAGE_KEY, JSON.stringify(state.pilotLeads));
   syncPilotLeadsToSupabase();
 }
 
@@ -666,12 +785,12 @@ function activeStudio(){
 }
 
 function saveStudios(){
-  localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
+  writeBusinessStore(STUDIO_STORAGE_KEY, JSON.stringify(state.studios));
   syncStudiosToSupabase();
 }
 
 function saveActiveStudio(){
-  localStorage.setItem(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
+  writeBusinessStore(ACTIVE_STUDIO_STORAGE_KEY, state.activeStudioId);
 }
 
 function normalizeSignature(signature){
@@ -687,12 +806,12 @@ function normalizeSignature(signature){
 }
 
 function saveSignatures(){
-  localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
+  writeBusinessStore(SIGNATURE_STORAGE_KEY, JSON.stringify(state.signatures));
   syncSignaturesToSupabase();
 }
 
 function saveProgramSelections(){
-  localStorage.setItem(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
+  writeBusinessStore(PROGRAM_SELECTION_STORAGE_KEY, JSON.stringify(state.programSelections));
   syncProgramSelectionsToSupabase();
 }
 
@@ -806,9 +925,13 @@ function currentSupabaseConfigFromForm(){
 function setSupabaseClientFromConfig(config){
   if(!config?.url || !config?.anonKey) return false;
   if(!window.supabase?.createClient){
-    state.backend.error = 'Supabase kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.';
+    // Kütüphane yüklenemediğinde açılış ekranı "hazırlanıyor" durumunda asılı
+    // kalmamalı: loading sıfırlanır ve panel yerel verilerle yeniden çizilir.
+    state.backend.error = 'Canlı veri kütüphanesi yüklenemedi. Panel şimdilik bu cihazdaki verilerle açıldı; bağlantını kontrol edip sayfayı yenile.';
     state.backend.configured = Boolean(config);
+    state.backend.loading = false;
     updateBackendShell();
+    render();
     notify(state.backend.error, 'error');
     return false;
   }
@@ -1279,6 +1402,25 @@ async function loadRemoteData(){
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length
     ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
     : localPilotLeads.filter(lead=>lead.source === 'landing');
+
+  // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
+  // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
+  // yazılır. Bu liste olmadan, yerelde olup sunucuda olmayan bir satır
+  // (henüz oluşturulmamış üye profili gibi) sessizce hiç yazılmazdı.
+  resetRemoteSignatures();
+  setServerRowKeys('studios', (studiosResult.data || []).map(row=>row.id));
+  setServerRowKeys('profiles', (profilesResult.data || []).map(row=>row.id));
+  setServerRowKeys('members', (membersResult.data || []).map(row=>row.id));
+  setServerRowKeys('programs', (programsResult.data || []).map(row=>row.id));
+  setServerRowKeys('sessions', (sessionsResult.data || []).map(row=>row.id));
+  setServerRowKeys('finance_entries', (financeResult.data || []).map(row=>row.id));
+  setServerRowKeys('signatures', (signaturesResult.data || []).map(row=>row.id));
+  setServerRowKeys('member_program_selections', (selectionsResult.data || []).map(row=>row.member_id));
+  setServerRowKeys('trainer_tasks', taskTableMissing ? [] : (trainerTasksResult.data || []).map(row=>row.id));
+  setServerRowKeys('member_tasks', memberTaskTableMissing ? [] : (memberTasksResult.data || []).map(row=>row.id));
+  setServerRowKeys('makeup_requests', makeupTableMissing ? [] : (makeupRequestsResult.data || []).map(row=>row.id));
+  setServerRowKeys('pilot_leads', pilotLeadTableMissing ? [] : remotePilotLeads.map(lead=>lead.id));
+
   state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
     const adminAccess = await verifyFormeraAdminAccess(db);
@@ -1304,6 +1446,13 @@ async function loadRemoteData(){
   state.backend.connected = true;
   state.backend.loading = false;
   state.backend.error = '';
+  // Demo oturumundan gerçek hesaba geçildiyse demo kalıntısını temizle.
+  liveSessionActive = true;
+  exitDemoMode();
+  // Sunucudan gelen satırların imzasını önden doldur; böylece hemen ardından
+  // gelen persistAllData bu satırları "değişmemiş" görür ve sunucuya geri
+  // yazmaz. Sunucuda bulunmayan satırlar kirli kalır, normal akışta yazılır.
+  await primeRemoteSignatures();
   persistAllData();
   if(state.backend.needsStudioSetup && profile.role === 'owner'){
     supabaseModal?.close();
@@ -1472,6 +1621,15 @@ async function signOutSupabase(){
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
+  // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
+  // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
+  resetRemoteSignatures();
+  // Kişisel veri hem ekrandan hem diskten gitmeli. Bunlar yapılmadığında
+  // çıkış sonrası üye adı/telefonu ekranda kalıyor ve sayfa yenilense bile
+  // localStorage'dan geri geliyordu.
+  liveSessionActive = false;
+  emptyBusinessState();
+  clearBusinessStorage();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1495,6 +1653,15 @@ async function switchSupabaseAccount(){
   state.backend.accountsReady = false;
   state.backend.trainerTasksReady = false;
   state.backend.memberTasksReady = false;
+  // İmza önbelleği hesaba özeldir; temizlenmezse yeni hesap, önceki hesabın
+  // "gönderildi" işaretlerini miras alır ve kendi satırlarını hiç yazmaz.
+  resetRemoteSignatures();
+  // Kişisel veri hem ekrandan hem diskten gitmeli. Bunlar yapılmadığında
+  // çıkış sonrası üye adı/telefonu ekranda kalıyor ve sayfa yenilense bile
+  // localStorage'dan geri geliyordu.
+  liveSessionActive = false;
+  emptyBusinessState();
+  clearBusinessStorage();
   state.role = 'owner';
   state.page = 'dashboard';
   if(supabaseAuthForm) supabaseAuthForm.reset();
@@ -1508,22 +1675,117 @@ async function switchSupabaseAccount(){
   }
 }
 
+// --- Satır bazlı senkronizasyon ------------------------------------------
+// Önceden her kayıt işlemi ilgili tablonun TAMAMINI upsert ediyordu. Üç sonucu
+// vardı: (1) iki cihaz açıkken sonra kaydeden, diğerinin dokunmadığı satırları
+// da geri yazdığı için onun düzenlemesini siliyordu; (2) 300 üyeli bir salonda
+// tek bir telefon düzeltmesi 300 satır (avatarlarla birlikte megabaytlar)
+// gönderiyordu; (3) girişte loadRemoteData'nın hemen ardından persistAllData
+// çalıştığı için sunucudan yeni çekilen veri olduğu gibi sunucuya geri
+// yazılıyordu.
+//
+// Çözüm: her satırın en son BAŞARIYLA gönderilen hali imzalanır. Yalnızca
+// imzası değişen satır ağa çıkar. İmza, yazma başarılı olduktan sonra
+// güncellenir; hata durumunda satır "kirli" kalır ve sonraki kayıtta tekrar
+// denenir (eskiden hata sonrası satır sessizce kayboluyordu).
+const remoteRowSignatures = new Map();   // tablo -> Map(satırAnahtarı -> imza)
+let remoteSyncPrimeOnly = false;
+
+// Girişte sunucudan GERÇEKTEN gelen satırların anahtarları. Prime yalnızca bu
+// kümedeki satırları "gönderilmiş" sayar; yerelde olup sunucuda olmayan bir
+// satır (örn. henüz yazılmamış üye profili veya landing'den gelen lead) kirli
+// kalır ve normal akışta yazılır.
+const serverRowKeys = new Map();         // tablo -> Set(satırAnahtarı)
+
+function setServerRowKeys(table, keys){
+  serverRowKeys.set(table, new Set((keys || []).filter(Boolean)));
+}
+
+function signatureStore(table){
+  if(!remoteRowSignatures.has(table)) remoteRowSignatures.set(table, new Map());
+  return remoteRowSignatures.get(table);
+}
+
+function rowSignature(row){
+  return JSON.stringify(row);
+}
+
+function resetRemoteSignatures(){
+  remoteRowSignatures.clear();
+  serverRowKeys.clear();
+}
+
+// Prime modunda: satır sunucudan geldiyse imzasını kaydet, gelmediyse dokunma.
+function markPrimedRows(table, rows, keyOf){
+  const known = serverRowKeys.get(table);
+  if(!known) return;
+  markRowsSynced(table, rows.filter(row=>known.has(keyOf(row))), keyOf);
+}
+
+// Sunucudan çekilen veriyi "zaten gönderilmiş" olarak işaretler. persistAllData
+// öncesinde çağrılır ve ağa hiçbir istek çıkarmaz. Async sync'ler burada
+// bilinçli olarak await edilir: bayrak, hepsi bitene kadar açık kalmalı.
+async function primeRemoteSignatures(){
+  remoteSyncPrimeOnly = true;
+  try{
+    await syncMembersToSupabase();
+    await syncTeamToSupabase();
+    await syncProgramSelectionsToSupabase();
+    syncStudiosToSupabase();
+    syncFinanceToSupabase();
+    syncProgramsToSupabase();
+    syncSessionsToSupabase();
+    syncTrainerTasksToSupabase();
+    syncMemberTasksToSupabase();
+    syncMakeupRequestsToSupabase();
+    syncPilotLeadsToSupabase();
+    syncSignaturesToSupabase();
+  }finally{
+    remoteSyncPrimeOnly = false;
+  }
+}
+
+// Gönderilmesi gereken satırları ayıklar. keyOf, tablodaki benzersiz anahtarı
+// verir (çoğu tabloda id, member_program_selections'ta member_id).
+function pendingRows(table, rows, keyOf){
+  const store = signatureStore(table);
+  return rows.filter(row=>store.get(keyOf(row)) !== rowSignature(row));
+}
+
+function markRowsSynced(table, rows, keyOf){
+  const store = signatureStore(table);
+  rows.forEach(row=>store.set(keyOf(row), rowSignature(row)));
+}
+
 async function syncRemote(table, rows){
   if(!isSupabaseReady()) return;
   const validRows = rows.filter(row=>row.id && isUuid(row.id));
   if(!validRows.length) return;
-  const {error} = await state.backend.client.from(table).upsert(validRows, {onConflict:'id'});
-  remoteError(error);
+  const keyOf = row=>row.id;
+  const pending = pendingRows(table, validRows, keyOf);
+  if(!pending.length) return;
+  if(remoteSyncPrimeOnly){
+    markPrimedRows(table, pending, keyOf);
+    return;
+  }
+  const {error} = await state.backend.client.from(table).upsert(pending, {onConflict:'id'});
+  if(error) return remoteError(error);
+  markRowsSynced(table, pending, keyOf);
 }
 
 async function syncMembersToSupabase(){
   const studioId = studioIdForRemote();
   if(!studioId) return;
   if(state.backend.accountsReady){
+    // profileId üretimi tek bir yerde olmalı. Burada `|| makeId()` ile üretmek,
+    // id geri yazılmadığı için her senkronizasyonda yeni bir profiles satırı
+    // oluşturma riskini taşıyordu; ensureAccountProfileIds id'yi bir kez üretip
+    // state'e yazar, böylece upsert hep aynı satırı günceller.
+    ensureAccountProfileIds();
     const profileRows = state.members
-      .filter(member=>member.email || member.profileId)
+      .filter(member=>member.profileId)
       .map(member=>({
-        id: member.profileId || makeId(),
+        id: member.profileId,
         studio_id: studioId,
         full_name: member.name,
         role: 'member',
@@ -1751,10 +2013,20 @@ async function syncProgramSelectionsToSupabase(){
     .map(([memberName, programId])=>({member_id: memberIdByName(memberName), program_id: programId}))
     .filter(row=>isUuid(row.member_id) && isUuid(row.program_id));
   if(!rows.length) return;
+  // Bu tabloda benzersiz anahtar id değil member_id.
+  const table = 'member_program_selections';
+  const keyOf = row=>row.member_id;
+  const pending = pendingRows(table, rows, keyOf);
+  if(!pending.length) return;
+  if(remoteSyncPrimeOnly){
+    markPrimedRows(table, pending, keyOf);
+    return;
+  }
   const {error} = await state.backend.client
-    .from('member_program_selections')
-    .upsert(rows, {onConflict:'member_id'});
-  remoteError(error);
+    .from(table)
+    .upsert(pending, {onConflict:'member_id'});
+  if(error) return remoteError(error);
+  markRowsSynced(table, pending, keyOf);
 }
 
 async function deleteRemoteRow(table, id){
@@ -1969,11 +2241,25 @@ function updateRoleShell(){
 }
 
 function metric(title, value, delta, icon, down=false){
-  return `<article class="metric"><div class="metric-head"><span>${title}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><span class="delta ${down?'down':''}">${delta} <em>geçen haftaya göre</em></span></article>`;
+  return `<article class="metric"><div class="metric-head"><span>${esc(title)}</span><span class="metric-icon">${icon}</span></div><strong>${esc(value)}</strong><span class="delta ${down?'down':''}">${esc(delta)} <em>geçen haftaya göre</em></span></article>`;
 }
 
+// Panel içeriği innerHTML ile basıldığı için kullanıcı kaynaklı her değer
+// buradan geçmek zorundadır. Tek tırnak da kaçırılır: avatarStyle değeri
+// url('...') içine girdiğinden tek tırnak olmadan CSS'ten çıkış mümkündü.
 function escapeAttr(value=''){
-  return String(value).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  return String(value)
+    .replaceAll('&','&amp;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;');
+}
+
+// Şablonlarda okunabilirlik için kısa ad. Fonksiyon bildirimi olarak tanımlı
+// ki hoisting sayesinde dosyanın herhangi bir yerinden güvenle çağrılabilsin.
+function esc(value=''){
+  return escapeAttr(value);
 }
 
 function avatarStyle(imageDataUrl){
@@ -2212,11 +2498,11 @@ function memberRows(items=state.members){
     const signature = memberSignature(m.name);
     const account = accountStatusMeta(m);
     return `<div class="member-row">
-    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${m.name}</strong><small>PT: ${m.trainer}${m.phone ? ` · ${m.phone}` : ''}</small><small>${escapeAttr(account.detail)}</small></div></div>
-    <span><small class="cell-label">Son ziyaret</small><br>${m.last}</span>
-    <span><small class="cell-label">Seans</small><br>${m.sessions}</span>
-    <span class="status ${m.type}">${m.status}</span>
-    <span class="status ${account.className}">${account.label}</span>
+    <div class="member">${avatarMarkup(m.initials, m.avatarDataUrl)}<div><strong>${esc(m.name)}</strong><small>PT: ${esc(m.trainer)}${m.phone ? ` · ${esc(m.phone)}` : ''}</small><small>${escapeAttr(account.detail)}</small></div></div>
+    <span><small class="cell-label">Son ziyaret</small><br>${esc(m.last)}</span>
+    <span><small class="cell-label">Seans</small><br>${esc(m.sessions)}</span>
+    <span class="status ${esc(m.type)}">${esc(m.status)}</span>
+    <span class="status ${esc(account.className)}">${esc(account.label)}</span>
     <span class="status ${signature ? 'good' : 'warn'}">${signature ? 'İmzalı' : 'İmza yok'}</span>
     <div class="row-actions">
       <button class="mini-button" data-action="send-member-invite" data-member-id="${m.id}">E-posta gönder</button>
@@ -2256,7 +2542,7 @@ function makeupRequestRows(requests, {owner=false}={}){
   return requests.map(request=>{
     const missed = state.sessions.find(session=>session.id === request.missedSessionId);
     const requested = state.sessions.find(session=>session.id === request.requestedSessionId);
-    return `<div class="makeup-request"><div><strong>${request.member}</strong><small>${missed ? `${formatDateTR(missed.date)} · ${missed.time} kaçırılan seans` : 'Kaçırılan seans'}${request.note ? ` · ${request.note}` : ''}${requested ? ` · Telafi: ${formatDateTR(requested.date)} ${requested.time}` : ''}</small></div><div class="makeup-actions"><span class="status ${request.status === 'approved' ? 'good' : request.status === 'rejected' ? 'risk' : 'warn'}">${makeupStatusLabel(request.status)}</span>${owner && request.status === 'pending' ? `<button class="mini-button" data-action="approve-makeup" data-makeup-id="${request.id}">Onayla</button><button class="mini-button danger" data-action="reject-makeup" data-makeup-id="${request.id}">Reddet</button>` : ''}</div></div>`;
+    return `<div class="makeup-request"><div><strong>${esc(request.member)}</strong><small>${missed ? `${formatDateTR(missed.date)} · ${missed.time} kaçırılan seans` : 'Kaçırılan seans'}${request.note ? ` · ${esc(request.note)}` : ''}${requested ? ` · Telafi: ${formatDateTR(requested.date)} ${requested.time}` : ''}</small></div><div class="makeup-actions"><span class="status ${request.status === 'approved' ? 'good' : request.status === 'rejected' ? 'risk' : 'warn'}">${makeupStatusLabel(request.status)}</span>${owner && request.status === 'pending' ? `<button class="mini-button" data-action="approve-makeup" data-makeup-id="${request.id}">Onayla</button><button class="mini-button danger" data-action="reject-makeup" data-makeup-id="${request.id}">Reddet</button>` : ''}</div></div>`;
   }).join('') || `<div class="empty-mini">${owner ? 'Onay bekleyen telafi talebi yok.' : 'Henüz telafi talebin yok.'}</div>`;
 }
 
@@ -2272,20 +2558,20 @@ function memberMakeupPanel(member){
   const missed = state.sessions.filter(session=>session.memberId === member.id || session.member === member.name).filter(session=>session.status === 'cancelled');
   const requests = state.makeupRequests.filter(request=>request.memberId === member.id || request.member === member.name);
   if(!studio.makeupEnabled) return '';
-  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi</h2><p>İşletmenin onayladığı uygun kontenjanlar için talep oluştur.</p></div><span class="badge">İsteğe bağlı</span></div>${missed.map(session=>`<div class="makeup-request"><div><strong>${formatDateTR(session.date)} · ${session.time}</strong><small>${session.program} · ${session.room}</small></div><div class="makeup-actions"><button class="mini-button" data-action="request-makeup" data-session-id="${session.id}" data-member-id="${member.id}">Telafi iste</button></div></div>`).join('') || `<div class="empty-mini">Telafi talebi oluşturulabilecek iptal edilmiş seansın yok.</div>`}<div class="makeup-list">${makeupRequestRows(requests)}</div></article>`;
+  return `<article class="card"><div class="card-title"><div><h2>Telafi dersi</h2><p>İşletmenin onayladığı uygun kontenjanlar için talep oluştur.</p></div><span class="badge">İsteğe bağlı</span></div>${missed.map(session=>`<div class="makeup-request"><div><strong>${formatDateTR(session.date)} · ${esc(session.time)}</strong><small>${esc(session.program)} · ${esc(session.room)}</small></div><div class="makeup-actions"><button class="mini-button" data-action="request-makeup" data-session-id="${session.id}" data-member-id="${member.id}">Telafi iste</button></div></div>`).join('') || `<div class="empty-mini">Telafi talebi oluşturulabilecek iptal edilmiş seansın yok.</div>`}<div class="makeup-list">${makeupRequestRows(requests)}</div></article>`;
 }
 
 function compactSessionRows(items=sessionsForDate()){
   return items.slice(0,4).map(session=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
     <span>${session.time}</span>
-    <div><strong>${session.member} · ${session.program}</strong><small>${session.trainer} ile · ${session.room} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
+    <div><strong>${esc(session.member)} · ${esc(session.program)}</strong><small>${esc(session.trainer)} ile · ${esc(session.room)} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
 }
 
 function studioPilotRows(){
   return state.studios.map(studio=>`<button class="studio-pilot ${studio.id === state.activeStudioId ? 'active' : ''}" data-action="select-studio" data-studio-id="${studio.id}">
     ${avatarMarkup(studio.initials, studio.logoDataUrl, 'studio-avatar')}
-    <div><strong>${studio.name}</strong><small>${studio.location} · ${studio.status}</small></div>
+    <div><strong>${esc(studio.name)}</strong><small>${esc(studio.location)} · ${esc(studio.status)}</small></div>
   </button>`).join('');
 }
 
@@ -2391,7 +2677,7 @@ function financeRows(items=state.finance){
     .slice()
     .sort((a,b)=>b.date.localeCompare(a.date))
     .map(entry=>`<div class="finance-row">
-      <div><strong>${entry.title}</strong><small>${entry.category} · ${new Date(entry.date).toLocaleDateString('tr-TR')}</small></div>
+      <div><strong>${esc(entry.title)}</strong><small>${esc(entry.category)} · ${new Date(entry.date).toLocaleDateString('tr-TR')}</small></div>
       <span class="status ${entry.status === 'pending' ? 'warn' : 'good'}">${entry.status === 'pending' ? 'Bekliyor' : 'Ödendi'}</span>
       <strong class="${entry.type === 'expense' ? 'money-out' : 'money-in'}">${entry.type === 'expense' ? '−' : '+'}${formatCurrency(entry.amount)}</strong>
       <button class="mini-button danger" data-action="delete-finance" data-finance-id="${entry.id}">Sil</button>
@@ -2519,15 +2805,15 @@ function exercisePreviewPath(exercise=''){
 }
 
 function exerciseRow(exercise,index,{member=false}={}){
-  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${exercise}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
+  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${esc(exercise)}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
 }
 
 function programCards(){
   return state.programs.map(program=>{
     const assignedMember = memberByName(program.assigned);
     return `<article class="program-card">
-    <div class="card-title"><div><h2>${program.title}</h2><p>${program.goal} · ${program.duration} dk</p></div><span class="badge">${program.level}</span></div>
-    <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${program.assigned}</strong><small>Atanan üye</small></div></div>
+    <div class="card-title"><div><h2>${esc(program.title)}</h2><p>${esc(program.goal)} · ${esc(program.duration)} dk</p></div><span class="badge">${esc(program.level)}</span></div>
+    <div class="program-assignee">${avatarMarkup(assignedMember?.initials || initialsFromName(program.assigned), assignedMember?.avatarDataUrl || '')}<div><strong>${esc(program.assigned)}</strong><small>Atanan üye</small></div></div>
     <div class="program-exercises">
       ${program.exercises.slice(0,4).map((exercise,index)=>exerciseRow(exercise,index)).join('')}
     </div>
@@ -2544,8 +2830,8 @@ function programsPage(){
 function sessionRows(items=sessionsForDate()){
   const canManageBookings = state.role === 'owner' || isFormeraAdmin();
   return items.map(session=>`<div class="session-row">
-    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
-    <div><strong>${session.member}</strong><small>${session.program} · PT ${session.trainer} · ${sessionCapacityLabel(session)}</small></div>
+    <div class="session-time"><strong>${esc(session.time)}</strong><small>${esc(session.room)}</small></div>
+    <div><strong>${esc(session.member)}</strong><small>${esc(session.program)} · PT ${esc(session.trainer)} · ${sessionCapacityLabel(session)}</small></div>
     <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
     <div class="row-actions">
       ${canManageBookings && session.status === 'scheduled' ? `<button class="mini-button" data-action="reserve-session" data-session-id="${session.id}">Rezervasyon ekle</button>` : ''}
@@ -2578,7 +2864,7 @@ function calendarPage(){
   </section>
   <section class="dashboard-grid">
     <article class="card">
-      <div class="card-title"><div><h2>${formatDateTR(selectedDate)}</h2><p>Günlük akış ve durumlar</p></div><input class="date-input" id="calendarDate" type="date" value="${selectedDate}"></div>
+      <div class="card-title"><div><h2>${formatDateTR(selectedDate)}</h2><p>Günlük akış ve durumlar</p></div><input class="date-input" id="calendarDate" type="date" value="${selectedDate}" aria-label="Takvim tarihi seç"></div>
       <div class="session-list">${sessionRows(sessionsForDate(selectedDate))}</div>
     </article>
     <article class="card ai-card">
@@ -2728,7 +3014,7 @@ function growthPage(){
   <section class="dashboard-grid">
     <article class="card">
       <div class="card-title"><div><h2>AI teşhisi</h2><p>Mevcut salon verisinden çıkan iş durumu</p></div><span class="badge">${businessModeLabel(health.mode)}</span></div>
-      <div class="business-diagnosis">${businessDiagnosisItems().map(item=>`<div class="${item.tone}"><span>${item.label}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+      <div class="business-diagnosis">${businessDiagnosisItems().map(item=>`<div class="${esc(item.tone)}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong><small>${esc(item.note)}</small></div>`).join('')}</div>
     </article>
     <article class="card">
       <div class="card-title"><div><h2>7 günlük aksiyon planı</h2><p>İşletmeci ve ekip için uygulanabilir sıra</p></div><button class="secondary" data-action="copy-growth-plan">Kopyala</button></div>
@@ -2736,7 +3022,7 @@ function growthPage(){
     </article>
     <article class="card">
       <div class="card-title"><div><h2>Büyüme fırsatları</h2><p>Gelir artırma ve kayıp azaltma alanları</p></div><span class="badge">Opsiyonel</span></div>
-      <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${item.title}</span><strong>${item.value}</strong><small>${item.note}</small></div>`).join('')}</div>
+      <div class="business-opportunities">${businessGrowthOpportunities().map(item=>`<div><span>${esc(item.title)}</span><strong>${esc(item.value)}</strong><small>${esc(item.note)}</small></div>`).join('')}</div>
     </article>
     ${internalPricingCard}
   </section>`;
@@ -2790,7 +3076,7 @@ function teamCards(){
     return `<article class="team-card">
       <div class="team-head">
         ${avatarMarkup(initialsFromName(trainer.name), trainer.avatarDataUrl)}
-        <div><h2>${trainer.name}</h2><p>${trainer.role} · ${trainer.specialty}</p><small class="account-line">${escapeAttr(account.detail)}</small></div>
+        <div><h2>${esc(trainer.name)}</h2><p>${esc(trainer.role)} · ${esc(trainer.specialty)}</p><small class="account-line">${escapeAttr(account.detail)}</small></div>
         <div class="team-badges"><span class="badge">%${trainer.commission} prim</span><span class="status ${account.className}">${account.label}</span></div>
       </div>
       <div class="team-stats">
@@ -2799,7 +3085,7 @@ function teamCards(){
         <div><span>Aktif üye</span><strong>${stats.activeMembers}</strong></div>
         <div><span>Gelir katkısı</span><strong>${formatCurrency(stats.revenue)}</strong></div>
       </div>
-      <div class="team-footer"><small>${trainer.phone || 'Telefon eklenmedi'} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="send-trainer-invite" data-trainer-id="${trainer.id}">E-posta gönder</button><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Bağlantıyı kopyala</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
+      <div class="team-footer"><small>${esc(trainer.phone || 'Telefon eklenmedi')} · Tahmini prim ${formatCurrency(estimatedCommission)}</small><div class="row-actions"><button class="mini-button" data-action="send-trainer-invite" data-trainer-id="${trainer.id}">E-posta gönder</button><button class="mini-button" data-action="copy-trainer-invite" data-trainer-id="${trainer.id}">Bağlantıyı kopyala</button><button class="mini-button danger" data-action="delete-trainer" data-trainer-id="${trainer.id}">Sil</button></div></div>
     </article>`;
   }).join('');
 }
@@ -2849,7 +3135,7 @@ function trainerTaskRows(items=state.trainerTasks){
     .slice()
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
-      <div><strong>${task.title}</strong><small>${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${esc(task.trainer)} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
       <div class="row-actions">
         ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
@@ -2874,7 +3160,7 @@ function memberTaskRows(items, {owner=false}={}){
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row member-task ${task.status === 'done' ? 'done' : ''}">
       <span class="task-type ${task.type}">${memberTaskTypeIcon(task.type)}</span>
-      <div><strong>${task.title}</strong><small>${memberTaskTypeLabel(task.type)} · ${task.member} · ${task.trainer} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${memberTaskTypeLabel(task.type)} · ${esc(task.member)} · ${esc(task.trainer)} · ${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : memberTaskTypeStatus(task.type)}">${task.status === 'done' ? 'Tamamlandı' : memberTaskTypeLabel(task.type)}</span>
       <div class="row-actions">
         ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-member-task" data-member-task-id="${task.id}">Tamamla</button>`}
@@ -2925,8 +3211,8 @@ function selectedProgramForMember(memberName){
 function trainerSessionRows(){
   const sessions = sessionsForDate().filter(session=>session.trainer === state.trainerName);
   return sessions.map(session=>`<div class="session-row">
-    <div class="session-time"><strong>${session.time}</strong><small>${session.room}</small></div>
-    <div><strong>${session.member}</strong><small>${session.program} · ${sessionStatusLabel(session.status)}</small></div>
+    <div class="session-time"><strong>${esc(session.time)}</strong><small>${esc(session.room)}</small></div>
+    <div><strong>${esc(session.member)}</strong><small>${esc(session.program)} · ${sessionStatusLabel(session.status)}</small></div>
     <span class="status ${sessionStatusClass(session.status)}">${sessionStatusLabel(session.status)}</span>
     <div class="row-actions">
       <button class="mini-button" data-action="complete-session" data-session-id="${session.id}">Tamamla</button>
@@ -2938,10 +3224,10 @@ function trainerSessionRows(){
 function trainerClientRows(){
   const clients = state.members.filter(member=>isMemberAssignedToSpecialist(member, state.trainerName));
   return clients.map(member=>`<div class="member-row">
-    <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${member.name}</strong><small>${member.phone || 'Telefon yok'}</small></div></div>
+    <div class="member">${avatarMarkup(member.initials, member.avatarDataUrl)}<div><strong>${esc(member.name)}</strong><small>${esc(member.phone || 'Telefon yok')}</small></div></div>
     <span><small class="cell-label">Son ziyaret</small><br>${member.last}</span>
     <span><small class="cell-label">Seans</small><br>${member.sessions}</span>
-    <span class="status ${member.type}">${member.status}</span>
+    <span class="status ${esc(member.type)}">${esc(member.status)}</span>
     <div class="row-actions"><button class="mini-button" data-action="add-member-task" data-member-name="${escapeAttr(member.name)}">Aksiyon</button><button class="mini-button" data-action="checkin-member" data-member-id="${member.id}">Geldi</button></div>
   </div>`).join('') || `<div class="empty-mini">Henüz atanmış danışan yok.</div>`;
 }
@@ -2949,7 +3235,7 @@ function trainerClientRows(){
 function trainerProgramRows(){
   const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && isMemberAssignedToSpecialist(member, state.trainerName)));
   return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
-    <span>▤</span><div><strong>${program.title}</strong><small>${program.assigned} · ${program.duration} dk · ${program.level}</small></div>
+    <span>▤</span><div><strong>${esc(program.title)}</strong><small>${esc(program.assigned)} · ${esc(program.duration)} dk · ${esc(program.level)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
 }
 
@@ -2963,7 +3249,7 @@ function trainerOwnTaskRows(){
     .slice()
     .sort((a,b)=>Number(a.status === 'done') - Number(b.status === 'done') || a.dueDate.localeCompare(b.dueDate))
     .map(task=>`<div class="task-row ${task.status === 'done' ? 'done' : ''}">
-      <div><strong>${task.title}</strong><small>${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${task.note || 'Not yok'}</small></div>
+      <div><strong>${esc(task.title)}</strong><small>${new Date(`${task.dueDate}T12:00:00`).toLocaleDateString('tr-TR')} · ${esc(task.note || 'Not yok')}</small></div>
       <span class="status ${task.status === 'done' ? 'good' : taskPriorityClass(task.priority)}">${task.status === 'done' ? 'Tamamlandı' : taskPriorityLabel(task.priority)}</span>
       ${task.status === 'done' ? '' : `<button class="mini-button" data-action="complete-trainer-task" data-task-id="${task.id}">Tamamla</button>`}
     </div>`).join('') || `<div class="empty-mini">İşletmeciden atanmış görev yok.</div>`;
@@ -2996,7 +3282,7 @@ function trainerDashboard(){
   const openClientActions = clientActions.filter(task=>task.status === 'open').length;
   const specialistLabel = trainer.accountRole === 'dietitian' ? 'DİYETİSYEN' : 'ANTRENÖR';
   const actionLabel = trainer.accountRole === 'dietitian' ? 'Beslenme notu' : 'Üye aksiyonu';
-  return `<div class="welcome"><div><span class="eyebrow">${specialistLabel} ALANI · ${activeStudio().name}</span><h1>Merhaba ${trainer.name}, bugünün akışı hazır.</h1><p>${trainer.specialty} uzmanlığı için atanmış danışan ve ekip notlarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ ${actionLabel}</button>${trainer.accountRole === 'dietitian' ? '' : '<button class="primary" data-action="add-session">+ Seans planla</button>'}</div></div>
+  return `<div class="welcome"><div><span class="eyebrow">${specialistLabel} ALANI · ${esc(activeStudio().name)}</span><h1>Merhaba ${esc(trainer.name)}, bugünün akışı hazır.</h1><p>${esc(trainer.specialty)} uzmanlığı için atanmış danışan ve ekip notlarını buradan takip et.</p></div><div class="welcome-actions"><button class="secondary" data-action="add-member-task">+ ${actionLabel}</button>${trainer.accountRole === 'dietitian' ? '' : '<button class="primary" data-action="add-session">+ Seans planla</button>'}</div></div>
   <section class="metrics">
     ${metric('Bugünkü seans',String(stats.todayTotal),'sana atanmış','□')}
     ${metric('Tamamlanan',String(stats.done),'bugün','✓')}
@@ -3333,7 +3619,7 @@ function pilotPage(){
       </div>
       <div class="report-list">
         <div><span>Son yedek zamanı</span><strong>${new Date(payload.exportedAt).toLocaleString('tr-TR')}</strong></div>
-        <div><span>Aktif stüdyo</span><strong>${activeStudio().name}</strong></div>
+        <div><span>Aktif stüdyo</span><strong>${esc(activeStudio().name)}</strong></div>
         <div><span>Yedek formatı</span><strong>Formera v${payload.version}</strong></div>
       </div>
     </article>
@@ -3372,8 +3658,8 @@ function memberDashboard(){
   const actions = memberTasksForMember(memberName);
   const openActions = actions.filter(task=>task.status === 'open').length;
   const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
-  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${member.name.split(' ')[0] || member.name}, hazırsan başlayalım.</h1><p>${activeStudio().name} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
-  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${member.dietitian}` : 'sorumlu PT','♧')}</section>
+  return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
+  <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
@@ -3381,7 +3667,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Bakım ekibi notları</h2><p>Antrenör ve diyetisyenin program, beslenme ve takip görevleri</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
   ${memberMakeupPanel(member)}
   <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>
-  <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${memberName}"><strong>${item.title}</strong><small>${item.goal} · ${item.duration} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
+  <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${esc(memberName)}"><strong>${esc(item.title)}</strong><small>${esc(item.goal)} · ${esc(item.duration)} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
   <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
 
@@ -5201,9 +5487,22 @@ if(initialSupabaseConfig){
   state.backend.loading = true;
 }
 render();
-initSupabase().finally(()=>{
-  if(initialInvite && !state.backend.connected) openSupabaseModal();
-});
+initSupabase()
+  .catch(error=>{
+    // Beklenmeyen bir ağ/kütüphane hatası açılışı kilitlememeli.
+    console.warn('Canlı bağlantı başlatılamadı.', error);
+    state.backend.error = 'Canlı veri bağlantısı kurulamadı. Panel bu cihazdaki verilerle açıldı.';
+  })
+  .finally(()=>{
+    // Son savunma hattı: initSupabase hangi yoldan dönerse dönsün açılış
+    // ekranı "hazırlanıyor" durumunda asılı kalamaz.
+    if(state.backend.loading){
+      state.backend.loading = false;
+      updateBackendShell();
+      render();
+    }
+    if(initialInvite && !state.backend.connected) openSupabaseModal();
+  });
 if(!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !readSupabaseConfig()){
   setTimeout(()=>openOnboardingModal(), 450);
 }

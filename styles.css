@@ -423,3 +423,37 @@
     opacity:1!important;
   }
 }
+
+/* --- Dar ekran düzeltmeleri (320px sınıfı cihazlar) -----------------------
+   Ölçüm: 320px'de panel sayfaları 8–47px yatay taşıyordu; sayfa yana kayıyordu.
+   Kaynaklar: sarmayan aksiyon satırları ve sabit boşluklu grafik. En dar
+   breakpoint 420px'ti, altı hiç ele alınmamıştı. */
+body{overflow-x:clip}
+
+/* Üst çubuk ve satır aksiyonları dar ekranda alta sarmalı. */
+.top-actions{flex-wrap:wrap;row-gap:8px}
+
+/* Kart bir grid/flex ogesi oldugunda varsayilan min-width:auto, icerigin
+   dogal genisliginin altina inmesini engelliyor; 320px'de kart 341px'e
+   buyuyup sayfayi yana kaydiriyordu. */
+.card,.page-card{min-width:0}
+.chart,.chart-legend{min-width:0}
+
+@media(max-width:420px){
+  /* Uye satirindaki 6 aksiyon butonu 'auto' sutunu geriyordu. */
+  .member-row{grid-template-columns:minmax(0,1fr)}
+  .member-row .row-actions{justify-content:flex-start}
+  .chart-legend{flex-wrap:wrap;row-gap:6px}
+}
+
+@media(max-width:380px){
+  .top-actions{gap:8px}
+  .row-actions{gap:4px;justify-content:flex-start}
+  .mini-button{padding:6px 7px;font-size:9px}
+  /* Grafik cubuklari arasi bosluk 320px'de tasmanin diger kaynagiydi. */
+  .chart{gap:4px;padding:12px 2px 0}
+  .bar-group{gap:2px}
+  .page-toolbar{flex-wrap:wrap;gap:8px}
+  .card,.page-card{padding:16px}
+  .finance-row{grid-template-columns:1fr auto;row-gap:6px}
+}

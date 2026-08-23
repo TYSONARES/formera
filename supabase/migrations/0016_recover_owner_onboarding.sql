@@ -71,3 +71,4 @@ end;
 $$;
 
 grant execute on function public.recover_owner_onboarding() to authenticated;
+revoke execute on function public.recover_owner_onboarding() from public, anon;
