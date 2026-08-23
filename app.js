@@ -2277,9 +2277,11 @@ function setAvatarElement(element, initials, imageDataUrl=''){
   element.textContent = imageDataUrl ? '' : initials;
 }
 
-function imageFileToDataUrl(file, maxSize=420){
+// Görseli tuvalde küçültüp bir <canvas> döndürür. Hem data URL hem de
+// Storage yüklemesi bu tek boyutlandırma mantığını paylaşır.
+function resizeImageToCanvas(file, maxSize=420){
   return new Promise((resolve, reject)=>{
-    if(!file) return resolve('');
+    if(!file) return reject(new Error('Görsel dosyası seçilmedi.'));
     if(!file.type?.startsWith('image/')) return reject(new Error('Görsel dosyası seçilmedi.'));
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Görsel okunamadı.'));
@@ -2291,14 +2293,62 @@ function imageFileToDataUrl(file, maxSize=420){
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.78));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas);
       };
       image.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+}
+
+function imageFileToDataUrl(file, maxSize=420){
+  if(!file) return Promise.resolve('');
+  return resizeImageToCanvas(file, maxSize).then(canvas=>canvas.toDataURL('image/jpeg', 0.78));
+}
+
+function canvasToJpegBlob(canvas){
+  return new Promise(resolve=>canvas.toBlob(resolve, 'image/jpeg', 0.78));
+}
+
+// --- Görsel depolama --------------------------------------------------------
+// Eskiden görseller base64 metin olarak satırın içinde saklanıyordu; bir logo
+// tek başına 1.5 MB'a kadar çıkıyor ve her `select` onu da çekiyordu.
+// Artık canlı oturumda dosya `formera-media` bucket'ına yüklenir ve satırda
+// yalnızca kısa bir https adresi tutulur.
+//
+// Dönüş değeri her iki durumda da bir URL olduğu için render katmanı (avatarStyle,
+// setAvatarElement) değişmeden çalışır; eski data: URL kayıtları da geçerli kalır.
+const MEDIA_BUCKET = 'formera-media';
+
+async function storeImageFile(file, {kind='image', id='', maxSize=420} = {}){
+  if(!file?.size) return '';
+  const canvas = await resizeImageToCanvas(file, maxSize);
+  const studioId = studioIdForRemote();
+
+  if(isSupabaseReady() && studioId){
+    const blob = await canvasToJpegBlob(canvas);
+    if(blob){
+      // Yol kuralı <studio_id>/... — Storage politikası stüdyoyu buradan doğrular.
+      const safeId = String(id || 'x').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'x';
+      const path = `${studioId}/${kind}-${safeId}-${Date.now()}.jpg`;
+      try{
+        const {error} = await state.backend.client.storage
+          .from(MEDIA_BUCKET)
+          .upload(path, blob, {contentType:'image/jpeg', upsert:true});
+        if(!error){
+          const {data} = state.backend.client.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+          if(data?.publicUrl) return data.publicUrl;
+        }else{
+          console.warn('Görsel Storage\'a yüklenemedi, satır içine gömülüyor.', error);
+        }
+      }catch(error){
+        console.warn('Görsel Storage\'a yüklenemedi, satır içine gömülüyor.', error);
+      }
+    }
+  }
+  // Demo modunda, oturum yokken veya yükleme başarısızsa eski davranış sürer.
+  return canvas.toDataURL('image/jpeg', 0.78);
 }
 
 function memberByName(name){
@@ -4346,6 +4396,10 @@ async function provisionLiveStudio({studio, trainer, member, program, ownerName}
   }
 }
 
+// Not: submit handler'larinda e.currentTarget yerine e.target kullanilir.
+// currentTarget olay dagitimi bittikten sonra null'a doner; bu handler'lar
+// async ve icinde await var (gorsel yukleme), dolayisiyla reset() sirasinda
+// currentTarget zaten null oluyordu.
 async function completeOnboarding(form){
   const data = new FormData(form);
   const studioName = data.get('studioName').trim();
@@ -4354,7 +4408,9 @@ async function completeOnboarding(form){
     ? normalizeStudio({id:makeId(), name:studioName, initials:initialsFromName(studioName)})
     : activeStudio();
   const logoFile = data.get('studioLogo');
-  const logoDataUrl = logoFile?.size ? await imageFileToDataUrl(logoFile, 520) : studio.logoDataUrl;
+  const logoDataUrl = logoFile?.size
+    ? await storeImageFile(logoFile, {kind:'logo', id:studio.id, maxSize:520})
+    : studio.logoDataUrl;
   const trainerName = data.get('trainerName').trim();
   const trainerEmail = data.get('trainerEmail').trim().toLocaleLowerCase('tr');
   const memberName = data.get('memberName').trim();
@@ -5071,7 +5127,7 @@ memberForm.onsubmit=async e=>{
   const sessions = current ? `${parseSessions(current.sessions).used} / ${total}` : `0 / ${total}`;
   let avatarDataUrl = current?.avatarDataUrl || '';
   const avatarFile = data.get('avatar');
-  if(avatarFile?.size) avatarDataUrl = await imageFileToDataUrl(avatarFile, 420);
+  if(avatarFile?.size) avatarDataUrl = await storeImageFile(avatarFile, {kind:'avatar', id:current?.id, maxSize:420});
   const email = data.get('email').trim().toLocaleLowerCase('tr');
   const member = normalizeMember({
     ...(current || {}),
@@ -5097,7 +5153,7 @@ memberForm.onsubmit=async e=>{
   }
   saveMembers();
   memberModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   e.currentTarget.dataset.editingId = '';
   render();
   showToast(email ? `${name} kaydedildi. Üye listesinden “E-posta gönder”e basıp daveti onaylayabilirsin.` : `${name} kaydı ${current ? 'güncellendi' : 'oluşturuldu'}.`);
@@ -5119,7 +5175,7 @@ financeForm.onsubmit=e=>{
   state.finance.unshift(entry);
   saveFinance();
   financeModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${entry.type === 'expense' ? 'Gider' : 'Gelir'} kaydedildi: ${formatCurrency(entry.amount)}`);
 };
@@ -5139,7 +5195,7 @@ programForm.onsubmit=e=>{
   state.programs.unshift(program);
   savePrograms();
   programModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${program.title} programı oluşturuldu.`);
 };
@@ -5170,7 +5226,7 @@ sessionForm.onsubmit=e=>{
   state.calendarDate = session.date;
   saveSessions();
   sessionModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(isMakeupSlot ? `${session.time} için telafi dersi kontenjanı açıldı.` : `${session.member} için ${session.time} seansı eklendi.`);
 };
@@ -5179,7 +5235,9 @@ trainerForm.onsubmit=async e=>{
   e.preventDefault();
   const data = new FormData(e.currentTarget);
   const avatarFile = data.get('avatar');
-  const avatarDataUrl = avatarFile?.size ? await imageFileToDataUrl(avatarFile, 420) : '';
+  const avatarDataUrl = avatarFile?.size
+          ? await storeImageFile(avatarFile, {kind:'avatar', maxSize:420})
+          : '';
   const email = data.get('email').trim().toLocaleLowerCase('tr');
   const trainer = normalizeTrainer({
     id: makeId(),
@@ -5196,7 +5254,7 @@ trainerForm.onsubmit=async e=>{
   state.team.push(trainer);
   saveTeam();
   trainerModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(email ? `${trainer.name} ekibe eklendi. Ekip kartından “E-posta gönder”e basıp daveti onaylayabilirsin.` : `${trainer.name} ekibe eklendi.`);
 };
@@ -5220,7 +5278,7 @@ trainerTaskForm.onsubmit=e=>{
   state.trainerTasks.unshift(task);
   saveTrainerTasks();
   trainerTaskModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${task.trainer} için görev gönderildi.`);
 };
@@ -5247,7 +5305,7 @@ memberTaskForm.onsubmit=e=>{
   state.memberTasks.unshift(task);
   saveMemberTasks();
   memberTaskModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${task.member} için ${memberTaskTypeLabel(task.type).toLocaleLowerCase('tr')} aksiyonu gönderildi.`);
 };
@@ -5274,7 +5332,7 @@ pilotLeadForm.onsubmit=e=>{
   state.pilotLeads.unshift(lead);
   savePilotLeads();
   pilotLeadModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${lead.studio} pilot aday listesine eklendi.`);
 };
@@ -5284,7 +5342,9 @@ studioBrandForm.onsubmit=async e=>{
   const data = new FormData(e.currentTarget);
   const studio = activeStudio();
   const logoFile = data.get('logo');
-  const logoDataUrl = logoFile?.size ? await imageFileToDataUrl(logoFile, 520) : studio.logoDataUrl;
+  const logoDataUrl = logoFile?.size
+    ? await storeImageFile(logoFile, {kind:'logo', id:studio.id, maxSize:520})
+    : studio.logoDataUrl;
   const name = data.get('name').trim();
   const updated = normalizeStudio({
     ...studio,
@@ -5303,7 +5363,7 @@ studioBrandForm.onsubmit=async e=>{
   state.studios = state.studios.map(item=>item.id === studio.id ? updated : item);
   saveStudios();
   studioBrandModal.close();
-  e.currentTarget.reset();
+  e.target.reset();
   render();
   showToast(`${updated.name} marka ayarları güncellendi.`);
 };

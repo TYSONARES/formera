@@ -98,3 +98,19 @@ python3 tests/pii_leak_test.py
 ```
 
 Düzeltme öncesi bu test 7 kontrolün 6'sında sızıntı raporluyordu.
+
+## storage_test.py — görsel Storage'a mı yükleniyor?
+
+Sahte Supabase oturumu ve sahte Storage ucu kurar, marka formundan bir logo
+yükler, sonra kontrol eder:
+
+1. Dosya Storage'a POST edildi mi
+2. Yol `<studio_id>/` ile mi başlıyor (politika stüdyoyu buradan doğruluyor)
+3. `studios` satırına yazılan değer base64 **değil**, kısa bir https adresi mi
+
+Ölçüm: satırdaki değer 1.5 MB'a kadar base64 yerine 160 karakter.
+
+```bash
+python3 -m http.server 8899
+python3 tests/storage_test.py
+```
