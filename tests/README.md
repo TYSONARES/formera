@@ -114,3 +114,12 @@ yükler, sonra kontrol eder:
 python3 -m http.server 8899
 python3 tests/storage_test.py
 ```
+
+## sql/check_logo.sql — logo Storage'a mı gitti?
+
+Salt okunur. İki soruyu birden cevaplar: `studios.logo_data_url` eski base64
+biçiminde mi yoksa Storage adresi mi, ve `formera-media` bucket'ında gerçekten
+dosya var mı.
+
+Üç durumu ayırt ettiği yerel Postgres'te doğrulandı: boş / eski base64 /
+Storage adresi.
