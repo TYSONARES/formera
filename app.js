@@ -2350,9 +2350,29 @@ function canvasToBlob(canvas, fmt){
 // setAvatarElement) değişmeden çalışır; eski data: URL kayıtları da geçerli kalır.
 const MEDIA_BUCKET = 'formera-media';
 
+// Form kaydini gorsel hatasi yuzunden sessizce oldurmemek icin sarmalayici.
+// Hata olursa kullaniciya gercek sebebi soyler ve null doner; cagiran taraf
+// kaydi gorselsiz surdurup surdurmeyecegine karar verir.
+async function storeImageFileSafe(file, options){
+  try{
+    return {ok:true, url: await storeImageFile(file, options)};
+  }catch(error){
+    console.warn('Görsel yüklenemedi.', error);
+    showToast(error.message || 'Görsel yüklenemedi.');
+    return {ok:false, url:''};
+  }
+}
+
 async function storeImageFile(file, {kind='image', id='', maxSize=420} = {}){
   if(!file?.size) return '';
-  const canvas = await resizeImageToCanvas(file, maxSize);
+  let canvas;
+  try{
+    canvas = await resizeImageToCanvas(file, maxSize);
+  }catch(error){
+    // Bozuk veya desteklenmeyen görsel. Hatayı yukarı taşı ki form kaydı
+    // sessizce ölmesin; çağıran taraf kullanıcıya anlamlı mesaj gösterir.
+    throw new Error(`Görsel işlenemedi (${file.name || 'dosya'}). Farklı bir PNG veya JPEG dene.`);
+  }
   const studioId = studioIdForRemote();
 
   const fmt = pickImageFormat(canvas);
@@ -4439,9 +4459,12 @@ async function completeOnboarding(form){
     ? normalizeStudio({id:makeId(), name:studioName, initials:initialsFromName(studioName)})
     : activeStudio();
   const logoFile = data.get('studioLogo');
-  const logoDataUrl = logoFile?.size
-    ? await storeImageFile(logoFile, {kind:'logo', id:studio.id, maxSize:520})
-    : studio.logoDataUrl;
+  let logoDataUrl = studio.logoDataUrl;
+  if(logoFile?.size){
+    const result = await storeImageFileSafe(logoFile, {kind:'logo', id:studio.id, maxSize:520});
+    if(!result.ok) return;
+    logoDataUrl = result.url;
+  }
   const trainerName = data.get('trainerName').trim();
   const trainerEmail = data.get('trainerEmail').trim().toLocaleLowerCase('tr');
   const memberName = data.get('memberName').trim();
@@ -5158,7 +5181,11 @@ memberForm.onsubmit=async e=>{
   const sessions = current ? `${parseSessions(current.sessions).used} / ${total}` : `0 / ${total}`;
   let avatarDataUrl = current?.avatarDataUrl || '';
   const avatarFile = data.get('avatar');
-  if(avatarFile?.size) avatarDataUrl = await storeImageFile(avatarFile, {kind:'avatar', id:current?.id, maxSize:420});
+  if(avatarFile?.size){
+          const result = await storeImageFileSafe(avatarFile, {kind:'avatar', id:current?.id, maxSize:420});
+          if(!result.ok) return;
+          avatarDataUrl = result.url;
+        }
   const email = data.get('email').trim().toLocaleLowerCase('tr');
   const member = normalizeMember({
     ...(current || {}),
@@ -5266,9 +5293,12 @@ trainerForm.onsubmit=async e=>{
   e.preventDefault();
   const data = new FormData(e.currentTarget);
   const avatarFile = data.get('avatar');
-  const avatarDataUrl = avatarFile?.size
-          ? await storeImageFile(avatarFile, {kind:'avatar', maxSize:420})
-          : '';
+  let avatarDataUrl = '';
+        if(avatarFile?.size){
+          const result = await storeImageFileSafe(avatarFile, {kind:'avatar', maxSize:420});
+          if(!result.ok) return;
+          avatarDataUrl = result.url;
+        }
   const email = data.get('email').trim().toLocaleLowerCase('tr');
   const trainer = normalizeTrainer({
     id: makeId(),
@@ -5373,9 +5403,12 @@ studioBrandForm.onsubmit=async e=>{
   const data = new FormData(e.currentTarget);
   const studio = activeStudio();
   const logoFile = data.get('logo');
-  const logoDataUrl = logoFile?.size
-    ? await storeImageFile(logoFile, {kind:'logo', id:studio.id, maxSize:520})
-    : studio.logoDataUrl;
+  let logoDataUrl = studio.logoDataUrl;
+  if(logoFile?.size){
+    const result = await storeImageFileSafe(logoFile, {kind:'logo', id:studio.id, maxSize:520});
+    if(!result.ok) return;            // hata mesaji gosterildi, modal acik kalir
+    logoDataUrl = result.url;
+  }
   const name = data.get('name').trim();
   const updated = normalizeStudio({
     ...studio,
