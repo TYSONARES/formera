@@ -457,3 +457,26 @@ body{overflow-x:clip}
   .card,.page-card{padding:16px}
   .finance-row{grid-template-columns:1fr auto;row-gap:6px}
 }
+
+/* --- Daraltılmış kenar çubuğunda işletmenin kendi logosu ------------------
+   Menü kapandığında Formera'nın "F" işareti kalıyor, işletmenin logosu
+   kayboluyordu. İşletme kendi panelinde kendi markasını görmeli; Formera
+   imzası zaten açık menüde "powered by formera" olarak duruyor.
+   Yalnızca canlı oturumda, owner rolünde ve kurulum tamamlanmışsa devreye
+   girer (.has-studio-brand sınıfını updateStudioShell yönetir). */
+.app-shell.sidebar-collapsed .brand.has-studio-brand .dashboard-brand-mark{
+  display:none!important;
+}
+.app-shell.sidebar-collapsed .brand.has-studio-brand .sidebar-studio-brand{
+  display:flex!important;
+  justify-content:center;
+}
+/* Daraltılmışken yalnızca logo; stüdyo adı ve alt yazı gizli. */
+.app-shell.sidebar-collapsed .brand.has-studio-brand .sidebar-studio-copy{
+  display:none!important;
+}
+.app-shell.sidebar-collapsed .brand.has-studio-brand .sidebar-studio-avatar{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+}

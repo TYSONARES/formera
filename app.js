@@ -2371,7 +2371,13 @@ async function storeImageFile(file, {kind='image', id='', maxSize=420} = {}){
   }catch(error){
     // Bozuk veya desteklenmeyen görsel. Hatayı yukarı taşı ki form kaydı
     // sessizce ölmesin; çağıran taraf kullanıcıya anlamlı mesaj gösterir.
-    throw new Error(`Görsel işlenemedi (${file.name || 'dosya'}). Farklı bir PNG veya JPEG dene.`);
+    // HEIC/HEIF (iPhone varsayılanı) ve TIFF tarayıcıda açılmaz; kullanıcıya
+    // ne yapacağını söyle, "işlenemedi" deyip bırakma.
+    const ad = (file.name || 'dosya');
+    const heic = /\.(heic|heif)$/i.test(ad);
+    throw new Error(heic
+      ? `${ad} biçimi tarayıcıda açılamıyor. Fotoğrafı JPEG veya PNG olarak kaydedip tekrar dene.`
+      : `Görsel işlenemedi (${ad}). PNG, JPEG, WebP, GIF veya SVG kullan.`);
   }
   const studioId = studioIdForRemote();
 
