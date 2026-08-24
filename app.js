@@ -2302,13 +2302,42 @@ function resizeImageToCanvas(file, maxSize=420){
   });
 }
 
-function imageFileToDataUrl(file, maxSize=420){
-  if(!file) return Promise.resolve('');
-  return resizeImageToCanvas(file, maxSize).then(canvas=>canvas.toDataURL('image/jpeg', 0.78));
+// Tuvalde saydam piksel var mi? JPEG saydamligi desteklemez; saydam zeminli
+// bir logo JPEG'e cevrildiginde bos alanlar SIYAH oluyordu. Logolar zaten duz
+// renkli oldugu icin PNG genelde hem daha kucuk hem kayipsiz.
+function canvasHasAlpha(canvas){
+  try{
+    const {width, height} = canvas;
+    const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+    for(let i = 3; i < data.length; i += 4){
+      if(data[i] < 255) return true;
+    }
+  }catch(error){
+    // getImageData bir sebeple engellenirse saydam varsay: PNG kayipsizdir,
+    // yanlis tarafa dusmenin maliyeti yalnizca biraz daha buyuk dosya.
+    return true;
+  }
+  return false;
 }
 
-function canvasToJpegBlob(canvas){
-  return new Promise(resolve=>canvas.toBlob(resolve, 'image/jpeg', 0.78));
+// Saydamlik varsa PNG, yoksa JPEG. Fotograf (avatar) JPEG'de cok daha kucuk,
+// logo PNG'de hem dogru hem kucuk kaliyor.
+function pickImageFormat(canvas){
+  return canvasHasAlpha(canvas)
+    ? {mime:'image/png',  ext:'png', quality:undefined}
+    : {mime:'image/jpeg', ext:'jpg', quality:0.78};
+}
+
+function imageFileToDataUrl(file, maxSize=420){
+  if(!file) return Promise.resolve('');
+  return resizeImageToCanvas(file, maxSize).then(canvas=>{
+    const fmt = pickImageFormat(canvas);
+    return canvas.toDataURL(fmt.mime, fmt.quality);
+  });
+}
+
+function canvasToBlob(canvas, fmt){
+  return new Promise(resolve=>canvas.toBlob(resolve, fmt.mime, fmt.quality));
 }
 
 // --- Görsel depolama --------------------------------------------------------
@@ -2326,16 +2355,18 @@ async function storeImageFile(file, {kind='image', id='', maxSize=420} = {}){
   const canvas = await resizeImageToCanvas(file, maxSize);
   const studioId = studioIdForRemote();
 
+  const fmt = pickImageFormat(canvas);
+
   if(isSupabaseReady() && studioId){
-    const blob = await canvasToJpegBlob(canvas);
+    const blob = await canvasToBlob(canvas, fmt);
     if(blob){
       // Yol kuralı <studio_id>/... — Storage politikası stüdyoyu buradan doğrular.
       const safeId = String(id || 'x').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'x';
-      const path = `${studioId}/${kind}-${safeId}-${Date.now()}.jpg`;
+      const path = `${studioId}/${kind}-${safeId}-${Date.now()}.${fmt.ext}`;
       try{
         const {error} = await state.backend.client.storage
           .from(MEDIA_BUCKET)
-          .upload(path, blob, {contentType:'image/jpeg', upsert:true});
+          .upload(path, blob, {contentType:fmt.mime, upsert:true});
         if(!error){
           const {data} = state.backend.client.storage.from(MEDIA_BUCKET).getPublicUrl(path);
           if(data?.publicUrl) return data.publicUrl;
@@ -2348,7 +2379,7 @@ async function storeImageFile(file, {kind='image', id='', maxSize=420} = {}){
     }
   }
   // Demo modunda, oturum yokken veya yükleme başarısızsa eski davranış sürer.
-  return canvas.toDataURL('image/jpeg', 0.78);
+  return canvas.toDataURL(fmt.mime, fmt.quality);
 }
 
 function memberByName(name){
