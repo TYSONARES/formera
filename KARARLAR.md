@@ -59,3 +59,46 @@ Yerel PostgreSQL 16'da ölçüldü: doğru sırada 1 program, yanlış sırada 0
 
 **Kilit varsayım.** Canlı veritabanında bu dosyaların hangilerinin uygulandığı
 `tests/sql/diagnose.sql` ile okunacak; körlemesine yeniden çalıştırma yapılmadı.
+
+---
+
+## 2026-08-24 · KRR-formera-05 · `studios` istemciden yalnızca UPDATE ile yazılır
+
+**Karar.** `syncRemote` artık `studios` için `upsert` değil, satır başına
+`update().eq('id', …)` kullanıyor (`UPDATE_ONLY_TABLES`). `studios` üzerine
+INSERT politikası **eklenmedi**.
+
+**Gerekçe.** PostgREST'in `upsert`'i `insert ... on conflict do update`
+üretiyor; Postgres bu ifadede önce INSERT politikasını arıyor. `studios`
+üzerinde INSERT politikası yok (satır kurulum Edge Function'ı ile oluşur),
+bu yüzden her marka / işletme bilgisi kaydı sunucuda RLS ile reddediliyordu.
+Ekranda "güncellendi" yazıyor, `logo_data_url` / `phone` / `address` NULL
+kalıyordu; bu yüzden kurulum rehberindeki "İşletme bilgileri" adımı hiç
+tamamlanmıyor ve stüdyo logosu her yenilemede kayboluyordu.
+
+Yerel Postgres'te ölçüldü: aynı veriyle düz `update` 1 satır yazıyor,
+`insert ... on conflict` `new row violates row-level security policy` veriyor.
+Kontrol edildi: `syncRemote`'un yazdığı 11 tablodan INSERT politikası eksik
+olan tek tablo `studios`.
+
+**Kilit varsayım.** İstemci hiçbir zaman yeni stüdyo satırı oluşturmaz;
+oluşturma `create_studio` Edge Function'ının işidir. Bu değişirse INSERT
+politikası gerekir. INSERT'i kapalı tutmak, politika eklemekten daha dar
+bir yüzey bırakır.
+
+---
+
+## 2026-08-24 · KRR-formera-06 · Sunucu yazma hatası her zaman görünür olmalı
+
+**Karar.** `remoteError`, hesap penceresi kapalıyken hatayı `showToast` ile
+de gösterir.
+
+**Gerekçe.** Hata yalnızca hesap penceresinin içindeki `accountAlert`
+alanına yazılıyordu. Pencere kapalıyken sunucunun 403'ü kullanıcıya hiç
+ulaşmıyor, form ise başarı mesajı veriyordu. KRR-formera-05'teki hatanın
+haftalarca fark edilmemesinin sebebi budur: sessiz başarısızlık, hatanın
+kendisinden daha pahalıya mal oldu.
+
+**Kilit varsayım.** Toast metni sunucudan gelen ham `error.message`. Teknik
+görünüyor ama yanlış "başarılı" mesajından iyidir; ileride kullanıcı diline
+çevrilebilir.

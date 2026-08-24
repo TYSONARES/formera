@@ -1014,6 +1014,10 @@ function remoteError(error, fallback='Canlı veri işleminde hata oluştu.'){
   state.backend.error = error.message || fallback;
   updateBackendShell();
   showAccountMessage(state.backend.error, 'error');
+  // showAccountMessage yalnizca hesap penceresinin icine yaziyor. Pencere
+  // kapaliyken sunucu hatasi hic gorunmuyordu: form "guncellendi" diyor,
+  // kayit sunucuya hic gitmiyordu. Basarisiz yazma her zaman gorunmeli.
+  if(!isAccountModalOpen()) showToast(state.backend.error);
 }
 
 function isAccountModalOpen(){
@@ -1757,6 +1761,15 @@ function markRowsSynced(table, rows, keyOf){
   rows.forEach(row=>store.set(keyOf(row), rowSignature(row)));
 }
 
+// Bu tablodaki satirlar sunucu tarafinda (kurulum RPC'si) olusturulur; panel
+// yalnizca var olan satiri gunceller. upsert kullanmak PostgREST'te
+// `insert ... on conflict do update` uretiyor ve Postgres bu ifadede once
+// INSERT politikasini ariyor. studios uzerinde INSERT politikasi bilincli
+// olarak yok, bu yuzden her marka / isletme bilgisi kaydi sunucuda RLS'e
+// takiliyordu. Yerel Postgres'te olctuk: duz UPDATE 1 satir yaziyor, ayni
+// veriyle upsert "new row violates row-level security policy" veriyor.
+const UPDATE_ONLY_TABLES = new Set(['studios']);
+
 async function syncRemote(table, rows){
   if(!isSupabaseReady()) return;
   const validRows = rows.filter(row=>row.id && isUuid(row.id));
@@ -1768,7 +1781,17 @@ async function syncRemote(table, rows){
     markPrimedRows(table, pending, keyOf);
     return;
   }
-  const {error} = await state.backend.client.from(table).upsert(pending, {onConflict:'id'});
+  const client = state.backend.client;
+  if(UPDATE_ONLY_TABLES.has(table)){
+    for(const row of pending){
+      const {id, ...patch} = row;
+      const {error} = await client.from(table).update(patch).eq('id', id);
+      if(error) return remoteError(error);
+      markRowsSynced(table, [row], keyOf);
+    }
+    return;
+  }
+  const {error} = await client.from(table).upsert(pending, {onConflict:'id'});
   if(error) return remoteError(error);
   markRowsSynced(table, pending, keyOf);
 }

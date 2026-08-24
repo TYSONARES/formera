@@ -123,3 +123,31 @@ dosya var mı.
 
 Üç durumu ayırt ettiği yerel Postgres'te doğrulandı: boş / eski base64 /
 Storage adresi.
+
+## studio_save_test.py — işletme bilgileri gerçekten sunucuya gidiyor mu?
+
+Panel `studios` satırını `upsert` ile yazıyordu. PostgREST upsert'i
+`insert ... on conflict do update` üretir; Postgres bu ifadede önce **INSERT**
+politikasını arar. `studios` üzerinde bilinçli olarak INSERT politikası yok,
+bu yüzden her marka / işletme bilgisi kaydı sunucuda RLS'e takılıyor, ekranda
+ise "güncellendi" yazıyordu.
+
+Yerel Postgres'te ölçüldü: aynı veriyle düz `update` **1 satır** yazıyor,
+`insert ... on conflict` ise `new row violates row-level security policy`
+hatası veriyor.
+
+Test on kontrol yapar:
+
+1. `studios` yazması **PATCH** mi (POST/upsert değil)
+2. `id=eq.<studio_id>` ile tek satırı mı hedefliyor
+3. `Prefer: resolution=merge-duplicates` gönderilmiyor mu
+4. Sunucu reddederse kullanıcı bunu **görüyor** mu (sessiz başarısızlık yok)
+5. Reddedilen satır kirli kalıp bir sonraki kayıtta tekrar deneniyor mu
+
+```bash
+python3 -m http.server 8899
+python3 tests/studio_save_test.py
+```
+
+> Düzeltme öncesi kodda 10 kontrolün 5'i kırmızıya döner; o hâlde ekrandaki
+> mesaj `"Test Studio marka ayarları güncellendi."` iken sunucu 403 veriyordu.
