@@ -7,6 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; MIG="$HERE/../../supabase/migrations"
 
 psql -h "$HOST" -p "$PORT" -U postgres -q -c "drop database if exists $DB;" -c "create database $DB;"
 psql -h "$HOST" -p "$PORT" -U postgres -d "$DB" -q -v ON_ERROR_STOP=1 -f "$HERE/00_supabase_shim.sql"
+psql -h "$HOST" -p "$PORT" -U postgres -d "$DB" -q -v ON_ERROR_STOP=1 -f "$HERE/00b_storage_shim.sql"
 
 echo "migration'lar sirayla uygulaniyor:"
 for f in "$MIG"/0*.sql; do

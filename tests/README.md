@@ -151,3 +151,37 @@ python3 tests/studio_save_test.py
 
 > Düzeltme öncesi kodda 10 kontrolün 5'i kırmızıya döner; o hâlde ekrandaki
 > mesaj `"Test Studio marka ayarları güncellendi."` iken sunucu 403 veriyordu.
+
+## xss_render_test.py — render sinki XSS (üye programı + AI notları)
+
+`xss_test.py` demo modda "giriş yapmış belirli üye"yi taklit edemediği için
+üyenin **Bugünkü program** görünümünü (`memberDashboard`) hiç tetiklemiyordu;
+orada `program.title` / `program.goal` / `program.level` doğrudan innerHTML'e
+giriyordu (stored XSS). Aynı biçimde rapor / ekip / antrenör AI notları, içine
+üye ve antrenör adını gömüp `esc`'siz basıyordu.
+
+Bu test state'i doğrudan kurar (giriş yapmış üye + atanmış program + riskli
+üye + yoğun antrenör), gerçek render fonksiyonlarını **canlı DOM'a** basar ve
+XSS payload'ının element olarak oluşup oluşmadığını ölçer. `memberDashboard`
+için ayrıca payload'ın metin olarak işlendiğini doğrular — böylece yol gerçekten
+tetikleniyor, kör nokta kalmıyor.
+
+```bash
+python3 -m http.server 8899
+python3 tests/xss_render_test.py
+```
+
+> Düzeltme öncesi `memberDashboard` payload'ı iki `<img>` elementi olarak
+> DOM'a sokuyordu (`img=2`); test o hâlde kırmızıya döner.
+
+## Saldırgan RLS denetimi (2026-08-24)
+
+`tests/sql/run.sh` migration sırası + 5 temel RLS senaryosunu doğrular. Buna ek
+olarak, iki ayrı stüdyo ve dört rolle (A sahibi/antrenörü/üyesi + B sahibi
+"saldırgan") 21 saldırgan senaryo yerel Postgres'te çalıştırıldı ve **hepsi
+bloklandı**: çapraz stüdyo PII okuma/yazma, stüdyo ele geçirme, rol yükseltme
+(üye/antrenör → owner), başka stüdyoya taşınma, abonelik ile ödeme atlama,
+anon veri okuma, Storage'da başka stüdyonun klasörüne yükleme, KVKK'sız/uzun
+landing spam'i, `formera_admins`'e kendini ekleme. Ayrıca 17 `SECURITY DEFINER`
+fonksiyonunun tümünde `search_path=public` sabitlenmiş (arama yolu enjeksiyonu
+savunması). Sonuçlar `KARARLAR.md` KRR-formera-07'de özetlendi.

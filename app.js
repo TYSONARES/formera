@@ -3001,7 +3001,7 @@ function calendarPage(){
       <span class="ai-label">✦ FORMA AI · KAPASİTE KOÇU</span>
       <h2>Günün operasyon notları</h2>
       <p>Seans yoğunluğu, iptal ve tamamlanma durumuna göre kısa aksiyon listesi.</p>
-      ${calendarAiNotes(selectedDate).map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Takvim aksiyonu</small></div></div>`).join('')}
+      ${calendarAiNotes(selectedDate).map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${esc(note)}</strong><small>Takvim aksiyonu</small></div></div>`).join('')}
     </article>
     ${state.role === 'owner' ? makeupOwnerPanel() : ''}
   </section>`;
@@ -3193,7 +3193,7 @@ function reportsPage(){
       <span class="ai-label">✦ FORMA AI · HAFTALIK RAPOR</span>
       <h2>Bu haftanın net yorumu</h2>
       <p>Mevcut pilot verisine göre uygulanabilir kısa yönetici özeti.</p>
-      ${aiNotes.map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Haftalık rapor maddesi</small></div></div>`).join('')}
+      ${aiNotes.map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${esc(note)}</strong><small>Haftalık rapor maddesi</small></div></div>`).join('')}
     </article>
   </section>`;
 }
@@ -3315,7 +3315,7 @@ function teamPage(){
       <span class="ai-label">✦ FORMA AI · EKİP KOÇU</span>
       <h2>Bugünkü ekip notları</h2>
       <p>Antrenör yükü, seans tamamlanma ve gelir katkısına göre kısa yönetim önerileri.</p>
-      ${teamAiNotes().map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${note}</strong><small>Ekip aksiyonu</small></div></div>`).join('')}
+      ${teamAiNotes().map((note,index)=>`<div class="insight"><span>${index+1}</span><div><strong>${esc(note)}</strong><small>Ekip aksiyonu</small></div></div>`).join('')}
     </article>
     <article class="card">
       <div class="card-title"><div><h2>Görevler ve öneriler</h2><p>İşletmeciden antrenörlere takip aksiyonları</p></div><button class="secondary" data-action="add-trainer-task">+ Görev ver</button></div>
@@ -3430,7 +3430,7 @@ function trainerDashboard(){
       <h2>${riskyClients.length ? 'Takip isteyen danışan var' : 'Akış sakin ve kontrollü'}</h2>
       <p>Seans, danışan riski ve program durumuna göre bugün için kısa antrenör notları.</p>
       <div class="insight"><span>1</span><div><strong>${stats.scheduled} planlı seansı gün sonunda tamamlandı işaretle.</strong><small>Paket ve raporlar otomatik güncellenir</small></div></div>
-      <div class="insight"><span>2</span><div><strong>${riskyClients[0]?.name || 'Aktif danışanlar'} için kısa motivasyon mesajı gönder.</strong><small>Katılım ve yenileme riskini azaltır</small></div></div>
+      <div class="insight"><span>2</span><div><strong>${esc(riskyClients[0]?.name || 'Aktif danışanlar')} için kısa motivasyon mesajı gönder.</strong><small>Katılım ve yenileme riskini azaltır</small></div></div>
       <div class="insight"><span>3</span><div><strong>Program sonrası notları üye kartında güncelle.</strong><small>Pilot geri bildirimi için değerli</small></div></div>
     </article>
     <article class="card"><div class="card-title"><div><h2>Danışanlarım</h2><p>Antrenör ve diyetisyen ortak takip alanı</p></div><span class="badge">${clients.length} kişi</span></div><div class="member-list">${trainerClientRows()}</div></article>
@@ -3791,9 +3791,9 @@ function memberDashboard(){
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
   <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
-  <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${program.title} · ${program.duration} dakika</p></div><span class="badge">${program.level}</span></div>
+  <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${esc(program.title)} · ${esc(program.duration)} dakika</p></div><span class="badge">${esc(program.level)}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
-  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${program.goal} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
+  <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${esc(program.goal)} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
   <article class="card"><div class="card-title"><div><h2>Bakım ekibi notları</h2><p>Antrenör ve diyetisyenin program, beslenme ve takip görevleri</p></div><span class="badge">${openActions} açık</span></div><div class="task-list">${memberTaskRows(actions)}</div></article>
   ${memberMakeupPanel(member)}
   <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>

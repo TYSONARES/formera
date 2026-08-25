@@ -102,3 +102,35 @@ kendisinden daha pahalıya mal oldu.
 **Kilit varsayım.** Toast metni sunucudan gelen ham `error.message`. Teknik
 görünüyor ama yanlış "başarılı" mesajından iyidir; ileride kullanıcı diline
 çevrilebilir.
+
+---
+
+## 2026-08-24 · KRR-formera-07 · Güvenlik denetimi: RLS + XSS + sır taraması
+
+**Karar.** Proje bağımsız bir sızma testi aracıyla (Strix) denetlenmek istendi;
+Strix kendi LLM API anahtarını gerektirdiği ve bu oturumun kimliği üçüncü-taraf
+bir araca verilemeyeceği için, eşdeğer denetim doğrudan gerçek Postgres ve
+gerçek tarayıcıda saldırgan senaryolarıyla yapıldı.
+
+**Bulgular.**
+1. **İki gerçek stored-XSS deliği kapatıldı.** `memberDashboard` içindeki üye
+   "Bugünkü program" kartı `program.title/goal/level/duration`'ı `esc`'siz
+   basıyordu; rapor/ekip/antrenör AI notları üye ve antrenör adını `esc`'siz
+   gömüyordu. Antrenör RLS gereği program başlığını ve üye adını yazabildiği
+   için, üye kendi panelini açtığında antrenörün payload'ı üyenin oturumunda
+   çalışabilirdi. Altı render noktası `esc()` ile sarıldı;
+   `tests/xss_render_test.py` eklendi (fix'siz `img=2`).
+2. **RLS sağlam.** İki stüdyo, dört rolle 21 saldırgan senaryo — çapraz
+   stüdyo okuma/yazma, stüdyo ele geçirme, rol yükseltme, ödeme atlama, anon
+   okuma, Storage klasör izolasyonu, landing spam, admin ele geçirme — hepsi
+   sunucu tarafında bloklandı.
+3. **Sır sızıntısı yok.** Repoda yalnızca yayımlanabilir anahtar var;
+   `service_role` her yerde ortam değişkeninden okunuyor.
+4. **search_path savunması tam.** 17 `SECURITY DEFINER` fonksiyonunun tümünde
+   `search_path=public` sabit.
+
+**Kilit varsayım.** XSS savunması render katmanında `esc()`/`escapeAttr()`'a
+bağlı; yeni bir innerHTML interpolasyonu eklenirse mutlaka bu iki testten
+(xss_test + xss_render_test) geçmeli. Strix'i çalıştırmak istenirse kendi LLM
+anahtarıyla `STRIX_LLM` + `LLM_API_KEY` verilerek `strix -t <hedef>` ile
+çalışır.
