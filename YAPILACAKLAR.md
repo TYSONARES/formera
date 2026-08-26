@@ -17,11 +17,15 @@ Görülmeyen lead, kaybolmuş lead'den çok farklı değil.
 
 **Çözüm (ücretsiz, iki parça):**
 
-1. **Pilot CRM'de göster** — dashboard `landing_leads`'i okusun, Formera Admin
-   panelinde listelesin. Bakılacak yer Supabase değil kendi panel olur.
-2. **Telegram bildirimi** — Supabase Database Webhook → Telegram Bot API.
-   Ücretsiz, anında, spam'e düşmez. Başkan'ın `@BotFather`'dan bot token alması
-   gerekiyor (2 dakika), kalanı kodla halledilir.
+1. ✅ **Pilot CRM'de göster** — YAPILDI (2026-08-26). Dashboard artık
+   `landing_leads`'i okuyor; Formera Admin panelinde "Web sitesinden gelen
+   başvurular" kartında listeliyor (isim, stüdyo, telefon, paket, değer, hedef,
+   zaman + Ara/WhatsApp linki). Salt okunur, yalnızca admin görür (RLS).
+   Test: `tests/landing_leads_test.py` (8 kontrol). Bakılacak yer artık kendi
+   panel, Supabase değil.
+2. ⏳ **Telegram bildirimi** — BEKLIYOR. Supabase Database Webhook → Telegram
+   Bot API. Ücretsiz, anında, spam'e düşmez. Başkan'ın `@BotFather`'dan bot
+   token alması gerekiyor (2 dakika), kalanı kodla halledilir.
 
 **Alternatifler ve neden seçilmedi:**
 - E-posta (Namecheap SMTP, `davet@formera.me`): DKIM/DMARC hazır ama SMTP hâlâ

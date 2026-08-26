@@ -173,6 +173,7 @@ function emptyBusinessState(){
   state.memberTasks = [];
   state.makeupRequests = [];
   state.pilotLeads = [];
+  state.landingLeads = [];
   state.signatures = [];
   state.programSelections = {};
   state.studios = [];
@@ -234,6 +235,7 @@ const state = {
   memberTasks: usesLocalBusinessData() ? starterMemberTasks.map(normalizeMemberTask) : [],
   makeupRequests: [],
   pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
+  landingLeads: [],
   studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
   activeStudioId: usesLocalBusinessData()
     ? (localStorage.getItem(ACTIVE_STUDIO_STORAGE_KEY) || 'studio_1')
@@ -256,7 +258,8 @@ const state = {
     memberTasksReady: false,
     makeupRequestsReady: false,
     careReady: false,
-    pilotLeadsReady: false
+    pilotLeadsReady: false,
+    landingLeadsReady: false
   }
 };
 
@@ -1250,6 +1253,27 @@ function mapRemotePilotLead(lead){
   });
 }
 
+// Web sitesindeki basvuru formundan gelen ham landing_leads satirini panelin
+// okuyacagi sekle cevirir. pilot_leads'ten farkli: studio_id yok, stage/
+// next_action yok; onun yerine package_code, timeline, consent_at var.
+function mapRemoteLandingLead(lead){
+  return {
+    id: lead.id,
+    name: lead.contact_name || '',
+    studio: lead.studio_name || '',
+    city: lead.city || '',
+    phone: lead.phone || '',
+    members: lead.members || '',
+    goal: lead.goal || '',
+    value: Number(lead.value) || 0,
+    packageCode: lead.package_code || '',
+    timeline: lead.timeline || '',
+    source: lead.source || 'landing',
+    consentAt: lead.consent_at || null,
+    createdAt: lead.created_at || null
+  };
+}
+
 async function initSupabase(){
   const config = readSupabaseConfig();
   state.backend.configured = Boolean(config);
@@ -1318,7 +1342,8 @@ async function loadRemoteData(){
     trainerTasksResult,
     memberTasksResult,
     pilotLeadsResult,
-    makeupRequestsResult
+    makeupRequestsResult,
+    landingLeadsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -1331,19 +1356,26 @@ async function loadRemoteData(){
     db.from('trainer_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
     db.from('member_tasks').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
     db.from('pilot_leads').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
-    db.from('makeup_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
+    db.from('makeup_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    // landing_leads global admin verisidir (studio_id yok); RLS yalnizca
+    // formera_admins uyesine satir dondurur, digerlerine bos gelir.
+    db.from('landing_leads').select('*').order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
   const memberTaskTableMissing = Boolean(memberTasksResult.error && (memberTasksResult.error.code === '42P01' || String(memberTasksResult.error.message || '').includes('member_tasks')));
   const pilotLeadTableMissing = Boolean(pilotLeadsResult.error && (pilotLeadsResult.error.code === '42P01' || String(pilotLeadsResult.error.message || '').includes('pilot_leads')));
   const makeupTableMissing = Boolean(makeupRequestsResult.error && (makeupRequestsResult.error.code === '42P01' || String(makeupRequestsResult.error.message || '').includes('makeup_requests')));
+  // landing_leads opsiyoneldir ve yalnizca admin okur; her tur hatayi
+  // (tablo yok / yetki) "hazir degil" sayip panelin geri kalanini bloklamayiz.
+  const landingLeadsTableMissing = Boolean(landingLeadsResult.error);
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
   state.backend.pilotLeadsReady = !pilotLeadTableMissing;
   state.backend.makeupRequestsReady = !makeupTableMissing;
   state.backend.careReady = !makeupTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult].filter(Boolean).find(result=>result.error);
+  state.backend.landingLeadsReady = !landingLeadsTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   let firstStudio = studiosResult.data?.[0] || {};
   // Eski canlı kurulumlarda stüdyo ve ekip oluşturulmasına rağmen
@@ -1406,6 +1438,7 @@ async function loadRemoteData(){
   state.pilotLeads = pilotLeadTableMissing ? state.pilotLeads : remotePilotLeads.length
     ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
     : localPilotLeads.filter(lead=>lead.source === 'landing');
+  state.landingLeads = landingLeadsTableMissing ? [] : (landingLeadsResult.data || []).map(mapRemoteLandingLead);
 
   // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
   // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
@@ -3633,6 +3666,44 @@ function pilotLeadActionButtons(lead){
   return `<button class="mini-button" data-action="copy-pilot-offer" data-lead-id="${lead.id}">Teklif</button>${stageActions}${wonAction}${activationAction}<button class="mini-button danger" data-action="delete-pilot-lead" data-lead-id="${lead.id}">Sil</button>`;
 }
 
+function landingLeadPackageLabel(code){
+  return {starter:'Başlangıç paketi', studio:'Studio paketi', studio_ai:'Studio AI paketi'}[code] || (code || 'Paket belirtilmedi');
+}
+
+function landingLeadAgeLabel(iso){
+  if(!iso) return 'Tarih yok';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return 'Tarih yok';
+  return d.toLocaleString('tr-TR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+}
+
+function landingLeadsEmptyLabel(){
+  if(!state.backend.connected) return 'Canlı bağlantı yok; başvurular yalnızca sunucuda görünür.';
+  if(!state.backend.landingLeadsReady) return 'landing_leads tablosu bulunamadı; migration 0014 çalıştırılmalı.';
+  return 'Henüz web sitesinden başvuru gelmedi.';
+}
+
+// Web sitesi formundan gelen başvurular. Salt okunur: panelden yazılmaz,
+// yalnızca Formera admin görür (RLS). Her alan escapeAttr'dan geçer; telefon
+// tel:/wa.me bağlantısı için yalnızca rakamlara indirgenir.
+function landingLeadRows(){
+  return state.landingLeads
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt) - new Date(a.createdAt))
+    .map(lead=>{
+      const digits = String(lead.phone || '').replace(/\D/g,'');
+      const wa = digits ? `<a class="mini-button" href="https://wa.me/${digits}" target="_blank" rel="noopener">WhatsApp</a>` : '';
+      const tel = lead.phone ? `<a class="mini-button" href="tel:${escapeAttr(lead.phone)}">Ara</a>` : '';
+      return `<div class="pilot-lead-row">
+      <div><strong>${escapeAttr(lead.studio || lead.name || 'Başvuru')}</strong><small>${escapeAttr(lead.name)}${lead.city ? ' · ' + escapeAttr(lead.city) : ''}${lead.members ? ' · ' + escapeAttr(lead.members) + ' üye' : ''}</small></div>
+      <div><strong>${escapeAttr(lead.phone || 'Telefon yok')}</strong><small>${escapeAttr(landingLeadPackageLabel(lead.packageCode))}${lead.timeline ? ' · ' + escapeAttr(lead.timeline) : ''}</small></div>
+      <div><strong>${lead.value ? formatCurrency(lead.value) : '—'}</strong><small>${escapeAttr(lead.goal || 'Hedef belirtilmedi')}</small></div>
+      <div><strong>${escapeAttr(landingLeadAgeLabel(lead.createdAt))}</strong><small>${lead.consentAt ? 'KVKK onaylı' : 'onay yok'}</small></div>
+      <div class="row-actions">${tel}${wa}</div>
+    </div>`;
+    }).join('') || `<div class="empty-mini">${escapeAttr(landingLeadsEmptyLabel())}</div>`;
+}
+
 function pilotLeadRows(){
   return state.pilotLeads
     .slice()
@@ -3720,6 +3791,10 @@ function pilotPage(){
     <article class="card pilot-crm-card">
       <div class="card-title"><div><h2>Pilot başvuru takibi</h2><p>Başvuru → demo → pilot → teklif akışını takip et · ${crmMode.note}</p></div><div class="row-actions"><span class="badge">${crmMode.label}</span><button class="secondary" data-action="add-pilot-lead">+ Pilot adayı ekle</button></div></div>
       <div class="pilot-lead-list">${pilotLeadRows()}</div>
+    </article>
+    <article class="card landing-leads-card">
+      <div class="card-title"><div><h2>Web sitesinden gelen başvurular</h2><p>formera.me formundan düşen talepler · yalnızca yönetici görür</p></div><span class="badge">${state.landingLeads.length} başvuru</span></div>
+      <div class="pilot-lead-list">${landingLeadRows()}</div>
     </article>
     <article class="card pilot-plan-card">
       <div class="card-title"><div><h2>30 günlük pilot planı</h2><p>Başvuru gelen salonu ödeme görüşmesine taşıyan takip akışı</p></div><span class="badge">${payload.studios.length} stüdyo</span></div>
