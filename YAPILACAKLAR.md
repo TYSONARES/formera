@@ -4,9 +4,13 @@ Karar defteri `KARARLAR.md`'de. Burası henüz yapılmamış, hatırlatılması 
 
 ---
 
-## 🔴 Lead bildirim sistemi — HATIRLATILACAK
+## ✅ Lead bildirim sistemi — TAMAMLANDI (canlıda doğrulandı 2026-08-27)
 
-**Durum:** Landing başvurusu `landing_leads` tablosuna düşüyor ama **kimse görmüyor.**
+**Durum:** ÇÖZÜLDÜ. Başvurular hem Formera Admin panelinde "Web sitesinden gelen
+ başvurular" kartında listeleniyor, hem de her yeni başvuruda Başkan'ın
+ Telegram'ına anlık bildirim düşüyor. 27.08.2026'da gerçek telefonda test edildi
+ ve mesaj geldi (status_code 200). Kurulumdaki tek tuzak: Vault'a önce placeholder
+ token kaydedilmişti (Telegram 404 döndü); doğru token'la düzeltilince çalıştı.
 
 - Dashboard bu tabloyu hiçbir yerde okumuyor (Pilot CRM farklı tabloyu okuyor: `pilot_leads`)
 - Otomatik bildirim yok
