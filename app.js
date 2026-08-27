@@ -10,6 +10,7 @@ const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const MEASUREMENT_STORAGE_KEY = 'formera_body_measurements';
+const ANNOUNCEMENT_STORAGE_KEY = 'formera_announcements';
 const MAKEUP_REQUEST_STORAGE_KEY = 'formera_makeup_requests';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
@@ -106,6 +107,7 @@ const BUSINESS_STORAGE_KEYS = [
   TRAINER_TASK_STORAGE_KEY,
   MEMBER_TASK_STORAGE_KEY,
   MEASUREMENT_STORAGE_KEY,
+  ANNOUNCEMENT_STORAGE_KEY,
   MAKEUP_REQUEST_STORAGE_KEY,
   PILOT_LEAD_STORAGE_KEY
 ];
@@ -174,6 +176,7 @@ function emptyBusinessState(){
   state.trainerTasks = [];
   state.memberTasks = [];
   state.measurements = [];
+  state.announcements = [];
   state.makeupRequests = [];
   state.pilotLeads = [];
   state.landingLeads = [];
@@ -238,6 +241,7 @@ const state = {
   memberTasks: usesLocalBusinessData() ? starterMemberTasks.map(normalizeMemberTask) : [],
   makeupRequests: [],
   measurements: [],
+  announcements: [],
   pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
   landingLeads: [],
   studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
@@ -264,7 +268,8 @@ const state = {
     careReady: false,
     pilotLeadsReady: false,
     landingLeadsReady: false,
-    measurementsReady: false
+    measurementsReady: false,
+    announcementsReady: false
   }
 };
 
@@ -397,6 +402,8 @@ const memberTaskModal = document.querySelector('#memberTaskModal');
 const memberTaskForm = document.querySelector('#memberTaskForm');
 const measurementModal = document.querySelector('#measurementModal');
 const measurementForm = document.querySelector('#measurementForm');
+const announcementModal = document.querySelector('#announcementModal');
+const announcementForm = document.querySelector('#announcementForm');
 const pilotLeadModal = document.querySelector('#pilotLeadModal');
 const pilotLeadForm = document.querySelector('#pilotLeadForm');
 const signatureModal = document.querySelector('#signatureModal');
@@ -740,6 +747,22 @@ function normalizeMeasurement(m){
 function saveMeasurements(){
   writeBusinessStore(MEASUREMENT_STORAGE_KEY, JSON.stringify(state.measurements));
   syncMeasurementsToSupabase();
+}
+
+function normalizeAnnouncement(a){
+  return {
+    id: a.id || makeId(),
+    studioId: a.studioId || a.studio_id || null,
+    authorProfileId: a.authorProfileId || a.author_profile_id || null,
+    title: a.title || 'Duyuru',
+    body: a.body || '',
+    createdAt: a.createdAt || a.created_at || new Date().toISOString()
+  };
+}
+
+function saveAnnouncements(){
+  writeBusinessStore(ANNOUNCEMENT_STORAGE_KEY, JSON.stringify(state.announcements));
+  syncAnnouncementsToSupabase();
 }
 
 function normalizePilotLead(lead){
@@ -1264,6 +1287,13 @@ function mapRemoteMeasurement(m){
   });
 }
 
+function mapRemoteAnnouncement(a){
+  return normalizeAnnouncement({
+    id: a.id, studioId: a.studio_id, authorProfileId: a.author_profile_id,
+    title: a.title, body: a.body, createdAt: a.created_at
+  });
+}
+
 function mapRemoteMemberTask(task){
   return normalizeMemberTask({
     id: task.id,
@@ -1392,7 +1422,8 @@ async function loadRemoteData(){
     pilotLeadsResult,
     makeupRequestsResult,
     landingLeadsResult,
-    measurementsResult
+    measurementsResult,
+    announcementsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -1409,7 +1440,8 @@ async function loadRemoteData(){
     // landing_leads global admin verisidir (studio_id yok); RLS yalnizca
     // formera_admins uyesine satir dondurur, digerlerine bos gelir.
     db.from('landing_leads').select('*').order('created_at', {ascending:false}),
-    db.from('body_measurements').select('*').eq('studio_id', studioId).order('measured_on', {ascending:false})
+    db.from('body_measurements').select('*').eq('studio_id', studioId).order('measured_on', {ascending:false}),
+    db.from('announcements').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
@@ -1420,6 +1452,7 @@ async function loadRemoteData(){
   // (tablo yok / yetki) "hazir degil" sayip panelin geri kalanini bloklamayiz.
   const landingLeadsTableMissing = Boolean(landingLeadsResult.error);
   const measurementsTableMissing = Boolean(measurementsResult.error && (measurementsResult.error.code === '42P01' || String(measurementsResult.error.message || '').includes('body_measurements')));
+  const announcementsTableMissing = Boolean(announcementsResult.error && (announcementsResult.error.code === '42P01' || String(announcementsResult.error.message || '').includes('announcements')));
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
   state.backend.pilotLeadsReady = !pilotLeadTableMissing;
@@ -1427,7 +1460,8 @@ async function loadRemoteData(){
   state.backend.careReady = !makeupTableMissing;
   state.backend.landingLeadsReady = !landingLeadsTableMissing;
   state.backend.measurementsReady = !measurementsTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult, measurementsTableMissing ? null : measurementsResult].filter(Boolean).find(result=>result.error);
+  state.backend.announcementsReady = !announcementsTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult, measurementsTableMissing ? null : measurementsResult, announcementsTableMissing ? null : announcementsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   let firstStudio = studiosResult.data?.[0] || {};
   // Eski canlı kurulumlarda stüdyo ve ekip oluşturulmasına rağmen
@@ -1492,6 +1526,7 @@ async function loadRemoteData(){
     : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.landingLeads = landingLeadsTableMissing ? [] : (landingLeadsResult.data || []).map(mapRemoteLandingLead);
   state.measurements = measurementsTableMissing ? state.measurements : (measurementsResult.data || []).map(mapRemoteMeasurement);
+  state.announcements = announcementsTableMissing ? state.announcements : (announcementsResult.data || []).map(mapRemoteAnnouncement);
 
   // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
   // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
@@ -1511,6 +1546,7 @@ async function loadRemoteData(){
   setServerRowKeys('makeup_requests', makeupTableMissing ? [] : (makeupRequestsResult.data || []).map(row=>row.id));
   setServerRowKeys('pilot_leads', pilotLeadTableMissing ? [] : remotePilotLeads.map(lead=>lead.id));
   setServerRowKeys('body_measurements', measurementsTableMissing ? [] : (measurementsResult.data || []).map(row=>row.id));
+  setServerRowKeys('announcements', announcementsTableMissing ? [] : (announcementsResult.data || []).map(row=>row.id));
 
   state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
@@ -1829,6 +1865,7 @@ async function primeRemoteSignatures(){
     syncTrainerTasksToSupabase();
     syncMemberTasksToSupabase();
     syncMeasurementsToSupabase();
+    syncAnnouncementsToSupabase();
     syncMakeupRequestsToSupabase();
     syncPilotLeadsToSupabase();
     syncSignaturesToSupabase();
@@ -2063,6 +2100,18 @@ function syncMeasurementsToSupabase(){
     weight_kg: m.weight, body_fat_pct: m.bodyFat, muscle_kg: m.muscle,
     chest_cm: m.chest, waist_cm: m.waist, hip_cm: m.hip, arm_cm: m.arm, thigh_cm: m.thigh,
     note: m.note
+  })));
+}
+
+function syncAnnouncementsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.announcementsReady)) return;
+  syncRemote('announcements', state.announcements.map(a=>({
+    id: a.id,
+    studio_id: studioId,
+    author_profile_id: a.authorProfileId || state.backend.profile?.id || null,
+    title: a.title,
+    body: a.body
   })));
 }
 
@@ -2890,6 +2939,7 @@ function dashboard(){
     <article class="card"><div class="card-title"><div><h2>Dikkat isteyen üyeler</h2><p>Katılım ve paket durumuna göre</p></div><button class="secondary" data-page-link="members">Tümünü gör</button></div><div class="member-list">${memberRows(state.members.slice(0,4))}</div></article>
     <article class="card"><div class="card-title"><div><h2>Bugünün akışı</h2><p>${formatDateTR(todayISO())}</p></div><button class="secondary" data-page-link="calendar">${sessions.total} seans</button></div>${compactSessionRows()}</article>
     <article class="card"><div class="card-title"><div><h2>İşletme profili</h2><p>Üye ve antrenör ekranlarında görünen bilgiler</p></div><button class="secondary" data-action="customize-studio">Düzenle</button></div><div class="report-list">${studioContactRows()}</div></article>
+    ${ownerAnnouncementCard()}
   </section>`;
 }
 
@@ -3944,6 +3994,24 @@ function progressSparkline(values){
   return `<svg class="progress-spark" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="İlerleme grafiği"><path d="${d}" fill="none" stroke-width="2.5"/>${dots}</svg>`;
 }
 
+// Duyuru satırları (hem işletmeci hem üye kartında kullanılır). Tümü esc'ten geçer.
+function announcementRows(limit=0){
+  const list = state.announcements.slice().sort((a,b)=>new Date(b.createdAt) - new Date(a.createdAt));
+  const shown = limit ? list.slice(0, limit) : list;
+  if(!shown.length) return `<div class="empty-mini">Henüz duyuru yok.</div>`;
+  return shown.map(a=>`<div class="insight announcement-row"><span>📣</span><div><strong>${esc(a.title)}</strong>${a.body ? `<p class="announcement-body">${esc(a.body)}</p>` : ''}<small>${esc(new Date(a.createdAt).toLocaleDateString('tr-TR'))}</small></div></div>`).join('');
+}
+
+// İşletmeci ana panelindeki duyuru kartı (yaz + son duyurular).
+function ownerAnnouncementCard(){
+  return `<article class="card"><div class="card-title"><div><h2>Duyurular</h2><p>Üyelerine görünen mesajlar</p></div><button class="secondary" data-action="add-announcement">+ Duyuru</button></div><div class="announcement-list">${announcementRows(4)}</div></article>`;
+}
+
+// Üye panelindeki duyuru kartı.
+function memberAnnouncementCard(){
+  return `<article class="card"><div class="card-title"><div><h2>Duyurular</h2><p>${esc(activeStudio().name)} senin için</p></div><span class="badge">${state.announcements.length}</span></div><div class="announcement-list">${announcementRows(5)}</div></article>`;
+}
+
 // Üyenin "Paketim" kartı: kalan seansı bir bakışta gösterir (ilerleme çubuğu +
 // büyük kalan sayısı + yenileme uyarısı). Formera PT paketleri seans bazlıdır;
 // takvim bazlı üyelik istenirse members'a bitiş tarihi eklenmeli (ayrı iş).
@@ -4009,7 +4077,7 @@ function memberDashboard(){
   const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
-  <section class="dashboard-grid">${memberPackageCard(member)}${studioPublicCard('ÜYE ALANI · İŞLETME')}
+  <section class="dashboard-grid">${memberPackageCard(member)}${memberAnnouncementCard()}${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${esc(program.title)} · ${esc(program.duration)} dakika</p></div><span class="badge">${esc(program.level)}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${esc(program.goal)} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
@@ -4367,6 +4435,12 @@ function openTrainerTaskModal(){
   select.innerHTML = state.team.map(trainer=>`<option value="${escapeAttr(trainer.name)}">${escapeAttr(trainer.name)}</option>`).join('');
   trainerTaskForm.elements.dueDate.value = todayISO();
   trainerTaskModal.showModal();
+}
+
+function openAnnouncementModal(){
+  if(!announcementModal || !announcementForm) return;
+  announcementForm.reset();
+  announcementModal.showModal();
 }
 
 function openMeasurementModal(member){
@@ -5132,6 +5206,7 @@ function bind(){
     if(action==='reset-demo-data') return confirmResetDemoData();
     if(action==='sign-member') return openSignatureModal(state.members.find(m=>m.id === b.dataset.memberId));
     if(action==='add-measurement') return openMeasurementModal(state.members.find(m=>m.id === b.dataset.memberId));
+    if(action==='add-announcement') return openAnnouncementModal();
     if(action==='sign-current-member') return openSignatureModal(currentMember());
     if(action==='clear-signature') return clearSignatureCanvas();
     if(action==='select-member-program') return selectMemberProgram(b.dataset.memberName, b.dataset.programId);
@@ -5601,6 +5676,25 @@ trainerTaskForm.onsubmit=e=>{
   e.target.reset();
   render();
   showToast(`${task.trainer} için görev gönderildi.`);
+};
+
+if(announcementForm) announcementForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.target);
+  const announcement = normalizeAnnouncement({
+    id: makeId(),
+    studioId: studioIdForRemote(),
+    authorProfileId: state.backend.profile?.id || null,
+    title: data.get('title').trim(),
+    body: (data.get('body') || '').trim(),
+    createdAt: new Date().toISOString()
+  });
+  state.announcements.unshift(announcement);
+  saveAnnouncements();
+  announcementModal.close();
+  e.target.reset();
+  render();
+  showToast('Duyuru yayınlandı.');
 };
 
 if(measurementForm) measurementForm.onsubmit=e=>{

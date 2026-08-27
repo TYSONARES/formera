@@ -77,7 +77,10 @@ Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi +
    trafiği azalır. (Seans var, üye talebi yok.)
 3. **Programlarım / antrenman geçmişi** — bugünkü + geçmiş program kartları.
    (Yarısı var, genişletilecek.)
-4. **İşletmeden üyeye duyuru (bildirimler)** — toplu/tekil haber. (Altyapı kısmi.)
+4. ✅ **İşletmeden üyeye duyuru** — YAPILDI (2026-08-27). announcements tablosu
+   + RLS (personel yazar, stüdyo üyeleri okur). İşletmeci ana panelinde 'Duyurular'
+   kartı + '+ Duyuru' modalı; üye panelinde 'Duyurular' kartı. Migration 0020.
+   Test: tests/announcements_test.py (7 kontrol).
 5. ✅ **Paket/kalan gün net görünsün** — YAPILDI (2026-08-27). Üye panelinde
    belirgin 'Paketim' kartı: ilerleme çubuğu + büyük 'X seans kaldı' + yenileme
    uyarısı (≤2 seansta turuncu). Seans bazlı (PT paketi). NOT: takvim bazlı

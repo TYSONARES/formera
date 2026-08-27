@@ -221,3 +221,11 @@ python3 tests/measurements_test.py
 
 RLS tarafı ayrıca `tests/sql/body_measurements_test.sh` ile doğrulanır (üye
 kendi ölçümünü görür, başka stüdyo göremez, üye yazamaz, anon engelli).
+
+## announcements_test.py — işletme duyuruları
+İşletmeci duyuru yayınlar → `announcements`'a doğru alanlarla yazılır; üye
+panelinde 'Duyurular' kartı görünür; XSS payload'ı element olmaz.
+
+```bash
+python3 tests/announcements_test.py
+```

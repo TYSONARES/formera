@@ -470,3 +470,6 @@ body{overflow-x:clip}
 
 /* Üye paket kartı ilerleme çubuğu */
 .package-bar{height:10px;border-radius:999px;background:rgba(17,20,15,.08);overflow:hidden;margin:2px 0 12px}.package-bar i{display:block;height:100%;border-radius:999px;background:var(--acid)}.warn-badge{background:#ffe3c2;color:#8a4b00}
+
+/* Duyurular */
+.announcement-list{display:flex;flex-direction:column;gap:8px}.announcement-body{margin:4px 0 2px;color:#3a3f36;font-size:13px;line-height:1.45;white-space:pre-wrap}.announcement-row span{font-size:16px}

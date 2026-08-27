@@ -16,7 +16,7 @@
   <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
-  <link rel="stylesheet" href="styles.css?v=20260827-2" />
+  <link rel="stylesheet" href="styles.css?v=20260827-3" />
 </head>
 <body>
   <div class="app-shell">
@@ -159,6 +159,14 @@
       <div class="form-grid"><label>Öncelik<select name="priority"><option value="medium">Normal</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
       <label>Not / öneri<textarea name="note" rows="4" placeholder="Kısa açıklama, öneri veya takip notu"></textarea></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Görevi gönder</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="announcementModal">
+    <form method="dialog" id="announcementForm">
+      <div class="modal-head"><div><span class="eyebrow">DUYURU</span><h2>Üyelerine duyuru yaz</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <label>Başlık<input name="title" required maxlength="120" placeholder="Örn. Bu hafta salon 14:00'te kapalı"></label>
+      <label>Mesaj<textarea name="body" rows="4" maxlength="1000" placeholder="Üyelerin göreceği duyuru metni"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Yayınla</button></div>
     </form>
   </dialog>
   <dialog class="modal" id="measurementModal">
@@ -361,7 +369,7 @@
        kesinti, kurumsal firewall veya ülke bazlı engel paneli kilitleyemez. -->
   <script src="vendor/supabase-js-2.112.3.min.js?v=20260817-1"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260827-2"></script>
+  <script src="app.js?v=20260827-3"></script>
 
 </body>
 </html>
