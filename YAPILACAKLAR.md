@@ -54,3 +54,42 @@ mümkünse ücretsiz." B (Storage geçişi) bitince buna dönülecek.
 | Eşzamanlı düzenleme çakışması | `updated_at` tabanlı tespit | Aynı satırı iki cihaz düzenlerse son yazan kazanıyor |
 | Otomatik yedek | Ücretli plana geçiş | Şu an hiç yedek yok |
 | İç dokümanları ayır | Karar | `PAYMENTS.md` public repoda duruyor |
+
+
+---
+
+## 🟢 Üye deneyimi — TIER 1 (yapılıyor, 2026-08-27'de başlandı)
+
+GORİLBEY üye uygulaması incelendi; butik PT stüdyosuna uyan, üye bağını
+güçlendiren özellikler seçildi. Zincire özel olanlar (turnike/geçiş logları,
+e-cüzdan, çok stüdyo, InBody/kan tahlili, aile hesapları) BİLİNÇLİ olarak
+dışarıda bırakıldı — sadelik ve butik ruhu korunuyor.
+
+Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi + test):
+
+1. **İlerleme takibi — vücut ölçümleri + grafik** — kilo/ölçü/yağ vb. zamanla,
+   hafif SVG grafik. PT'nin motivasyon ve satış kozu. (Yok, sıfırdan.)
+2. **Üye self-servis seans talebi** — üye uygulamadan seans ister, WhatsApp
+   trafiği azalır. (Seans var, üye talebi yok.)
+3. **Programlarım / antrenman geçmişi** — bugünkü + geçmiş program kartları.
+   (Yarısı var, genişletilecek.)
+4. **İşletmeden üyeye duyuru (bildirimler)** — toplu/tekil haber. (Altyapı kısmi.)
+5. **Paket/kalan gün net görünsün** — üye kaç gün/seans kaldığını bir bakışta
+   görsün. (Kısmen var, belirginleştirilecek.)
+
+## 🟡 Üye deneyimi — TIER 2 (SONRAKİ TUR — hatırlatılacak)
+
+Tier 1 bitince Başkan'a hatırlat:
+
+- **Diyet / beslenme planı (Diyetlerim)** — diyetisyen rolü zaten var; üyeye
+  planını göstermek doğal uzantı.
+- **Memnuniyet anketi (Anketler ve Ölçümler)** — stüdyoya geri bildirim toplar.
+- **QR ile check-in (hafif yoklama)** — butikte turnike yok; sadece "geldim"
+  yoklaması için hafif sürüm.
+- **Su tüketimi takibi** — düşük etki, wellness dokunuşu.
+
+## 🔴 Değerlendirildi, Formera'ya (şimdilik) alınmadı
+
+E-cüzdan (ödeme entegrasyonu ister), geçiş/turnike raporları (donanım),
+çok stüdyo seçimi (zincir), kan tahlili + segmental/InBody (tıbbi + cihaz),
+aile/kayıtlı hesaplar (aile paketi satılırsa). Gerekçe: butik ölçek + sadelik.
