@@ -473,3 +473,6 @@ body{overflow-x:clip}
 
 /* Duyurular */
 .announcement-list{display:flex;flex-direction:column;gap:8px}.announcement-body{margin:4px 0 2px;color:#3a3f36;font-size:13px;line-height:1.45;white-space:pre-wrap}.announcement-row span{font-size:16px}
+
+/* Açık kartlardaki liste satırları (duyuru/geçmiş/talepler) okunur olsun */
+.announcement-list .insight{background:#f6f8f2;border-color:#e6ead9;color:#11140f;margin-top:0}.announcement-list .insight strong{color:#11140f}.announcement-list .insight small{color:#6b7064}.announcement-list .insight .announcement-body{color:#3a3f36}

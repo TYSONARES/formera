@@ -229,3 +229,9 @@ panelinde 'Duyurular' kartı görünür; XSS payload'ı element olmaz.
 ```bash
 python3 tests/announcements_test.py
 ```
+
+## session_requests_test.py — üye self-servis seans talebi
+Üye talep oluşturur → `session_requests`'e 'pending' yazılır; işletmeci onaylar
+→ takvime planlı seans düşer + talep 'approved' olur; XSS payload'ı element olmaz.
+RLS ayrıca migration harness'inde doğrulanır (üye kendi 'pending' talebini açar,
+başkasınınkini göremez, 'approved' olarak ekleyemez, anon engelli).

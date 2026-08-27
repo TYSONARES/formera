@@ -58,7 +58,7 @@ mümkünse ücretsiz." B (Storage geçişi) bitince buna dönülecek.
 
 ---
 
-## 🟢 Üye deneyimi — TIER 1 (yapılıyor, 2026-08-27'de başlandı)
+## ✅ Üye deneyimi — TIER 1 (TAMAMLANDI 2026-08-27)
 
 GORİLBEY üye uygulaması incelendi; butik PT stüdyosuna uyan, üye bağını
 güçlendiren özellikler seçildi. Zincire özel olanlar (turnike/geçiş logları,
@@ -73,8 +73,11 @@ Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi +
    özeti + ilk→son değişim. İşletmeci üye satırındaki 'Ölçüm' ile kaydeder.
    Migration 0019 (Supabase'de çalıştırılmalı). Test: tests/measurements_test.py
    (10 kontrol) + tests/sql/body_measurements_test.sh.
-2. **Üye self-servis seans talebi** — üye uygulamadan seans ister, WhatsApp
-   trafiği azalır. (Seans var, üye talebi yok.)
+2. ✅ **Üye self-servis seans talebi** — YAPILDI (2026-08-27). session_requests
+   tablosu + RLS (üye kendi 'pending' talebini açar/görür; personel karar verir).
+   Üye panelinde 'Seans taleplerim' kartı + '+ Seans iste' modalı; işletmeci
+   panelinde 'Seans talepleri' kartı Onayla/Reddet ile. Onayda talep takvime
+   planlı seans olarak düşer. Migration 0021. Test: tests/session_requests_test.py.
 3. ✅ **Programlarım / antrenman geçmişi** — YAPILDI (2026-08-27). Üye panelinde
    'Antrenman geçmişim' kartı: kendi seanslarını (tamamlanan ✓ / iptal ✕ / planlı ◷)
    tarih+program+antrenörle listeler. Şema gerekmez; mevcut sessions'tan.

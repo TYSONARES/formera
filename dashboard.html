@@ -16,7 +16,7 @@
   <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
-  <link rel="stylesheet" href="styles.css?v=20260827-3" />
+  <link rel="stylesheet" href="styles.css?v=20260827-5" />
 </head>
 <body>
   <div class="app-shell">
@@ -159,6 +159,14 @@
       <div class="form-grid"><label>Öncelik<select name="priority"><option value="medium">Normal</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></label><label>Bitiş tarihi<input name="dueDate" type="date"></label></div>
       <label>Not / öneri<textarea name="note" rows="4" placeholder="Kısa açıklama, öneri veya takip notu"></textarea></label>
       <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Görevi gönder</button></div>
+    </form>
+  </dialog>
+  <dialog class="modal" id="sessionRequestModal">
+    <form method="dialog" id="sessionRequestForm">
+      <div class="modal-head"><div><span class="eyebrow">SEANS TALEBİ</span><h2>Uygun olduğun zamanı iste</h2></div><button value="cancel" class="modal-close" aria-label="Kapat">×</button></div>
+      <div class="form-grid"><label>Tarih<input name="requestedDate" type="date" required></label><label>Saat<input name="requestedTime" type="time"></label></div>
+      <label>Not (isteğe bağlı)<textarea name="note" rows="3" maxlength="300" placeholder="Örn. Akşam saatlerini tercih ederim"></textarea></label>
+      <div class="modal-actions"><button value="cancel" class="secondary">Vazgeç</button><button type="submit" value="default" class="primary">Talebi gönder</button></div>
     </form>
   </dialog>
   <dialog class="modal" id="announcementModal">
@@ -369,7 +377,7 @@
        kesinti, kurumsal firewall veya ülke bazlı engel paneli kilitleyemez. -->
   <script src="vendor/supabase-js-2.112.3.min.js?v=20260817-1"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260827-4"></script>
+  <script src="app.js?v=20260827-5"></script>
 
 </body>
 </html>
