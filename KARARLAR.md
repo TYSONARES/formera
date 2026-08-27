@@ -134,3 +134,28 @@ bağlı; yeni bir innerHTML interpolasyonu eklenirse mutlaka bu iki testten
 (xss_test + xss_render_test) geçmeli. Strix'i çalıştırmak istenirse kendi LLM
 anahtarıyla `STRIX_LLM` + `LLM_API_KEY` verilerek `strix -t <hedef>` ile
 çalışır.
+
+
+---
+
+## 2026-08-26 · KRR-formera-08 · Lead bildirimi Vault + pg_net trigger'ı ile
+
+**Karar.** Yeni landing başvurusunda Telegram bildirimi, Edge Function/Database
+Webhook yerine doğrudan Postgres trigger'ı (`0018`) + `pg_net` ile yapılıyor.
+Bot token ve chat_id Supabase **Vault**'ta şifreli; migration ve repo **sır
+içermiyor**. Trigger `security definer` ve tam `exception when others` koruması
+altında: bildirim hattındaki hiçbir hata (Vault yok, pg_net yok, ağ hatası)
+başvuru INSERT'ini düşürmez.
+
+**Gerekçe.** (1) Sır Git'e asla girmemeli — Vault bunu sağlıyor, migration'da
+placeholder bile yok. (2) Edge Function + Webhook, işletmeci için dashboard'da
+çok adım demekti; SQL Editor'a yapıştırma akışı Başkan'ın zaten bildiği yol.
+(3) `pg_net` asenkron: INSERT'i bekletmez. (4) `parse_mode` yok → kullanıcı
+kaynaklı alanlar (stüdyo adı vb.) düz metin, biçim/enjeksiyon riski sıfır.
+
+**Kilit varsayım.** Supabase projesinde `pg_net` ve `supabase_vault` mevcut
+(varsayılan). Yoksa bildirim sessizce devre dışı kalır, başvuru yine kaydedilir.
+Yerel testte ikisi de shimlenir (`tests/sql/00c_pgnet_vault_shim.sql`).
+
+**Not.** Token herkese açık sohbette paylaşıldığı için, kurulum doğrulandıktan
+sonra `@BotFather` `/revoke` ile yenilenmeli.

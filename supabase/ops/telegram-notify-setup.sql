@@ -1,0 +1,44 @@
+-- Telegram lead bildirimi — TEK SEFERLİK KURULUM
+-- =================================================
+-- Bu dosya bir ŞABLONdur. Gerçek token ve chat_id'yi buraya yazıp Supabase SQL
+-- Editor'da çalıştır. GERÇEK DEĞERLERLE HALİNİ GIT'E COMMIT ETME — sırlar yalnızca
+-- Supabase Vault'ta durmalı. (Bu şablondaki placeholder'lar zaten sahte.)
+--
+-- Ön koşul: migration 0018_lead_telegram_notify.sql çalıştırılmış olmalı
+-- (trigger'ı ve fonksiyonları o kurar; bu dosya yalnızca sırları yükler).
+--
+-- --------------------------------------------------------------------------
+-- ADIM A · chat_id'yi öğren
+-- --------------------------------------------------------------------------
+-- 1) Telegram'da KENDI botuna bir mesaj yaz (herhangi bir şey, örn. "merhaba").
+--    Bildirimlerin GRUBA gitmesini istiyorsan botu gruba ekle ve grupta bir
+--    mesaj at.
+-- 2) Tarayıcıda şu adresi aç (BOT_TOKEN'i kendi token'ınla değiştir):
+--       https://api.telegram.org/botBOT_TOKEN/getUpdates
+-- 3) Dönen JSON içinde "chat":{"id": 123456789 ...} kısmındaki sayı senin
+--    chat_id'in. Kişisel sohbette pozitif; grupta genelde negatif (-100...).
+--
+-- --------------------------------------------------------------------------
+-- ADIM B · Sırları Vault'a yaz (aşağıdaki iki satırı gerçek değerlerle çalıştır)
+-- --------------------------------------------------------------------------
+select vault.create_secret('BURAYA_BOT_TOKEN', 'telegram_bot_token');
+select vault.create_secret('BURAYA_CHAT_ID',   'telegram_chat_id');
+
+-- Sırları güncellemek istersen (yeniden create hata verir), önce sil:
+--   delete from vault.secrets where name in ('telegram_bot_token','telegram_chat_id');
+-- sonra yukarıdaki iki create_secret'i tekrar çalıştır.
+
+-- --------------------------------------------------------------------------
+-- ADIM C · Test et
+-- --------------------------------------------------------------------------
+-- Aşağıdaki satır sahte bir başvuru ekler; birkaç saniye içinde Telegram'a
+-- bildirim düşmeli. Sonra bu test satırını silebilirsin.
+--
+-- insert into public.landing_leads
+--   (contact_name, studio_name, city, phone, members, goal, package_code, value, source, consent_at)
+--   values ('Test Başvuru','Deneme Stüdyo','İstanbul','05550001122','0-50','Test','starter',0,'landing',now());
+--
+-- Bildirim gelmezse kontrol et:
+--   - Vault sırları doğru isimlerle mi: select name from vault.decrypted_secrets;
+--   - pg_net açık mı: select * from pg_extension where extname='pg_net';
+--   - net.http_post yanıtları: select * from net._http_response order by id desc limit 5;

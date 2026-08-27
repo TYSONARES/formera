@@ -185,3 +185,23 @@ anon veri okuma, Storage'da başka stüdyonun klasörüne yükleme, KVKK'sız/uz
 landing spam'i, `formera_admins`'e kendini ekleme. Ayrıca 17 `SECURITY DEFINER`
 fonksiyonunun tümünde `search_path=public` sabitlenmiş (arama yolu enjeksiyonu
 savunması). Sonuçlar `KARARLAR.md` KRR-formera-07'de özetlendi.
+
+
+## sql/telegram_test.sh — landing_leads Telegram bildirim trigger'ı
+
+`0018_lead_telegram_notify.sql` migration'ını boş bir Postgres'e uygular ve
+trigger'ın davranışını doğrular. `pg_net` ve `supabase_vault` yerelde
+shimlenir (`00c_pgnet_vault_shim.sql`); gerçek Telegram çağrısı yapılmaz,
+`net._calls` tablosuna kaydedilen istek incelenir.
+
+```bash
+PGPORT=55432 PGHOST=/tmp ./tests/sql/telegram_test.sh
+```
+
+Doğruladığı dört şey:
+1. Vault sırrı yokken başvuru kaydedilir, bildirim çağrılmaz (sessiz no-op)
+2. Sırlar eklenince yeni başvuru bildirim çağırır
+3. Çağrı URL'i `bot<token>/sendMessage`, gövde doğru chat_id + mesaj metni
+4. Biçim karakterli alan düz metin olarak geçer (parse_mode yok → enjeksiyon yok)
+
+> Sır repoda tutulmaz. Canlı kurulum: `supabase/ops/telegram-notify-setup.sql`.

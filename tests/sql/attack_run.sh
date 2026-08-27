@@ -10,6 +10,7 @@ P(){ psql -h "$HOST" -p "$PORT" -U postgres -q -v ON_ERROR_STOP=1 "$@"; }
 psql -h "$HOST" -p "$PORT" -U postgres -q -c "drop database if exists $DB;" -c "create database $DB;"
 P -d "$DB" -f "$HERE/00_supabase_shim.sql"
 P -d "$DB" -f "$HERE/00b_storage_shim.sql"
+P -d "$DB" -f "$HERE/00c_pgnet_vault_shim.sql"
 for f in "$MIG"/0*.sql; do P -d "$DB" -f "$f" >/dev/null; done
 P -d "$DB" -f "$HERE/attack_seed.sql"
 echo "=== capraz stüdyo / okuma-yazma ==="

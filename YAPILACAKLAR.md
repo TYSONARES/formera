@@ -23,9 +23,13 @@ Görülmeyen lead, kaybolmuş lead'den çok farklı değil.
    zaman + Ara/WhatsApp linki). Salt okunur, yalnızca admin görür (RLS).
    Test: `tests/landing_leads_test.py` (8 kontrol). Bakılacak yer artık kendi
    panel, Supabase değil.
-2. ⏳ **Telegram bildirimi** — BEKLIYOR. Supabase Database Webhook → Telegram
-   Bot API. Ücretsiz, anında, spam'e düşmez. Başkan'ın `@BotFather`'dan bot
-   token alması gerekiyor (2 dakika), kalanı kodla halledilir.
+2. ✅ **Telegram bildirimi** — KOD HAZIR (2026-08-26). `landing_leads`'e her
+   INSERT'te Postgres trigger'ı (0018) pg_net ile Telegram sendMessage çağırıyor.
+   Bot token + chat_id Supabase Vault'ta; **repoda sır yok**. Trigger security
+   definer + tam exception koruması: bildirim hattındaki hiçbir hata başvuruyu
+   düşürmez. Test: `tests/sql/telegram_test.sh`.
+   **Başkan'ın yapması gereken (tek seferlik):** `supabase/ops/telegram-notify-setup.sql`
+   → chat_id'yi öğren + iki Vault sırrını yükle + 0018'i çalıştır.
 
 **Alternatifler ve neden seçilmedi:**
 - E-posta (Namecheap SMTP, `davet@formera.me`): DKIM/DMARC hazır ama SMTP hâlâ
