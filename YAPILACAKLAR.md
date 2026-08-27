@@ -75,8 +75,9 @@ Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi +
    (10 kontrol) + tests/sql/body_measurements_test.sh.
 2. **Üye self-servis seans talebi** — üye uygulamadan seans ister, WhatsApp
    trafiği azalır. (Seans var, üye talebi yok.)
-3. **Programlarım / antrenman geçmişi** — bugünkü + geçmiş program kartları.
-   (Yarısı var, genişletilecek.)
+3. ✅ **Programlarım / antrenman geçmişi** — YAPILDI (2026-08-27). Üye panelinde
+   'Antrenman geçmişim' kartı: kendi seanslarını (tamamlanan ✓ / iptal ✕ / planlı ◷)
+   tarih+program+antrenörle listeler. Şema gerekmez; mevcut sessions'tan.
 4. ✅ **İşletmeden üyeye duyuru** — YAPILDI (2026-08-27). announcements tablosu
    + RLS (personel yazar, stüdyo üyeleri okur). İşletmeci ana panelinde 'Duyurular'
    kartı + '+ Duyuru' modalı; üye panelinde 'Duyurular' kartı. Migration 0020.

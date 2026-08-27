@@ -4030,6 +4030,20 @@ function memberPackageCard(member){
 
 // Üyenin "İlerlemem" kartı: kilo grafiği + son ölçüm özeti. Tüm değerler
 // esc'ten geçer; null alanlar gösterilmez.
+function memberHistoryCard(memberName){
+  const list = state.sessions
+    .filter(sn=>sn.member === memberName)
+    .slice()
+    .sort((a,b)=>`${b.date} ${b.time || ''}`.localeCompare(`${a.date} ${a.time || ''}`));
+  const done = list.filter(sn=>sn.status === 'done').length;
+  if(!list.length){
+    return `<article class="card"><div class="card-title"><div><h2>Antrenman geçmişim</h2><p>Tamamladığın seanslar</p></div><span class="badge">0</span></div><div class="empty-mini">Seansların tamamlandıkça geçmişin burada birikecek.</div></article>`;
+  }
+  const icon = st => st === 'done' ? '✓' : (st === 'cancelled' ? '✕' : '◷');
+  const rows = list.slice(0, 8).map(sn=>`<div class="insight"><span>${icon(sn.status)}</span><div><strong>${esc(sn.program)}</strong><small>${esc(new Date(sn.date).toLocaleDateString('tr-TR'))} · ${esc(sn.time)} · ${esc(sn.trainer)} ile · ${sessionStatusLabel(sn.status)}</small></div></div>`).join('');
+  return `<article class="card"><div class="card-title"><div><h2>Antrenman geçmişim</h2><p>${done} tamamlandı · ${list.length} kayıt</p></div><span class="badge">${done}</span></div><div class="announcement-list">${rows}</div></article>`;
+}
+
 function memberProgressCard(member){
   const list = measurementsForMember(member.id);
   if(!list.length){
@@ -4086,7 +4100,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>
   <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${esc(memberName)}"><strong>${esc(item.title)}</strong><small>${esc(item.goal)} · ${esc(item.duration)} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
-  <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article>${memberProgressCard(member)}</section>`}
+  <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article>${memberHistoryCard(memberName)}${memberProgressCard(member)}</section>`}
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Haftalık özet','Haftalık ve aylık performansı karşılaştır.','↗'],growth:['AI İş Geliştirme','Toparlanma ve büyüme önerilerini tek ekranda yönet.','✦'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
