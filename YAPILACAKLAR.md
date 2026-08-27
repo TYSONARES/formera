@@ -78,8 +78,11 @@ Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi +
 3. **Programlarım / antrenman geçmişi** — bugünkü + geçmiş program kartları.
    (Yarısı var, genişletilecek.)
 4. **İşletmeden üyeye duyuru (bildirimler)** — toplu/tekil haber. (Altyapı kısmi.)
-5. **Paket/kalan gün net görünsün** — üye kaç gün/seans kaldığını bir bakışta
-   görsün. (Kısmen var, belirginleştirilecek.)
+5. ✅ **Paket/kalan gün net görünsün** — YAPILDI (2026-08-27). Üye panelinde
+   belirgin 'Paketim' kartı: ilerleme çubuğu + büyük 'X seans kaldı' + yenileme
+   uyarısı (≤2 seansta turuncu). Seans bazlı (PT paketi). NOT: takvim bazlı
+   üyelik (kalan GÜN) istenirse members'a package_end tarihi eklenmeli — Başkan'a
+   sorulacak.
 
 ## 🟡 Üye deneyimi — TIER 2 (SONRAKİ TUR — hatırlatılacak)
 

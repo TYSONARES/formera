@@ -3944,6 +3944,22 @@ function progressSparkline(values){
   return `<svg class="progress-spark" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="İlerleme grafiği"><path d="${d}" fill="none" stroke-width="2.5"/>${dots}</svg>`;
 }
 
+// Üyenin "Paketim" kartı: kalan seansı bir bakışta gösterir (ilerleme çubuğu +
+// büyük kalan sayısı + yenileme uyarısı). Formera PT paketleri seans bazlıdır;
+// takvim bazlı üyelik istenirse members'a bitiş tarihi eklenmeli (ayrı iş).
+function memberPackageCard(member){
+  const {used, total} = parseSessions(member.sessions);
+  const remaining = Math.max(0, total - used);
+  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+  const low = remaining <= 2;
+  const label = total > 0 ? `${total} seanslık paket` : 'Paket tanımlı değil';
+  return `<article class="card package-card">
+    <div class="card-title"><div><h2>Paketim</h2><p>${esc(label)}</p></div><span class="badge${low ? ' warn-badge' : ''}">${remaining} seans kaldı</span></div>
+    <div class="package-bar" role="img" aria-label="Paket kullanımı %${pct}"><i style="width:${pct}%"></i></div>
+    <div class="report-list"><div><span>Kullanılan</span><strong>${used} seans</strong></div><div><span>Toplam</span><strong>${total} seans</strong></div><div><span>Durum</span><strong>${low ? 'Yakında yenilenmeli' : 'Aktif'}</strong></div></div>
+  </article>`;
+}
+
 // Üyenin "İlerlemem" kartı: kilo grafiği + son ölçüm özeti. Tüm değerler
 // esc'ten geçer; null alanlar gösterilmez.
 function memberProgressCard(member){
@@ -3993,7 +4009,7 @@ function memberDashboard(){
   const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
-  <section class="dashboard-grid">${studioPublicCard('ÜYE ALANI · İŞLETME')}
+  <section class="dashboard-grid">${memberPackageCard(member)}${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${esc(program.title)} · ${esc(program.duration)} dakika</p></div><span class="badge">${esc(program.level)}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${esc(program.goal)} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>

@@ -467,3 +467,6 @@ body{overflow-x:clip}
 
 /* Üye ilerleme grafiği (satır içi SVG, harici bağımlılık yok) */
 .progress-spark{display:block;width:100%;margin:4px 0 6px}.progress-spark path{stroke:#2e7d32}.progress-spark circle{fill:#2e7d32}.progress-cap{display:block;color:#70756a;font-size:11px;margin-bottom:8px}
+
+/* Üye paket kartı ilerleme çubuğu */
+.package-bar{height:10px;border-radius:999px;background:rgba(17,20,15,.08);overflow:hidden;margin:2px 0 12px}.package-bar i{display:block;height:100%;border-radius:999px;background:var(--acid)}.warn-badge{background:#ffe3c2;color:#8a4b00}
