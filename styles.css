@@ -465,4 +465,5 @@ body{overflow-x:clip}
   .finance-row{grid-template-columns:1fr auto;row-gap:6px}
 }
 
-
+/* Üye ilerleme grafiği (satır içi SVG, harici bağımlılık yok) */
+.progress-spark{display:block;width:100%;margin:4px 0 6px}.progress-spark path{stroke:#2e7d32}.progress-spark circle{fill:#2e7d32}.progress-cap{display:block;color:#70756a;font-size:11px;margin-bottom:8px}

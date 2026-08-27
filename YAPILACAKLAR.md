@@ -67,8 +67,12 @@ dışarıda bırakıldı — sadelik ve butik ruhu korunuyor.
 
 Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi + test):
 
-1. **İlerleme takibi — vücut ölçümleri + grafik** — kilo/ölçü/yağ vb. zamanla,
-   hafif SVG grafik. PT'nin motivasyon ve satış kozu. (Yok, sıfırdan.)
+1. ✅ **İlerleme takibi — vücut ölçümleri + grafik** — YAPILDI (2026-08-27).
+   body_measurements tablosu + RLS (üye kendi görür, personel kaydeder). Üye
+   panelinde 'İlerlemem' kartı: hafif satır-içi SVG kilo grafiği + son ölçüm
+   özeti + ilk→son değişim. İşletmeci üye satırındaki 'Ölçüm' ile kaydeder.
+   Migration 0019 (Supabase'de çalıştırılmalı). Test: tests/measurements_test.py
+   (10 kontrol) + tests/sql/body_measurements_test.sh.
 2. **Üye self-servis seans talebi** — üye uygulamadan seans ister, WhatsApp
    trafiği azalır. (Seans var, üye talebi yok.)
 3. **Programlarım / antrenman geçmişi** — bugünkü + geçmiş program kartları.

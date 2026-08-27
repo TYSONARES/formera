@@ -9,6 +9,7 @@ const SIGNATURE_STORAGE_KEY = 'formera_signatures';
 const PROGRAM_SELECTION_STORAGE_KEY = 'formera_program_selections';
 const TRAINER_TASK_STORAGE_KEY = 'formera_trainer_tasks';
 const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
+const MEASUREMENT_STORAGE_KEY = 'formera_body_measurements';
 const MAKEUP_REQUEST_STORAGE_KEY = 'formera_makeup_requests';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
@@ -104,6 +105,7 @@ const BUSINESS_STORAGE_KEYS = [
   PROGRAM_SELECTION_STORAGE_KEY,
   TRAINER_TASK_STORAGE_KEY,
   MEMBER_TASK_STORAGE_KEY,
+  MEASUREMENT_STORAGE_KEY,
   MAKEUP_REQUEST_STORAGE_KEY,
   PILOT_LEAD_STORAGE_KEY
 ];
@@ -171,6 +173,7 @@ function emptyBusinessState(){
   state.team = [];
   state.trainerTasks = [];
   state.memberTasks = [];
+  state.measurements = [];
   state.makeupRequests = [];
   state.pilotLeads = [];
   state.landingLeads = [];
@@ -234,6 +237,7 @@ const state = {
   trainerTasks: usesLocalBusinessData() ? starterTrainerTasks.map(normalizeTrainerTask) : [],
   memberTasks: usesLocalBusinessData() ? starterMemberTasks.map(normalizeMemberTask) : [],
   makeupRequests: [],
+  measurements: [],
   pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
   landingLeads: [],
   studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
@@ -259,7 +263,8 @@ const state = {
     makeupRequestsReady: false,
     careReady: false,
     pilotLeadsReady: false,
-    landingLeadsReady: false
+    landingLeadsReady: false,
+    measurementsReady: false
   }
 };
 
@@ -390,6 +395,8 @@ const trainerTaskModal = document.querySelector('#trainerTaskModal');
 const trainerTaskForm = document.querySelector('#trainerTaskForm');
 const memberTaskModal = document.querySelector('#memberTaskModal');
 const memberTaskForm = document.querySelector('#memberTaskForm');
+const measurementModal = document.querySelector('#measurementModal');
+const measurementForm = document.querySelector('#measurementForm');
 const pilotLeadModal = document.querySelector('#pilotLeadModal');
 const pilotLeadForm = document.querySelector('#pilotLeadForm');
 const signatureModal = document.querySelector('#signatureModal');
@@ -701,6 +708,38 @@ function normalizeMemberTask(task){
 function saveMemberTasks(){
   writeBusinessStore(MEMBER_TASK_STORAGE_KEY, JSON.stringify(state.memberTasks));
   syncMemberTasksToSupabase();
+}
+
+// Bir vücut ölçümünü kanonik hale getirir. Sayısal alanlar boşsa null kalır
+// (o ölçümde o değer alınmamış demektir); grafik ve özet null'ları atlar.
+function normalizeMeasurement(m){
+  const num = v => {
+    if(v === '' || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  return {
+    id: m.id || makeId(),
+    studioId: m.studioId || m.studio_id || null,
+    memberId: m.memberId || m.member_id || null,
+    recordedBy: m.recordedBy || m.recorded_by || null,
+    measuredOn: m.measuredOn || m.measured_on || todayISO(),
+    weight: num(m.weight ?? m.weight_kg),
+    bodyFat: num(m.bodyFat ?? m.body_fat_pct),
+    muscle: num(m.muscle ?? m.muscle_kg),
+    chest: num(m.chest ?? m.chest_cm),
+    waist: num(m.waist ?? m.waist_cm),
+    hip: num(m.hip ?? m.hip_cm),
+    arm: num(m.arm ?? m.arm_cm),
+    thigh: num(m.thigh ?? m.thigh_cm),
+    note: m.note || '',
+    createdAt: m.createdAt || m.created_at || new Date().toISOString()
+  };
+}
+
+function saveMeasurements(){
+  writeBusinessStore(MEASUREMENT_STORAGE_KEY, JSON.stringify(state.measurements));
+  syncMeasurementsToSupabase();
 }
 
 function normalizePilotLead(lead){
@@ -1216,6 +1255,15 @@ function mapRemoteTrainerTask(task){
   });
 }
 
+function mapRemoteMeasurement(m){
+  return normalizeMeasurement({
+    id: m.id, studioId: m.studio_id, memberId: m.member_id, recordedBy: m.recorded_by,
+    measuredOn: m.measured_on, weight: m.weight_kg, bodyFat: m.body_fat_pct, muscle: m.muscle_kg,
+    chest: m.chest_cm, waist: m.waist_cm, hip: m.hip_cm, arm: m.arm_cm, thigh: m.thigh_cm,
+    note: m.note, createdAt: m.created_at
+  });
+}
+
 function mapRemoteMemberTask(task){
   return normalizeMemberTask({
     id: task.id,
@@ -1343,7 +1391,8 @@ async function loadRemoteData(){
     memberTasksResult,
     pilotLeadsResult,
     makeupRequestsResult,
-    landingLeadsResult
+    landingLeadsResult,
+    measurementsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -1359,7 +1408,8 @@ async function loadRemoteData(){
     db.from('makeup_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
     // landing_leads global admin verisidir (studio_id yok); RLS yalnizca
     // formera_admins uyesine satir dondurur, digerlerine bos gelir.
-    db.from('landing_leads').select('*').order('created_at', {ascending:false})
+    db.from('landing_leads').select('*').order('created_at', {ascending:false}),
+    db.from('body_measurements').select('*').eq('studio_id', studioId).order('measured_on', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
@@ -1369,13 +1419,15 @@ async function loadRemoteData(){
   // landing_leads opsiyoneldir ve yalnizca admin okur; her tur hatayi
   // (tablo yok / yetki) "hazir degil" sayip panelin geri kalanini bloklamayiz.
   const landingLeadsTableMissing = Boolean(landingLeadsResult.error);
+  const measurementsTableMissing = Boolean(measurementsResult.error && (measurementsResult.error.code === '42P01' || String(measurementsResult.error.message || '').includes('body_measurements')));
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
   state.backend.pilotLeadsReady = !pilotLeadTableMissing;
   state.backend.makeupRequestsReady = !makeupTableMissing;
   state.backend.careReady = !makeupTableMissing;
   state.backend.landingLeadsReady = !landingLeadsTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult].filter(Boolean).find(result=>result.error);
+  state.backend.measurementsReady = !measurementsTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult, measurementsTableMissing ? null : measurementsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   let firstStudio = studiosResult.data?.[0] || {};
   // Eski canlı kurulumlarda stüdyo ve ekip oluşturulmasına rağmen
@@ -1439,6 +1491,7 @@ async function loadRemoteData(){
     ? remotePilotLeads.map(lead=>({...lead, activationStatus: localActivationById.get(lead.id)?.activationStatus || lead.activationStatus, activationMode: localActivationById.get(lead.id)?.activationMode || lead.activationMode}))
     : localPilotLeads.filter(lead=>lead.source === 'landing');
   state.landingLeads = landingLeadsTableMissing ? [] : (landingLeadsResult.data || []).map(mapRemoteLandingLead);
+  state.measurements = measurementsTableMissing ? state.measurements : (measurementsResult.data || []).map(mapRemoteMeasurement);
 
   // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
   // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
@@ -1457,6 +1510,7 @@ async function loadRemoteData(){
   setServerRowKeys('member_tasks', memberTaskTableMissing ? [] : (memberTasksResult.data || []).map(row=>row.id));
   setServerRowKeys('makeup_requests', makeupTableMissing ? [] : (makeupRequestsResult.data || []).map(row=>row.id));
   setServerRowKeys('pilot_leads', pilotLeadTableMissing ? [] : remotePilotLeads.map(lead=>lead.id));
+  setServerRowKeys('body_measurements', measurementsTableMissing ? [] : (measurementsResult.data || []).map(row=>row.id));
 
   state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
@@ -1774,6 +1828,7 @@ async function primeRemoteSignatures(){
     syncSessionsToSupabase();
     syncTrainerTasksToSupabase();
     syncMemberTasksToSupabase();
+    syncMeasurementsToSupabase();
     syncMakeupRequestsToSupabase();
     syncPilotLeadsToSupabase();
     syncSignaturesToSupabase();
@@ -1993,6 +2048,21 @@ function syncTrainerTasksToSupabase(){
     due_date: task.dueDate,
     status: task.status,
     completed_at: task.completedAt
+  })));
+}
+
+function syncMeasurementsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.measurementsReady)) return;
+  syncRemote('body_measurements', state.measurements.map(m=>({
+    id: m.id,
+    studio_id: studioId,
+    member_id: m.memberId,
+    recorded_by: m.recordedBy || state.backend.profile?.id || null,
+    measured_on: m.measuredOn,
+    weight_kg: m.weight, body_fat_pct: m.bodyFat, muscle_kg: m.muscle,
+    chest_cm: m.chest, waist_cm: m.waist, hip_cm: m.hip, arm_cm: m.arm, thigh_cm: m.thigh,
+    note: m.note
   })));
 }
 
@@ -2672,6 +2742,7 @@ function memberRows(items=state.members){
       <button class="mini-button" data-action="copy-member-invite" data-member-id="${m.id}">Bağlantıyı kopyala</button>
       <button class="mini-button" data-action="checkin-member" data-member-id="${m.id}">Geldi</button>
       <button class="mini-button" data-action="sign-member" data-member-id="${m.id}">İmza al</button>
+      <button class="mini-button" data-action="add-measurement" data-member-id="${m.id}">Ölçüm</button>
       <button class="mini-button" data-action="edit-member" data-member-id="${m.id}">Düzenle</button>
       <button class="mini-button danger" data-action="delete-member" data-member-id="${m.id}">Sil</button>
     </div>
@@ -3851,6 +3922,63 @@ function pilotPage(){
 
 function genericPage(title, desc, icon){return `<div class="welcome"><div><span class="eyebrow">${escapeAttr(activeStudio().name)}</span><h1>${title}</h1><p>${desc}</p></div><button class="primary">+ Yeni oluştur</button></div><article class="card page-card"><div class="empty-illustration"><div><b>${icon}</b><h2>${title} modülü hazırlanıyor</h2><p>Bu bölüm için ilk işlem veya kayıt henüz eklenmedi.</p></div></div></article>`}
 
+// Üyenin ölçümlerini tarih artan sırada döndürür (grafik için).
+function measurementsForMember(memberId){
+  return state.measurements
+    .filter(m=>m.memberId === memberId)
+    .slice()
+    .sort((a,b)=>new Date(a.measuredOn) - new Date(b.measuredOn));
+}
+
+// Harici kütüphane yok: hafif satır-içi SVG çizgi grafik (yayın kuralı gereği).
+function progressSparkline(values){
+  const pts = values.filter(v=>v != null);
+  if(pts.length < 2) return '';
+  const W = 300, H = 70, pad = 8;
+  const minY = Math.min(...pts), maxY = Math.max(...pts);
+  const spanY = (maxY - minY) || 1;
+  const nx = i => pad + (W - 2*pad) * (i / (pts.length - 1));
+  const ny = y => H - pad - (H - 2*pad) * ((y - minY) / spanY);
+  const d = pts.map((y,i)=>`${i===0?'M':'L'}${nx(i).toFixed(1)} ${ny(y).toFixed(1)}`).join(' ');
+  const dots = pts.map((y,i)=>`<circle cx="${nx(i).toFixed(1)}" cy="${ny(y).toFixed(1)}" r="${i===pts.length-1?3.5:2.5}"></circle>`).join('');
+  return `<svg class="progress-spark" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="İlerleme grafiği"><path d="${d}" fill="none" stroke-width="2.5"/>${dots}</svg>`;
+}
+
+// Üyenin "İlerlemem" kartı: kilo grafiği + son ölçüm özeti. Tüm değerler
+// esc'ten geçer; null alanlar gösterilmez.
+function memberProgressCard(member){
+  const list = measurementsForMember(member.id);
+  if(!list.length){
+    return `<article class="card"><div class="card-title"><div><h2>İlerlemem</h2><p>Kilo ve ölçü takibin</p></div><span class="badge">0 ölçüm</span></div><div class="empty-mini">Antrenörün ölçüm ekledikçe kilo ve ölçü değişimin burada grafikle görünecek.</div></article>`;
+  }
+  const latest = list[list.length - 1];
+  const first = list[0];
+  const line = (label, val, unit) => val == null ? '' : `<div><span>${label}</span><strong>${esc(String(val))} ${unit}</strong></div>`;
+  const rows = [];
+  if(latest.weight != null){
+    let delta = '';
+    if(first.weight != null && list.length > 1){
+      const d = Math.round((latest.weight - first.weight) * 10) / 10;
+      const color = d < 0 ? '#2e7d32' : (d > 0 ? '#b06a00' : '#70756a');
+      const txt = d === 0 ? 'değişim yok' : (d < 0 ? `${d} kg` : `+${d} kg`);
+      delta = ` <small style="color:${color}">(${esc(txt)})</small>`;
+    }
+    rows.push(`<div><span>Kilo</span><strong>${esc(String(latest.weight))} kg${delta}</strong></div>`);
+  }
+  rows.push(line('Yağ oranı', latest.bodyFat, '%'));
+  rows.push(line('Kas', latest.muscle, 'kg'));
+  rows.push(line('Bel', latest.waist, 'cm'));
+  rows.push(line('Göğüs', latest.chest, 'cm'));
+  rows.push(line('Kalça', latest.hip, 'cm'));
+  rows.push(line('Kol', latest.arm, 'cm'));
+  rows.push(line('Bacak', latest.thigh, 'cm'));
+  const chart = progressSparkline(list.map(m=>m.weight));
+  const cap = chart ? `<small class="progress-cap">Kilo · ${esc(new Date(first.measuredOn).toLocaleDateString('tr-TR'))} → ${esc(new Date(latest.measuredOn).toLocaleDateString('tr-TR'))}</small>` : '';
+  return `<article class="card"><div class="card-title"><div><h2>İlerlemem</h2><p>Son ölçüm: ${esc(new Date(latest.measuredOn).toLocaleDateString('tr-TR'))}</p></div><span class="badge">${list.length} ölçüm</span></div>
+  ${chart}${cap}
+  <div class="report-list">${rows.filter(Boolean).join('')}</div></article>`;
+}
+
 function memberDashboard(){
   const member = currentMember();
   const memberName = member.name;
@@ -3874,7 +4002,7 @@ function memberDashboard(){
   <article class="card"><div class="card-title"><div><h2>Programlarım</h2><p>Antrenörünün sana atadığı programlardan birini seç.</p></div><span class="badge">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').length} seçenek</span></div>
   <div class="choice-list">${memberPrograms.filter(item=>item.title !== 'Henüz program atanmadı').map(item=>`<button class="choice-card ${item.id === program.id ? 'active' : ''}" data-action="select-member-program" data-program-id="${item.id}" data-member-name="${esc(memberName)}"><strong>${esc(item.title)}</strong><small>${esc(item.goal)} · ${esc(item.duration)} dk</small></button>`).join('') || `<div class="empty-mini">Antrenörün henüz sana bir program atamadı.</div>`}</div></article>
   <article class="card"><div class="card-title"><div><h2>Onaylarım</h2><p>Dijital imza ve sözleşme durumu</p></div><button class="secondary" data-action="sign-current-member">İmza at</button></div>
-  <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article></section>`}
+  <div class="report-list"><div><span>Son imza</span><strong>${signature ? new Date(signature.signedAt).toLocaleDateString('tr-TR') : 'Yok'}</strong></div><div><span>Onay tipi</span><strong>${signature?.type || 'Bekliyor'}</strong></div></div></article>${memberProgressCard(member)}</section>`}
 
 const pages={programs:['Programlar','Antrenman şablonlarını oluştur ve üyelere ata.','▤'],calendar:['Takvim','PT seanslarını ve stüdyo kapasitesini planla.','□'],finance:['Finans','Gelir, gider ve tahsilat hareketlerini yönet.','₺'],reports:['Haftalık özet','Haftalık ve aylık performansı karşılaştır.','↗'],growth:['AI İş Geliştirme','Toparlanma ve büyüme önerilerini tek ekranda yönet.','✦'],team:['Ekip','Antrenörleri, görevleri ve performansı izle.','♧'],pilot:['Pilot araçları','Yedekleme, geri yükleme ve demo sıfırlama.','⚑']};
 
@@ -4223,6 +4351,16 @@ function openTrainerTaskModal(){
   select.innerHTML = state.team.map(trainer=>`<option value="${escapeAttr(trainer.name)}">${escapeAttr(trainer.name)}</option>`).join('');
   trainerTaskForm.elements.dueDate.value = todayISO();
   trainerTaskModal.showModal();
+}
+
+function openMeasurementModal(member){
+  if(!measurementModal || !measurementForm) return;
+  measurementForm.reset();
+  const sel = measurementForm.elements.member;
+  sel.innerHTML = state.members.map(m=>`<option value="${escapeAttr(m.id)}">${escapeAttr(m.name)}</option>`).join('');
+  if(member?.id) sel.value = member.id;
+  measurementForm.elements.measuredOn.value = todayISO();
+  measurementModal.showModal();
 }
 
 function openMemberTaskModal(memberName=''){
@@ -4977,6 +5115,7 @@ function bind(){
     if(action==='import-full-backup') return document.querySelector('#fullBackupImport')?.click();
     if(action==='reset-demo-data') return confirmResetDemoData();
     if(action==='sign-member') return openSignatureModal(state.members.find(m=>m.id === b.dataset.memberId));
+    if(action==='add-measurement') return openMeasurementModal(state.members.find(m=>m.id === b.dataset.memberId));
     if(action==='sign-current-member') return openSignatureModal(currentMember());
     if(action==='clear-signature') return clearSignatureCanvas();
     if(action==='select-member-program') return selectMemberProgram(b.dataset.memberName, b.dataset.programId);
@@ -5446,6 +5585,31 @@ trainerTaskForm.onsubmit=e=>{
   e.target.reset();
   render();
   showToast(`${task.trainer} için görev gönderildi.`);
+};
+
+if(measurementForm) measurementForm.onsubmit=e=>{
+  e.preventDefault();
+  const data = new FormData(e.target);
+  const memberId = data.get('member');
+  const measurement = normalizeMeasurement({
+    id: makeId(),
+    studioId: studioIdForRemote(),
+    memberId,
+    recordedBy: state.backend.profile?.id || null,
+    measuredOn: data.get('measuredOn') || todayISO(),
+    weight: data.get('weight'), bodyFat: data.get('bodyFat'), muscle: data.get('muscle'),
+    chest: data.get('chest'), waist: data.get('waist'), hip: data.get('hip'),
+    arm: data.get('arm'), thigh: data.get('thigh'),
+    note: (data.get('note') || '').trim(),
+    createdAt: new Date().toISOString()
+  });
+  state.measurements.unshift(measurement);
+  saveMeasurements();
+  measurementModal.close();
+  e.target.reset();
+  render();
+  const who = state.members.find(m=>m.id === memberId)?.name || 'Üye';
+  showToast(`${who} için ölçüm kaydedildi.`);
 };
 
 memberTaskForm.onsubmit=e=>{

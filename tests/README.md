@@ -205,3 +205,19 @@ Doğruladığı dört şey:
 4. Biçim karakterli alan düz metin olarak geçer (parse_mode yok → enjeksiyon yok)
 
 > Sır repoda tutulmaz. Canlı kurulum: `supabase/ops/telegram-notify-setup.sql`.
+
+
+## measurements_test.py — vücut ölçümü / ilerleme takibi
+
+İki katmanı doğrular: (A) işletmeci bir üyeye ölçüm kaydedince
+`body_measurements`'a doğru alanlarla (studio_id, member_id, weight_kg…) yazma
+gider; (B) üye panelinde "İlerlemem" kartı ölçümlerle + satır-içi SVG kilo
+grafiğiyle render olur, ilk→son değişim hesaplanır, XSS payload'ı element olmaz.
+
+```bash
+python3 -m http.server 8899
+python3 tests/measurements_test.py
+```
+
+RLS tarafı ayrıca `tests/sql/body_measurements_test.sh` ile doğrulanır (üye
+kendi ölçümünü görür, başka stüdyo göremez, üye yazamaz, anon engelli).
