@@ -159,3 +159,29 @@ Yerel testte ikisi de shimlenir (`tests/sql/00c_pgnet_vault_shim.sql`).
 
 **Not.** Token herkese açık sohbette paylaşıldığı için, kurulum doğrulandıktan
 sonra `@BotFather` `/revoke` ile yenilenmeli.
+
+---
+
+## 2026-08-28 · KRR-formera-09 · Landing "papercraft" (Podia esinli) açık temaya geçti
+
+**Karar.** Web sitesi (landing) koyu/sinematik temadan, Başkan'ın onayladığı
+Podia stil rehberine göre sıcak, açık, mat "papercraft" temaya taşındı.
+`landing.css` sıfırdan yeniden yazıldı; `index.html` içeriği/görselleri/formu
+ve landing.js'in tüm id bağımlılıkları korundu.
+
+- Palet: Fog #f5f5f5 zemin, Paper beyaz kart, Ink #06040e (violet alt tonlu)
+  yazı, Sky/Terracotta/Lavanta ürün üçlüsü, Mist hairline. Gölge YOK, gradyan
+  YOK — yükseklik renk + yarıçapla. Organik lekeler imza öğe.
+- Tipografi: tek aile Manrope (self-hosted 500-800), sıkı-aralıklı iri başlık;
+  gövde DM Sans. Google Fonts hotlink'i YOK (KVKK + yayın kuralı).
+- Rol üçlüsü (İşletmeci/Antrenör/Üye) Podia ürün-kartı olarak Sky/Terracotta/
+  Lavanta; AI bandı Plum koyu vurgu yüzeyi.
+- Scroll animasyonu: IntersectionObserver reveal + hafif hero parallax.
+  `<html>.reveal-ready` yalnızca prefers-reduced-motion KAPALIYKEN (index.html
+  inline script) eklenir; JS'siz veya hareket azaltılmışsa içerik ilk boyamada
+  görünür (failsafe). landing.js form mantığı değişmedi.
+
+**Kilit varsayım.** Tema tek dünyaya (açık papercraft) commit; karanlık varyant
+yok — Podia zaten açık. Dashboard (uygulama) henüz eski temada; bir sonraki
+faz. Marka logosu (assets/formera-logo.svg) kendi renklerinde bırakıldı;
+palete tam uyum için ayrıca ele alınabilir.

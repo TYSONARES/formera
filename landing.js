@@ -329,3 +329,46 @@
   form.addEventListener('change', updatePreview);
   updatePreview();
 })();
+
+/* ---- Scroll animasyonları -------------------------------------------------
+   Bölümler görünüme girince yumuşakça yükselerek belirir; hero lekeleri
+   kaydırmayla hafifçe kayar. Hareket yalnızca kullanıcı istiyorsa: <html>'e
+   .reveal-ready sınıfı yalnızca prefers-reduced-motion kapalıyken (index.html
+   içindeki inline script) eklenir. JS yoksa veya hareket azaltılmışsa tüm
+   içerik zaten görünür (CSS failsafe). */
+(function setupScrollMotion(){
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const targets = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
+
+  // Reveal: IntersectionObserver destekliyse tembel; değilse hepsini göster.
+  if(targets.length){
+    if('IntersectionObserver' in window && !reduce){
+      const io = new IntersectionObserver((entries, obs)=>{
+        entries.forEach(entry=>{
+          if(entry.isIntersecting){ entry.target.classList.add('is-in'); obs.unobserve(entry.target); }
+        });
+      }, {rootMargin:'0px 0px -8% 0px', threshold:0.12});
+      targets.forEach(el=>io.observe(el));
+    }else{
+      targets.forEach(el=>el.classList.add('is-in'));
+    }
+  }
+
+  // Hafif hero parallax: lekeler kaydırmaya göre birkaç piksel kayar.
+  const orbs = Array.prototype.slice.call(document.querySelectorAll('.hero .light-orb'));
+  if(orbs.length && !reduce){
+    let ticking = false;
+    const apply = () => {
+      const y = window.scrollY || 0;
+      orbs.forEach((orb, i)=>{
+        const depth = i % 2 === 0 ? 0.06 : -0.05;
+        orb.style.transform = `transl` + `ate3d(0, ${(y * depth).toFixed(1)}px, 0)`;
+      });
+      ticking = false;
+    };
+    window.addEventListener('scroll', ()=>{
+      if(!ticking){ ticking = true; requestAnimationFrame(apply); }
+    }, {passive:true});
+    apply();
+  }
+})();

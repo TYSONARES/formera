@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#090b08" />
+  <meta name="theme-color" content="#f5f5f5" />
   <meta name="description" content="Formera, PT stüdyoları için işletmeci, antrenör ve üyeyi aynı akışta buluşturan AI destekli premium yönetim platformudur." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Formera" />
@@ -37,7 +37,8 @@
   <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
-  <link rel="stylesheet" href="landing.css?v=20260726-2" />
+  <link rel="stylesheet" href="landing.css?v=20260828-1" />
+  <script>try{if(window.matchMedia&&!matchMedia("(prefers-reduced-motion:reduce)").matches)document.documentElement.classList.add("reveal-ready")}catch(e){}</script>
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -56,7 +57,7 @@
 
   <main>
     <section class="hero">
-      <div class="hero-copy">
+      <div class="hero-copy" data-reveal>
         <span class="eyebrow">PT STÜDYOLARI İÇİN PREMIUM OPERASYON AKIŞI</span>
         <h1><span class="brand-word">Formera</span> ile stüdyonuzun haftasını tek akıllı sahnede yönetin.</h1>
         <p><span class="brand-word small">Formera</span>; işletmeci, antrenör ve üyeyi aynı sistemde buluşturan AI destekli stüdyo yönetim platformudur. Mesajlaşma dağınıklığını azaltır, takipleri görünür kılar, haftalık kararları hızlandırır.</p>
@@ -72,7 +73,7 @@
         </div>
       </div>
 
-      <div class="hero-stage" aria-label="Formera ürün sahnesi">
+      <div class="hero-stage" data-reveal data-reveal-d="1" aria-label="Formera ürün sahnesi">
         <div class="hero-media" aria-hidden="true">
           <!-- Video koşullu yüklenir: 7 MB'lık dosya dar ekranda, veri
                tasarrufu açıkken, yavaş bağlantıda veya hareket azaltma
@@ -115,7 +116,7 @@
       </div>
     </section>
 
-    <section class="visual-story" aria-label="Formera görsel hikaye alanı">
+    <section class="visual-story" data-reveal aria-label="Formera görsel hikaye alanı">
       <article class="visual-card studio-still">
         <figure class="visual-photo">
           <img src="assets/studio-flow.jpg" alt="Antrenör eşliğinde butik stüdyo antrenmanı" loading="lazy">
@@ -138,14 +139,14 @@
       </article>
     </section>
 
-    <section class="problem-strip" aria-label="Formera'nın çözdüğü problemler">
+    <section class="problem-strip" data-reveal aria-label="Formera'nın çözdüğü problemler">
       <div><span>01</span>Antrenörün üyeye ne verdiği görünür olur.</div>
       <div><span>02</span>Üye programı ve görevleri tek yerden takip eder.</div>
       <div><span>03</span>İşletmeci haftalık özeti beklemeden görür.</div>
       <div><span>04</span>Gelir, görev, ekip ve takip aynı hikâyeye bağlanır.</div>
     </section>
 
-    <section class="brand-gallery" aria-label="Formera marka atmosferi">
+    <section class="brand-gallery" data-reveal aria-label="Formera marka atmosferi">
       <article class="gallery-card large">
         <img src="assets/app-split.jpg" alt="Mobil uygulama ve antrenman akışı" loading="lazy">
         <span>Üye deneyimi</span>
@@ -168,7 +169,7 @@
         <span class="eyebrow">ÜÇ AYRI ROL, TEK OPERASYON DİLİ</span>
         <h2>Panel değil; stüdyo içindeki herkes için ayrı tasarlanmış bir deneyim.</h2>
       </div>
-      <div class="role-grid">
+      <div class="role-grid" data-reveal>
         <article>
           <span class="role-icon">⌂</span>
           <h3>İşletmeci</h3>
@@ -187,7 +188,7 @@
       </div>
     </section>
 
-    <section class="cinematic-band" id="ai">
+    <section class="cinematic-band" id="ai" data-reveal>
       <div>
         <span class="eyebrow">SESLİ AKIŞ + AI KATMANI</span>
         <h2>Yazmak yerine söyle. Formera notu göreve, görevi plana dönüştürür.</h2>
@@ -204,7 +205,7 @@
       </div>
     </section>
 
-    <section class="funnel" id="pilot">
+    <section class="funnel" id="pilot" data-reveal>
       <div class="funnel-copy">
         <span class="eyebrow">PAZARA ÇIKIŞ FUNNEL’I</span>
         <h2>İlk hedef: 4 kurucu stüdyo ile hızlı, ölçülebilir pilot.</h2>
@@ -258,7 +259,7 @@
       </aside>
     </section>
 
-    <section class="pricing-teaser" id="pricing" aria-label="Paket taslağı">
+    <section class="pricing-teaser" id="pricing" data-reveal aria-label="Paket taslağı">
       <div class="pricing-controls" role="group" aria-label="Faturalama dönemi">
         <span>Faturalama dönemi</span>
         <button class="billing-toggle is-active" type="button" data-billing="monthly" aria-pressed="true">Aylık</button>
@@ -334,7 +335,7 @@
   <!-- config.js landing'de de gerekli: başvuru Supabase'e buradaki bağlantı
        bilgisiyle, WhatsApp'a ise FORMERA_CONTACT.whatsapp ile gidiyor. -->
   <script src="config.js?v=20260817-1"></script>
-  <script src="landing.js?v=20260817-1"></script>
+  <script src="landing.js?v=20260828-1"></script>
   <script src="pwa.js?v=20260726-2"></script>
 </body>
 </html>
