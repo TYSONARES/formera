@@ -476,3 +476,13 @@ body{overflow-x:clip}
 
 /* Açık kartlardaki liste satırları (duyuru/geçmiş/talepler) okunur olsun */
 .announcement-list .insight{background:#f7f4f0;border-color:#e0dbea;color:#191231;margin-top:0}.announcement-list .insight strong{color:#191231}.announcement-list .insight small{color:#6b6673}.announcement-list .insight .announcement-body{color:#3a3545}
+
+/* Sol menü marka yazısı: neon logo yerine sade papercraft wordmark (koyu menü) */
+.brand .dashboard-brand-logo.brand-word-logo{display:block;width:auto;height:auto;filter:none;font:800 21px/1 Manrope,"DM Sans",sans-serif;letter-spacing:-.045em;color:#f5f2fb}
+.brand .dashboard-brand-logo.brand-word-logo b{color:var(--acid);font-weight:800}
+
+/* Metrik ikonları: landing üçlüsü + cream dönüşümlü (terracotta/sky/lavender/cream) */
+.metrics .metric:nth-child(4n+1) .metric-icon{background:#f7e6d4;color:#b3701f}
+.metrics .metric:nth-child(4n+2) .metric-icon{background:#e4eef2;color:#3f7186}
+.metrics .metric:nth-child(4n+3) .metric-icon{background:#efe7f7;color:#6b4a94}
+.metrics .metric:nth-child(4n+4) .metric-icon{background:#f7efe3;color:#a76f2a}

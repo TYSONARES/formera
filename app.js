@@ -1,3 +1,17 @@
+// Papercraft öncesi varsayılan aksan lime (#d9ff64) idi ve kurulumda stüdyo
+// kaydına yazılıyordu. Yeni marka aksanı terracotta; kullanıcı bilerek bir
+// renk seçmediyse (boş ya da eski lime varsayılan) terracotta'ya çeviriyoruz.
+// Veriyi silmez, yalnızca gösterimi düzeltir; kullanıcı gerçek bir renk
+// seçerse o korunur. NOT: en üstte tanımlı olmalı; state başlatılırken demo
+// stüdyoları normalizeStudio -> normalizeAccent'i çağırıyor (TDZ hatasını önler).
+const LEGACY_DEFAULT_ACCENT = '#d9ff64';
+const DEFAULT_ACCENT = '#e39a4d';
+function normalizeAccent(value){
+  const c = String(value || '').trim().toLowerCase();
+  if(!c || c === LEGACY_DEFAULT_ACCENT) return DEFAULT_ACCENT;
+  return value;
+}
+
 const STORAGE_KEY = 'formera_members';
 const FINANCE_STORAGE_KEY = 'formera_finance_entries';
 const PROGRAM_STORAGE_KEY = 'formera_programs';
@@ -849,19 +863,6 @@ function teamSummary(){
     completed: stats.reduce((sum,item)=>sum + item.done, 0),
     estimatedCommission: state.team.reduce((sum,trainer)=>sum + trainerStats(trainer.name).revenue * (trainer.commission / 100), 0)
   };
-}
-
-// Papercraft öncesi varsayılan aksan lime (#d9ff64) idi ve kurulumda stüdyo
-// kaydına yazılıyordu. Yeni marka aksanı terracotta; kullanıcı bilerek bir
-// renk seçmediyse (boş ya da eski lime varsayılan) terracotta'ya çeviriyoruz.
-// Veriyi silmez, yalnızca gösterimi düzeltir; kullanıcı gerçek bir renk
-// seçerse o korunur.
-const LEGACY_DEFAULT_ACCENT = '#d9ff64';
-const DEFAULT_ACCENT = '#e39a4d';
-function normalizeAccent(value){
-  const c = String(value || '').trim().toLowerCase();
-  if(!c || c === LEGACY_DEFAULT_ACCENT) return DEFAULT_ACCENT;
-  return value;
 }
 
 function normalizeStudio(studio){
