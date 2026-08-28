@@ -406,3 +406,54 @@ p{margin:0}
   .hero-copy h1{font-size:clamp(32px,9vw,44px)}
   .section, .visual-story, .problem-strip, .brand-gallery, .cinematic-band, .funnel, .pricing-teaser{padding:52px 20px}
 }
+
+/* ---------- Cihaz vitrini (gerçek panelin canlı önizlemesi) ---------- */
+.device-showcase{text-align:center}
+.device-stage{
+  display:flex; align-items:flex-end; justify-content:center;
+  gap:clamp(28px,6vw,80px); flex-wrap:wrap; margin-top:4px;
+}
+.device{margin:0; display:flex; flex-direction:column; align-items:center; gap:15px}
+.device figcaption{
+  font-family:var(--body); font-weight:600; font-size:12.5px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--graphite);
+}
+.device-screen{position:relative; overflow:hidden; background:var(--paper)}
+.device-scroll{
+  width:100%; height:100%;
+  background-repeat:no-repeat; background-size:100% auto; background-position:center top;
+  will-change:background-position;
+}
+.device.tablet .device-screen{
+  width:min(430px,76vw); height:min(560px,60vh); aspect-ratio:3/4;
+  border-radius:24px; border:14px solid var(--plum);
+  box-shadow:0 28px 60px rgba(6,4,14,.18);
+}
+.device.phone{position:relative}
+.device.phone .device-screen{
+  width:min(236px,60vw); height:min(500px,54vh); aspect-ratio:9/19;
+  border-radius:40px; border:12px solid var(--plum);
+  box-shadow:0 28px 60px rgba(6,4,14,.2);
+}
+.device-notch{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  width:98px; height:20px; border-radius:0 0 14px 14px; background:var(--plum); z-index:2;
+}
+.device-note{
+  font-family:var(--body); color:var(--graphite); opacity:.72; font-size:14px;
+  margin:34px auto 0; max-width:54ch;
+}
+/* GIF benzeri kendiliğinden kayan hareket — yalnızca hareket izni varsa */
+@media (prefers-reduced-motion:no-preference){
+  .device.tablet .device-scroll{animation:device-pan 24s cubic-bezier(.42,0,.42,1) infinite alternate}
+  .device.phone .device-scroll{animation:device-pan 18s cubic-bezier(.42,0,.42,1) infinite alternate .8s}
+}
+@keyframes device-pan{
+  0%, 9%{background-position:center 0%}
+  91%, 100%{background-position:center 100%}
+}
+@media (max-width:520px){
+  .device-stage{gap:32px}
+  .device.tablet .device-screen{width:min(430px,86vw); height:52vh}
+  .device.phone .device-screen{width:min(236px,66vw); height:50vh}
+}
