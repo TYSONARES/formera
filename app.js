@@ -859,7 +859,7 @@ function normalizeStudio(studio){
     location: studio.location || 'Konum eklenmedi',
     status: studio.status || 'Demo',
     logoDataUrl: studio.logoDataUrl || studio.logo_data_url || '',
-    accentColor: studio.accentColor || studio.accent_color || '#d9ff64',
+    accentColor: studio.accentColor || studio.accent_color || '#e39a4d',
     address: studio.address || '',
     phone: studio.phone || '',
     whatsapp: studio.whatsapp || '',
@@ -2029,7 +2029,7 @@ function syncStudiosToSupabase(){
       };
       if(state.backend.brandingReady){
         row.logo_data_url = studio.logoDataUrl || null;
-        row.accent_color = studio.accentColor || '#d9ff64';
+        row.accent_color = studio.accentColor || '#e39a4d';
         row.address = studio.address || null;
         row.phone = studio.phone || null;
         row.whatsapp = studio.whatsapp || null;
@@ -2288,7 +2288,7 @@ function updateStudioShell(){
   if(sidebarName) sidebarName.textContent = studio.name;
   if(sidebarBrand) sidebarBrand.hidden = !useStudioBrand;
   brand?.classList.toggle('has-studio-brand', useStudioBrand);
-  document.documentElement.style.setProperty('--acid', studio.accentColor || '#d9ff64');
+  document.documentElement.style.setProperty('--acid', studio.accentColor || '#e39a4d');
 }
 
 function roleMeta(){
@@ -2906,7 +2906,7 @@ function memberMakeupPanel(member){
 }
 
 function compactSessionRows(items=sessionsForDate()){
-  return items.slice(0,4).map(session=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
+  return items.slice(0,4).map(session=>`<div class="insight" style="background:#f6f4f1;border-color:#eeecf2">
     <span>${session.time}</span>
     <div><strong>${esc(session.member)} · ${esc(session.program)}</strong><small>${esc(session.trainer)} ile · ${esc(session.room)} · ${sessionCapacityLabel(session)} · ${sessionStatusLabel(session.status)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Bugün için seans yok. İlk seansı takvimden ekle.</div>`;
@@ -3151,7 +3151,7 @@ function exercisePreviewPath(exercise=''){
 }
 
 function exerciseRow(exercise,index,{member=false}={}){
-  return `<div class="insight exercise-row" style="background:#f8f9f4;border-color:#eef0e8"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${esc(exercise)}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
+  return `<div class="insight exercise-row" style="background:#f6f4f1;border-color:#eeecf2"><span>${index+1}</span><img class="exercise-preview" src="${exercisePreviewPath(exercise)}" alt="${escapeAttr(exercise)} hareket önizlemesi" loading="lazy"><div><strong>${esc(exercise)}</strong><small>${member ? 'Dinlenme 60–90 saniye · kısa hareket önizlemesi' : 'Setleri PT onayıyla güncelle · kısa hareket önizlemesi'}</small></div></div>`;
 }
 
 function programCards(){
@@ -3580,7 +3580,7 @@ function trainerClientRows(){
 
 function trainerProgramRows(){
   const programs = state.programs.filter(program=>program.assigned === 'Atanmadı' || state.members.some(member=>member.name === program.assigned && isMemberAssignedToSpecialist(member, state.trainerName)));
-  return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f8f9f4;border-color:#eef0e8">
+  return programs.slice(0,3).map(program=>`<div class="insight" style="background:#f6f4f1;border-color:#eeecf2">
     <span>▤</span><div><strong>${esc(program.title)}</strong><small>${esc(program.assigned)} · ${esc(program.duration)} dk · ${esc(program.level)}</small></div>
   </div>`).join('') || `<div class="empty-mini">Program atanmadı.</div>`;
 }
@@ -5064,7 +5064,7 @@ function openStudioBrandModal(){
   studioBrandForm.elements.website.value = studio.website || '';
   studioBrandForm.elements.mapUrl.value = studio.mapUrl || '';
   studioBrandForm.elements.initials.value = studio.initials;
-  studioBrandForm.elements.accentColor.value = studio.accentColor || '#d9ff64';
+  studioBrandForm.elements.accentColor.value = studio.accentColor || '#e39a4d';
   studioBrandModal.showModal();
 }
 
@@ -5965,7 +5965,7 @@ studioBrandForm.onsubmit=async e=>{
     website: data.get('website').trim(),
     mapUrl: data.get('mapUrl').trim(),
     initials: data.get('initials').trim().toLocaleUpperCase('tr') || initialsFromName(name),
-    accentColor: data.get('accentColor') || '#d9ff64',
+    accentColor: data.get('accentColor') || '#e39a4d',
     logoDataUrl
   });
   state.studios = state.studios.map(item=>item.id === studio.id ? updated : item);
