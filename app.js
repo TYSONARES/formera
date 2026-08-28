@@ -2300,8 +2300,16 @@ function updateStudioShell(){
   if(location) location.textContent = studio.location;
   setAvatarElement(sidebarAvatar, studio.initials, studio.logoDataUrl);
   if(sidebarName) sidebarName.textContent = studio.name;
+  const sidebarTag = document.querySelector('#sidebarStudioTag');
+  if(sidebarTag) sidebarTag.textContent = studio.location || 'İşletme paneli';
   if(sidebarBrand) sidebarBrand.hidden = !useStudioBrand;
   brand?.classList.toggle('has-studio-brand', useStudioBrand);
+  // Beyaz etiket: işletme markası üstte; alt köşede "powered by formera"
+  // imzası, stüdyo değiştirici yerine görünür.
+  const studioCard = document.querySelector('.studio-card');
+  const powered = document.querySelector('#sidebarPowered');
+  if(studioCard) studioCard.hidden = useStudioBrand;
+  if(powered) powered.hidden = !useStudioBrand;
   document.documentElement.style.setProperty('--acid', normalizeAccent(studio.accentColor));
 }
 

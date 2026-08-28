@@ -16,7 +16,7 @@
   <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
-  <link rel="stylesheet" href="styles.css?v=20260828-6" />
+  <link rel="stylesheet" href="styles.css?v=20260828-7" />
 </head>
 <body>
   <div class="app-shell">
@@ -27,7 +27,7 @@
         <span class="dashboard-brand-logo brand-word-logo" aria-label="Formera">form<b>era</b></span>
         <span class="sidebar-studio-brand" id="sidebarStudioBrand" hidden>
           <span class="studio-avatar sidebar-studio-avatar" id="sidebarStudioAvatar">NF</span>
-          <span class="sidebar-studio-copy"><strong id="sidebarStudioName">Stüdyo</strong><small>powered by formera</small></span>
+          <span class="sidebar-studio-copy"><strong id="sidebarStudioName">Stüdyo</strong><small id="sidebarStudioTag">İşletme paneli</small></span>
         </span>
       </a>
 
@@ -54,6 +54,10 @@
         <div><strong id="studioName">NorthFit Studio</strong><small id="studioLocation">Kadıköy · İstanbul</small></div>
         <button aria-label="Stüdyo değiştir" data-action="cycle-studio">↻</button>
       </div>
+      <a class="sidebar-powered" id="sidebarPowered" href="index.html" aria-label="Formera ana sayfa" hidden>
+        <span class="powered-mark" aria-hidden="true">F</span>
+        <span class="powered-copy">powered by <b>formera</b></span>
+      </a>
     </aside>
     <div class="sidebar-backdrop" aria-hidden="true"></div>
 
@@ -377,7 +381,7 @@
        kesinti, kurumsal firewall veya ülke bazlı engel paneli kilitleyemez. -->
   <script src="vendor/supabase-js-2.112.3.min.js?v=20260817-1"></script>
   <script src="pwa.js?v=20260729-1"></script>
-  <script src="app.js?v=20260828-4"></script>
+  <script src="app.js?v=20260828-7"></script>
 
 </body>
 </html>
