@@ -851,6 +851,19 @@ function teamSummary(){
   };
 }
 
+// Papercraft öncesi varsayılan aksan lime (#d9ff64) idi ve kurulumda stüdyo
+// kaydına yazılıyordu. Yeni marka aksanı terracotta; kullanıcı bilerek bir
+// renk seçmediyse (boş ya da eski lime varsayılan) terracotta'ya çeviriyoruz.
+// Veriyi silmez, yalnızca gösterimi düzeltir; kullanıcı gerçek bir renk
+// seçerse o korunur.
+const LEGACY_DEFAULT_ACCENT = '#d9ff64';
+const DEFAULT_ACCENT = '#e39a4d';
+function normalizeAccent(value){
+  const c = String(value || '').trim().toLowerCase();
+  if(!c || c === LEGACY_DEFAULT_ACCENT) return DEFAULT_ACCENT;
+  return value;
+}
+
 function normalizeStudio(studio){
   return {
     id: studio.id || makeId(),
@@ -859,7 +872,7 @@ function normalizeStudio(studio){
     location: studio.location || 'Konum eklenmedi',
     status: studio.status || 'Demo',
     logoDataUrl: studio.logoDataUrl || studio.logo_data_url || '',
-    accentColor: studio.accentColor || studio.accent_color || '#e39a4d',
+    accentColor: normalizeAccent(studio.accentColor || studio.accent_color),
     address: studio.address || '',
     phone: studio.phone || '',
     whatsapp: studio.whatsapp || '',
@@ -2029,7 +2042,7 @@ function syncStudiosToSupabase(){
       };
       if(state.backend.brandingReady){
         row.logo_data_url = studio.logoDataUrl || null;
-        row.accent_color = studio.accentColor || '#e39a4d';
+        row.accent_color = normalizeAccent(studio.accentColor);
         row.address = studio.address || null;
         row.phone = studio.phone || null;
         row.whatsapp = studio.whatsapp || null;
@@ -2288,7 +2301,7 @@ function updateStudioShell(){
   if(sidebarName) sidebarName.textContent = studio.name;
   if(sidebarBrand) sidebarBrand.hidden = !useStudioBrand;
   brand?.classList.toggle('has-studio-brand', useStudioBrand);
-  document.documentElement.style.setProperty('--acid', studio.accentColor || '#e39a4d');
+  document.documentElement.style.setProperty('--acid', normalizeAccent(studio.accentColor));
 }
 
 function roleMeta(){
@@ -5064,7 +5077,7 @@ function openStudioBrandModal(){
   studioBrandForm.elements.website.value = studio.website || '';
   studioBrandForm.elements.mapUrl.value = studio.mapUrl || '';
   studioBrandForm.elements.initials.value = studio.initials;
-  studioBrandForm.elements.accentColor.value = studio.accentColor || '#e39a4d';
+  studioBrandForm.elements.accentColor.value = normalizeAccent(studio.accentColor);
   studioBrandModal.showModal();
 }
 
@@ -5965,7 +5978,7 @@ studioBrandForm.onsubmit=async e=>{
     website: data.get('website').trim(),
     mapUrl: data.get('mapUrl').trim(),
     initials: data.get('initials').trim().toLocaleUpperCase('tr') || initialsFromName(name),
-    accentColor: data.get('accentColor') || '#e39a4d',
+    accentColor: normalizeAccent(data.get('accentColor')),
     logoDataUrl
   });
   state.studios = state.studios.map(item=>item.id === studio.id ? updated : item);
