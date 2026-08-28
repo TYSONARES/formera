@@ -16,7 +16,7 @@
   <!-- Yazı tipleri kendi origin'imizden; Google Fonts hotlink'i KVKK gereği kaldırıldı. -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/dm-sans-latin-ext-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts/fonts.css?v=20260818-1">
-  <link rel="stylesheet" href="styles.css?v=20260828-7" />
+  <link rel="stylesheet" href="styles.css?v=20260828-8" />
 </head>
 <body>
   <div class="app-shell">
@@ -312,25 +312,20 @@
   <dialog class="modal" id="supabaseModal">
     <div class="modal-panel formera-login-panel">
       <div class="formera-login-top">
-        <a class="formera-login-brand" href="index.html" aria-label="Formera ana sayfa"><img src="assets/formera-logo.svg?v=20260828-3" alt="Formera"></a>
-        <span class="formera-login-tag">STÜDYO OPERASYON SİSTEMİ</span>
+        <a class="formera-login-brand" href="index.html" aria-label="Formera ana sayfa">
+          <span class="brand-mark" aria-hidden="true">F</span><span class="brand-word-logo">form<b>era</b></span>
+        </a>
         <button class="modal-close" id="closeSupabaseModal" aria-label="Kapat">×</button>
       </div>
       <div class="formera-login-copy">
-        <span class="eyebrow" id="loginEyebrow">FORMERA GİRİŞ</span>
-        <h2 id="supabaseModalTitle">Operasyon sahnene hoş geldin.</h2>
-        <p id="loginWelcomeText">İşletmeni, ekibini ve üye akışını tek bir ritimde yönet.</p>
+        <h2 id="supabaseModalTitle">Formera hesabına giriş</h2>
+        <p id="loginWelcomeText">İşletme, antrenör veya üye hesabınla devam et.</p>
       </div>
       <div class="login-tabs formera-login-tabs" id="loginTabs" role="tablist" aria-label="Giriş rolü">
         <button type="button" class="active" data-login-role="owner" role="tab" aria-selected="true"><span>◫</span> İşletme</button>
         <button type="button" data-login-role="trainer" role="tab" aria-selected="false"><span>⌁</span> Antrenör</button>
         <button type="button" data-login-role="member" role="tab" aria-selected="false"><span>◌</span> Üye</button>
       </div>
-      <div class="account-summary login-account-summary" id="accountSummary">
-        <span class="avatar">?</span>
-        <div><strong>Canlı giriş bekleniyor</strong><small>Rolün, kayıtlı hesabına göre güvenli biçimde açılır.</small></div>
-      </div>
-      <p class="modal-note login-role-note" id="loginRoleNote">İşletme hesabıyla tüm salon verilerini yönet.</p>
       <form id="supabaseConfigForm">
         <label>Project URL<input name="url" required placeholder="https://xxxxx.supabase.co"></label>
         <label>Anon public key<textarea name="anonKey" required rows="4" placeholder="eyJhbGciOi..."></textarea></label>
