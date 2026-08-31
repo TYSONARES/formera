@@ -487,11 +487,14 @@ body{overflow-x:clip}
 .metrics .metric:nth-child(4n+4) .metric-icon{background:#f7efe3;color:#a76f2a}
 
 /* Beyaz etiket alt imzası: "powered by formera" (işletme markası üstte kalır) */
-.sidebar-powered{margin-top:auto;display:flex;align-items:center;gap:9px;text-decoration:none;color:#8c82a5;font:600 10px "DM Sans";letter-spacing:.02em;padding:6px;border-radius:10px}
+.sidebar-powered{margin-top:auto;display:flex;align-items:center;gap:11px;text-decoration:none;padding:9px 8px;border-radius:12px}
 .sidebar-powered[hidden]{display:none!important}
 .sidebar-powered:hover{color:#cbc4dc;background:#251d40}
-.powered-mark{flex:0 0 auto;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#2a2148;border:1px solid #3a3060;color:#cbc4dc;font:800 12px Manrope}
-.powered-copy b{color:#f5f2fb;font-weight:800}
+.powered-mark{flex:0 0 auto;display:grid;place-items:center;width:33px;height:33px;border-radius:9px;background:var(--terracotta);color:#3a1e06;font:800 18px Manrope}
+.powered-copy{display:flex;flex-direction:column;line-height:1.02;min-width:0}
+.powered-copy .pb{font:700 8.5px "DM Sans";letter-spacing:.16em;text-transform:uppercase;color:#8c82a5;margin-bottom:2px}
+.powered-copy .pf{font:800 17px/1 Manrope;letter-spacing:-.02em;color:#f5f2fb}
+.powered-copy .pf b{color:var(--terracotta);font-weight:800}
 /* Menü daralınca yalnızca imza işareti ortada kalır */
 @media(min-width:761px){
   .app-shell:not(.sidebar-expanded) .sidebar-powered{justify-content:center;padding:6px 0}
