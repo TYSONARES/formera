@@ -13,7 +13,7 @@
   "categories": ["business", "health", "productivity"],
   "icons": [
     {
-      "src": "assets/formera-favicon.svg",
+      "src": "assets/formera-favicon.svg?v=20260828-6",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
