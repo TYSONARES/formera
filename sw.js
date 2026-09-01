@@ -1,4 +1,4 @@
-const CACHE_NAME = 'formera-pwa-v71';
+const CACHE_NAME = 'formera-pwa-v72';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -30,9 +30,13 @@ const CORE_ASSETS = [
   './assets/fonts/manrope-latin-ext-700-normal.woff2',
   './assets/fonts/manrope-latin-ext-800-normal.woff2',
   './pwa.js',
+  './install.js',
   './manifest.webmanifest',
   './icon.svg',
   './favicon.svg',
+  './assets/apple-touch-icon.png',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
   './assets/formera-logo.svg',
   './assets/formera-favicon.svg',
   './assets/kettlebell-stage.jpg',
