@@ -185,3 +185,53 @@ ve landing.js'in tüm id bağımlılıkları korundu.
 yok — Podia zaten açık. Dashboard (uygulama) henüz eski temada; bir sonraki
 faz. Marka logosu (assets/formera-logo.svg) kendi renklerinde bırakıldı;
 palete tam uyum için ayrıca ele alınabilir.
+
+---
+
+## 2026-09-18 · KRR-formera-10 · Arayüz canlıda yalnızca girişle görünür; demo kaldırıldı
+
+**Karar.** Sitedeki tüm "demo dashboard" bağlantıları kaldırıldı. Canlı sitede
+`dashboard.html` — `?demo=1` dahil — arayüzü göstermez; oturum yoksa yalnızca
+giriş kapısı görünür (`app.js > loginGateActive`). Demo önizleme yalnızca yerel
+geliştirmede (localhost / file:) çalışır; testler ve ekran görüntüsü üretimi
+bundan etkilenmez. Arayüz tanıtımı artık index'teki gerçek ekran
+görüntüleriyle yapılır: 4 ürün kartı yenilendi + 6 kartlık "Panelin içinden"
+galerisi eklendi (takvim, üyeler, programlar, rapor, antrenör, üye ilerlemesi).
+Görseller demo panelden Playwright ile alındı; üye ekranındaki ölçüm/duyuru/
+talep örnek verisi yalnızca tarayıcıda enjekte edildi, koda girmedi.
+
+**Gerekçe.** Başkan talimatı (2026-09-18): "dashboarda tıklanıldığında insanlar
+arayüzü görmesin; arayüz fotoğraflarını web sitesinde sunalım." Ayrıca ölçüldü:
+demo'suz `dashboard.html` bile giriş istemeden boş arayüz iskeletini açıyordu;
+yani yalnızca link kaldırmak yetmezdi, kapı şarttı.
+
+**Kilit varsayım.** Kapı istemci tarafındadır; veri güvenliği zaten RLS'tedir
+(KRR-formera-07). Kapı veri değil, arayüzün kendisini gizler. Davet linkleri
+(`?invite_*`) kapıdan etkilenmez: kapıdaki "Giriş yap" aynı modalı açar.
+
+---
+
+## 2026-09-18 · KRR-formera-11 · İş modeli pivotu: tek paket + üye barajı + bireysele ücretsiz
+
+**Karar.** (Başkan, 2026-09-18) "Kurucu pilot" söylemi bırakıldı → "erken
+kayıt avantajı". Paket üçlemesi (Starter/Studio/Studio AI) kaldırıldı → tek
+paket; her özellik herkese açık. Fiyat yalnızca üye sayısı barajına göre:
+0–10 üye ücretsiz (bireysel antrenör, koç ve kendi antrenmanını yönetenler
+böylece ücretsiz kullanır), 11–25 / 26–45 / 46–60 kademeli, 60+ özel teklif.
+Uzun vadeli yön: sporu teşvik eden, bireyi oyunlaştırılmış başarı ölçütleri ve
+kutlama animasyonlarıyla motive eden AI destekli platform.
+
+**Uygulanan.** Landing tamamen yeni modele geçirildi: fiyat bölümü tek
+paket + 5 kademe kartı; form "paket ilgisi" yerine "kullanım" (stüdyo /
+bireysel antrenör / kendi antrenmanım) + yeni üye barajları; tüm pilot
+söylemleri erken kayıt oldu; plan/faturalama modalı ve landing.js'teki paket
+fiyat mantığı kaldırıldı. Lead kaydına `packageCode` artık
+`<kullanım>_<kademe>` yazar; kademe fiyatı belli olmadığından `value: 0`.
+
+**KARAR GEREKLİ (Başkan'a).** (1) Kademe TL tutarları — sitede bilerek
+yazılmadı, `data-placeholder` ile işaretli; rakamlar onaylanınca eklenecek.
+(2) PAYMENTS.md eski üç paketli modeli anlatıyor; revize edilmeli.
+(3) Oyunlaştırma kapsamı YAPILACAKLAR'da planlandı, onay bekliyor.
+
+**Kilit varsayım.** "10 üyeye kadar ücretsiz" Başkan'ın açık kararıdır ve
+sitede yayınlandı; kademe tutarları yayınlanmadı, yanıltıcı fiyat iddiası yok.

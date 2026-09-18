@@ -4,6 +4,32 @@ Karar defteri `KARARLAR.md`'de. Burası henüz yapılmamış, hatırlatılması 
 
 ---
 
+## 🔴 İş modeli pivotu (KRR-formera-11) — bekleyen adımlar
+
+Başkan kararı (2026-09-18): tek paket + üye barajlı fiyat + bireysele ücretsiz +
+oyunlaştırılmış, sporu teşvik eden platform. Landing yeni modele geçirildi;
+kalan adımlar:
+
+1. **Kademe TL tutarları — KARAR (Başkan).** 11–25 / 26–45 / 46–60 kademeleri
+   sitede `data-placeholder="fiyat-kademe-*"` ile "Erken kayıtta netleşir"
+   yazıyor. Rakamlar onaylanınca `index.html` + `landing.js`'e işlenecek.
+2. **Oyunlaştırma / başarı sistemi — ONAY BEKLİYOR.** Üye panelinde bölüm
+   geçme mantığında başarı ölçütleri (seri antrenman, tamamlanan program,
+   ölçüm hedefi, kademe atlama vb.) + her başarıda ekranda görsel tebrik
+   animasyonu. Tasarım taslağı öneri olarak Başkan'a sunuldu (2026-09-18
+   oturumu). Onaylanınca: `achievements` tablosu + RLS + kutlama animasyonu
+   (prefers-reduced-motion'da atlanır) + test.
+3. **Bireysel kullanım akışı.** Solo antrenör/sporcu bugün "tek kişilik
+   stüdyo" olarak kayıt olabiliyor; kayıt sihirbazında bunu açıkça sunan
+   "Bireysel" yolu eklenecek (stüdyo kurulum adımlarını atlayan sade akış).
+4. **Fiyat kademesi uygulaması.** Üye sayısı barajı aşılınca panelde nazik
+   uyarı + kademe bilgisi (şimdilik manuel faturalama; İyzico sonrası).
+5. **PAYMENTS.md revizyonu.** Eski üç paketli modeli anlatıyor; tek paket +
+   kademe modeline göre yeniden yazılacak (ve public repodan ayrılacak, bkz.
+   "Diğer bekleyenler").
+
+---
+
 ## ✅ Lead bildirim sistemi — TAMAMLANDI (canlıda doğrulandı 2026-08-27)
 
 **Durum:** ÇÖZÜLDÜ. Başvurular hem Formera Admin panelinde "Web sitesinden gelen

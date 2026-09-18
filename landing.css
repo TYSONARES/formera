@@ -515,3 +515,42 @@ p{margin:0}
 .pc-shot{position:relative; z-index:1}
 .pc-art{position:absolute; right:-30px; top:-14px; height:74%; mix-blend-mode:multiply; opacity:.16; pointer-events:none; z-index:0}
 .pc-card--lavender .pc-art,.pc-card--cream .pc-art{top:auto; bottom:-24px; height:80%}
+
+/* ---------- Ekran galerisi (#ekranlar) ---------- */
+/* Demo dashboard bağlantısı kaldırıldı (Başkan kararı); arayüz siteye
+   yalnızca bu ekran görüntüleriyle tanıtılır. */
+.shot-gallery{padding:72px 20px}
+.shot-note{color:rgba(6,4,14,.62); margin:10px 0 0; font-size:15px}
+.shot-grid{max-width:var(--maxw); margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:26px}
+.shot-card{margin:0; background:var(--paper); border:1px solid rgba(6,4,14,.08); border-radius:20px; overflow:hidden; display:flex; flex-direction:column}
+.shot-card img{width:100%; display:block; border-bottom:1px solid rgba(6,4,14,.08)}
+.shot-card figcaption{padding:16px 20px 18px; display:flex; flex-direction:column; gap:4px}
+.shot-card figcaption b{font-family:var(--display); font-size:17px; letter-spacing:-0.01em}
+.shot-card figcaption span{color:rgba(6,4,14,.62); font-size:14.5px; line-height:1.45}
+.shot-card--terracotta{border-top:4px solid var(--terracotta)}
+.shot-card--sky{border-top:4px solid var(--sky)}
+.shot-card--lavender{border-top:4px solid var(--lavender)}
+.shot-card--cream{border-top:4px solid var(--cream)}
+@media (max-width:820px){
+  .shot-grid{grid-template-columns:1fr; gap:18px}
+  .shot-gallery{padding:56px 16px}
+}
+
+/* ---------- Tek paket / kademe fiyatlama (#pricing) ---------- */
+.single-plan{padding:72px 20px}
+.pricing-sub{color:rgba(6,4,14,.62); margin:12px auto 0; max-width:52ch; font-size:15.5px; line-height:1.5}
+.tier-track{max-width:var(--maxw); margin:0 auto 22px; display:grid; grid-template-columns:repeat(5,1fr); gap:14px}
+.tier{background:var(--paper); border:1px solid rgba(6,4,14,.08); border-radius:18px; padding:20px 18px; display:flex; flex-direction:column; gap:8px; text-align:left}
+.tier strong{font-family:var(--display); font-size:15px; letter-spacing:-0.01em; color:rgba(6,4,14,.66)}
+.tier-price{font-family:var(--display); font-weight:800; font-size:19px; letter-spacing:-0.02em; line-height:1.2}
+.tier small{color:rgba(6,4,14,.55); font-size:13px; line-height:1.45}
+.tier--free{background:var(--plum); border-color:var(--plum); color:#fff}
+.tier--free strong{color:rgba(255,255,255,.72)}
+.tier--free .tier-price{color:var(--terracotta); font-size:23px}
+.tier--free small{color:rgba(255,255,255,.72)}
+.single-plan .package-note{max-width:var(--maxw)}
+.pricing-cta-row{max-width:var(--maxw); margin:24px auto 0; display:flex; justify-content:center}
+@media (max-width:960px){ .tier-track{grid-template-columns:repeat(2,1fr)} .tier--free{grid-column:1 / -1} }
+@media (max-width:520px){ .tier-track{grid-template-columns:1fr} .single-plan{padding:56px 16px} }
+/* Tek paket bölümü eski 3 sütunlu paket grid'ini kullanmaz. */
+.pricing-teaser.single-plan{display:block}

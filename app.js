@@ -135,8 +135,19 @@ function requestedDemoMode(){
   return params.get('demo') === '1' || window.location.hash === '#demo';
 }
 
+// Demo önizleme yalnızca yerel geliştirmede (localhost / dosyadan açılış)
+// çalışır. Canlı sitede dashboard URL'si — ?demo=1 dahil — arayüzü göstermez;
+// arayüz tanıtımı index'teki ekran görüntüleriyle yapılır (Başkan kararı,
+// 2026-09-18). Testler ve ekran görüntüsü üretimi localhost'ta çalıştığı için
+// etkilenmez.
+function demoPreviewAllowed(){
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '' || window.location.protocol === 'file:';
+}
+
 // Demo tercihi sekme boyunca korunur ki panel içi gezinmede kaybolmasın.
 function isDemoMode(){
+  if(!demoPreviewAllowed()) return false;
   try{
     if(requestedDemoMode()){
       sessionStorage.setItem(DEMO_MODE_STORAGE_KEY, 'true');
@@ -4291,7 +4302,37 @@ function syncNavState(){
   });
 }
 
+// Canlı sitede oturum yoksa arayüz gösterilmez: ziyaretçi yalnızca giriş
+// kapısını görür. Demo önizleme yalnızca yerel geliştirmede mümkündür
+// (demoPreviewAllowed). Arayüz tanıtımı index'teki ekran görüntüleriyle
+// yapılır (Başkan kararı, 2026-09-18).
+function loginGateActive(){
+  return state.backend.configured && !state.backend.connected && !isDemoMode();
+}
+
+function loginGatePage(){
+  const busy = state.backend.loading;
+  return `<section class="login-gate" aria-label="Giriş kapısı">
+    <div class="login-gate-card">
+      <span class="brand-mark" aria-hidden="true">F</span>
+      <h1>Formera paneli</h1>
+      <p>Bu alan Formera kullanan stüdyolara ve üyelerine özeldir. Devam etmek için hesabınla giriş yap.</p>
+      <button class="primary" id="gateLogin" type="button" ${busy ? 'disabled' : ''}>${busy ? 'Bağlanıyor...' : 'Giriş yap'}</button>
+      <a class="gate-link" href="index.html">Formera'yı tanımak için tanıtım sayfasına dön</a>
+    </div>
+  </section>`;
+}
+
 function render(){
+  const shell = document.querySelector('.app-shell');
+  if(loginGateActive()){
+    shell?.classList.add('locked');
+    app.innerHTML = loginGatePage();
+    const gateButton = document.querySelector('#gateLogin');
+    if(gateButton) gateButton.onclick = openSupabaseModal;
+    return;
+  }
+  shell?.classList.remove('locked');
   const count = document.querySelector('#memberCount');
   if(count) count.textContent = state.members.length;
   syncNavState();
