@@ -554,3 +554,4 @@ p{margin:0}
 @media (max-width:520px){ .tier-track{grid-template-columns:1fr} .single-plan{padding:56px 16px} }
 /* Tek paket bölümü eski 3 sütunlu paket grid'ini kullanmaz. */
 .pricing-teaser.single-plan{display:block}
+.shot-card--wide{grid-column:1 / -1}

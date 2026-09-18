@@ -235,3 +235,14 @@ python3 tests/announcements_test.py
 → takvime planlı seans düşer + talep 'approved' olur; XSS payload'ı element olmaz.
 RLS ayrıca migration harness'inde doğrulanır (üye kendi 'pending' talebini açar,
 başkasınınkini göremez, 'approved' olarak ekleyemez, anon engelli).
+
+## achievements_test.py — üye başarı rozetleri (oyunlaştırma)
+Taban çizgisinde (ilk yükleme) geçmiş rozetler sessizce kaydedilir, kutlama
+oynamaz; oturum içinde kazanılan yeni rozette kutlama animasyonu oynar ve
+kendini temizler; prefers-reduced-motion'da animasyon yerine toast; rozetler
+`member_achievements`'a POST edilir; tanımlar arasında kilo/vücut hedefli
+rozet olmadığı denetlenir (davranış-bazlı ilke, KRR-formera-13).
+
+```bash
+python3 tests/achievements_test.py
+```

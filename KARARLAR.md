@@ -235,3 +235,52 @@ yazılmadı, `data-placeholder` ile işaretli; rakamlar onaylanınca eklenecek.
 
 **Kilit varsayım.** "10 üyeye kadar ücretsiz" Başkan'ın açık kararıdır ve
 sitede yayınlandı; kademe tutarları yayınlanmadı, yanıltıcı fiyat iddiası yok.
+
+---
+
+## 2026-09-18 · KRR-formera-12 · Kademe fiyatları netleşti
+
+**Karar.** (Başkan onayı: "önerilerin doğrultusunda devam et") 11–25 üye
+990 TL/ay · 26–45 üye 1.690 TL/ay · 46–60 üye 2.490 TL/ay · 60+ özel teklif.
+0–10 üye ücretsiz (KRR-formera-11). Erken kayıt olan stüdyoya fiyat sabitlenir.
+
+**Gerekçe.** Rakamlar, daha önce yayında olan onaylı paket fiyat noktalarından
+(990/1.690/2.490) türetildi — "makul fiyat" ilkesine uygun, yeni rakam
+uydurulmadı. Siteye, lead CRM değerine (`value`) ve PAYMENTS.md'ye işlendi.
+
+**Kilit varsayım.** Fiyatlar lokasyon başına aylıktır; yıllık indirim ve ek
+lokasyon kuralı bilinçli olarak kaldırıldı (tek paket sadeliği). Gerekirse
+ayrı kararla döner.
+
+---
+
+## 2026-09-18 · KRR-formera-13 · Başarı sistemi: davranış bazlı rozet + kutlama
+
+**Karar.** Üye panelinde "Başarılarım" kartı: 9 rozet, bölüm-geçme mantığı
+("Sıradaki bölüm: X · N adım kaldı") ve her yeni rozette ekranda konfeti +
+madalya kutlaması. Tanımlar `ACHIEVEMENT_DEFS` (app.js). Kayıt:
+`member_achievements` tablosu (migration 0022, RLS: üye kendi rozetini
+yazar/görür, personel stüdyo içinde görür/yazar).
+
+**Tasarım ilkeleri.**
+1. **Rozetler DAVRANIŞA bağlı, kiloya değil** — antrenman sayısı, haftalık
+   seri, paket bitirme, ölçüm sürekliliği, erken saat. Kilo/vücut hedefine
+   bağlı rozet bilinçli olarak YOK (sağlıksız teşvik riski); test bunu da
+   denetliyor.
+2. **Taban çizgisi kuralı:** oturumdaki ilk hesaplamada geçmişten gelen
+   rozetler sessizce kaydedilir; kutlama yalnızca oturum İÇİNDE kazanılan
+   rozet için oynar. İlk açılışta kutlama fırtınası olmaz.
+3. **Erişilebilirlik:** prefers-reduced-motion'da animasyon hiç oynamaz,
+   yerine toast (Yayın Kapısı §4 sözleşmesi).
+4. Rozetler mevcut veriden türetilir; tablo yalnızca "ne zaman açıldı"
+   kaydıdır. Antrenman sayısı `max(done seans satırları, paketten kullanılan)`
+   ile hesaplanır ki eski üyelerin geçmişi kaybolmasın.
+
+**Doğrulama.** Yerel tarayıcıda uçtan uca ölçüldü: taban çizgisinde kutlama
+yok, oturum içi yeni rozette animasyon oynayıp kendini temizliyor,
+reduced-motion'da yalnızca toast. Test: `tests/achievements_test.py`
+(8 kontrol). Landing galerisine "Başarı bölümleri" kartı eklendi.
+
+**Kilit varsayım.** Migration 0022 canlıda çalıştırılana kadar tablo yoktur;
+`tableMissing` deseni sayesinde panel bundan etkilenmez, rozetler yalnızca
+sunucuya yazılmaz.

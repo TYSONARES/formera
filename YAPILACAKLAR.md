@@ -10,23 +10,27 @@ Başkan kararı (2026-09-18): tek paket + üye barajlı fiyat + bireysele ücret
 oyunlaştırılmış, sporu teşvik eden platform. Landing yeni modele geçirildi;
 kalan adımlar:
 
-1. **Kademe TL tutarları — KARAR (Başkan).** 11–25 / 26–45 / 46–60 kademeleri
-   sitede `data-placeholder="fiyat-kademe-*"` ile "Erken kayıtta netleşir"
-   yazıyor. Rakamlar onaylanınca `index.html` + `landing.js`'e işlenecek.
-2. **Oyunlaştırma / başarı sistemi — ONAY BEKLİYOR.** Üye panelinde bölüm
-   geçme mantığında başarı ölçütleri (seri antrenman, tamamlanan program,
-   ölçüm hedefi, kademe atlama vb.) + her başarıda ekranda görsel tebrik
-   animasyonu. Tasarım taslağı öneri olarak Başkan'a sunuldu (2026-09-18
-   oturumu). Onaylanınca: `achievements` tablosu + RLS + kutlama animasyonu
-   (prefers-reduced-motion'da atlanır) + test.
+1. ✅ **Kademe TL tutarları** — ONAYLANDI ve işlendi (2026-09-18,
+   KRR-formera-12): 11–25 → 990 TL/ay, 26–45 → 1.690 TL/ay, 46–60 →
+   2.490 TL/ay, 60+ özel. Sitede, lead değerinde ve PAYMENTS.md'de.
+2. ✅ **Oyunlaştırma / başarı sistemi** — YAPILDI (2026-09-18,
+   KRR-formera-13). Üye panelinde "Başarılarım": 9 davranış-bazlı rozet
+   (kilo rozetı bilinçli YOK), bölüm-geçme ilerleme satırı, yeni rozette
+   konfeti kutlaması (reduced-motion'da toast). Migration **0022**
+   (Supabase'de çalıştırılmalı!). Test: tests/achievements_test.py.
+   Landing galerisine "Başarı bölümleri" kartı eklendi.
 3. **Bireysel kullanım akışı.** Solo antrenör/sporcu bugün "tek kişilik
    stüdyo" olarak kayıt olabiliyor; kayıt sihirbazında bunu açıkça sunan
    "Bireysel" yolu eklenecek (stüdyo kurulum adımlarını atlayan sade akış).
+   SONRAKİ TUR adayı.
 4. **Fiyat kademesi uygulaması.** Üye sayısı barajı aşılınca panelde nazik
    uyarı + kademe bilgisi (şimdilik manuel faturalama; İyzico sonrası).
-5. **PAYMENTS.md revizyonu.** Eski üç paketli modeli anlatıyor; tek paket +
-   kademe modeline göre yeniden yazılacak (ve public repodan ayrılacak, bkz.
-   "Diğer bekleyenler").
+   Üye kaydetmek asla kilitlenmez, yalnızca bilgilendirilir.
+5. ✅ **PAYMENTS.md revizyonu** — YAPILDI (2026-09-18): tek paket + kademe
+   modeline göre yeniden yazıldı. (Public repodan ayırma kararı hâlâ açık,
+   bkz. "Diğer bekleyenler".)
+6. **Rozet seti genişletme (fikir).** AI haftalık kişisel motivasyon özeti,
+   yıl dönümü rozeti, stüdyo-içi ay sıralaması (opt-in). Başkan isterse.
 
 ---
 

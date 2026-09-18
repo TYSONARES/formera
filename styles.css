@@ -514,3 +514,39 @@ body{overflow-x:clip}
 .login-gate-card p{color:var(--muted);font-size:14px;line-height:1.55;margin:0}
 .login-gate-card .primary{width:100%;padding:13px 16px;font-size:14px}
 .gate-link{color:var(--muted);font-size:13px}
+
+/* Başarı rozetleri (oyunlaştırma — KRR-formera-13) */
+.ach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.ach-badge{border:1px solid var(--line);border-radius:13px;padding:12px 10px;text-align:center;display:flex;flex-direction:column;gap:3px;background:#f8f6f3;opacity:.62}
+.ach-badge.is-open{opacity:1;background:#fff8ef;border-color:#ecd9bd}
+.ach-icon{font-size:21px;line-height:1}
+.ach-badge.is-open .ach-icon{color:var(--acid)}
+.ach-badge strong{font:700 11.5px Manrope}
+.ach-badge small{font-size:10px;color:var(--muted)}
+.ach-badge.is-open small{color:#9c641d;font-weight:700}
+.ach-next{margin-top:12px;background:#f6f4f1;border:1px dashed #d5d0de;border-radius:12px;padding:11px 13px;font-size:12.5px;color:var(--muted)}
+.ach-next strong{color:var(--ink)}
+@media (max-width:640px){.ach-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Kutlama animasyonu: yalnızca hareket azaltma KAPALIYKEN oynar (JS kontrol
+   eder; reduced-motion'da yerine toast gösterilir). */
+.achievement-burst{position:fixed;inset:0;display:grid;place-items:center;z-index:30;pointer-events:none}
+.achievement-toast{background:#1f1738;color:#fff;border-radius:16px;padding:20px 26px;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 24px 60px rgba(6,4,14,.35);animation:achPop .45s cubic-bezier(.2,1.4,.4,1) both}
+.achievement-medal{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--acid);color:#3a1e06;font-size:26px;margin-bottom:4px;animation:achSpin .7s ease-out both}
+.achievement-toast strong{font:800 16px Manrope}
+.achievement-toast small{color:#b8b0cc;font-size:12px}
+.achievement-burst.leaving .achievement-toast{animation:achOut .4s ease-in both}
+.achievement-confetti{position:absolute;inset:0;overflow:hidden}
+.achievement-confetti i{position:absolute;left:50%;top:45%;width:9px;height:14px;border-radius:2px;opacity:0;animation:achConfetti 2.2s ease-out both;animation-delay:calc(var(--i)*0.04s)}
+.achievement-confetti i:nth-child(4n){background:#e39a4d}
+.achievement-confetti i:nth-child(4n+1){background:#cbb0eb}
+.achievement-confetti i:nth-child(4n+2){background:#a5c8d8}
+.achievement-confetti i:nth-child(4n+3){background:#2b7150}
+@keyframes achPop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes achOut{to{transform:scale(.85);opacity:0}}
+@keyframes achSpin{from{transform:rotate(-200deg) scale(.3)}to{transform:rotate(0) scale(1)}}
+@keyframes achConfetti{
+  0%{opacity:0;transform:translate(0,0) rotate(0)}
+  8%{opacity:1}
+  100%{opacity:0;transform:translate(calc((var(--i) - 9)*46px),52vh) rotate(calc(var(--i)*137deg))}
+}

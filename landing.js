@@ -15,13 +15,13 @@
 
   // Tek paket modeli (Başkan kararı, 2026-09-18): paket seçimi yok; fiyat
   // yalnızca üye sayısı kademesine göre belirlenir. 0–10 üye ücretsizdir.
-  // Kademe TL tutarları Başkan netleştirene kadar sitede yazılmaz.
+  // Kademe tutarları Başkan onayı ile netleşti (KRR-formera-12).
   function tierForMembers(members){
-    if(members === '0–10') return {code:'free', label:'0–10 üye · ücretsiz'};
-    if(members === '11–25') return {code:'tier_25', label:'11–25 üye kademesi'};
-    if(members === '26–45') return {code:'tier_45', label:'26–45 üye kademesi'};
-    if(members === '46–60') return {code:'tier_60', label:'46–60 üye kademesi'};
-    return {code:'tier_custom', label:'60+ üye · özel teklif'};
+    if(members === '0–10') return {code:'free', label:'0–10 üye · ücretsiz', price:0};
+    if(members === '11–25') return {code:'tier_25', label:'11–25 üye · 990 TL/ay', price:990};
+    if(members === '26–45') return {code:'tier_45', label:'26–45 üye · 1.690 TL/ay', price:1690};
+    if(members === '46–60') return {code:'tier_60', label:'46–60 üye · 2.490 TL/ay', price:2490};
+    return {code:'tier_custom', label:'60+ üye · özel teklif', price:0};
   }
 
   // Kullanım tipi: stüdyo mu, bireysel antrenör mü, kendi antrenmanı mı.
@@ -54,8 +54,7 @@
       goal: `${field('goal', 'Operasyonu toparlamak')} · ${usage} · ${tier.label} · ${timeline}`,
       stage: 'lead',
       nextAction: timeline === 'Sadece bilgi almak istiyorum' ? 'Bilgilendirme ve tanıtım akışını planla' : 'Tanışma ve kurulum görüşmesini planla',
-      // Kademe fiyatları netleşene kadar CRM'e parasal değer yazılmaz.
-      value: 0,
+      value: tier.price,
       packageCode: `${usageCode(usage)}_${tier.code}`,
       activationStatus: 'pending',
       activationMode: 'manual',
@@ -187,7 +186,9 @@
     if(previewRecommendation){
       previewRecommendation.textContent = tier.code === 'free'
         ? 'Kademen: 0–10 üye — Formera senin için tamamen ücretsiz.'
-        : `Kademen: ${tier.label} · erken kayıt fiyatı görüşmede sabitlenir.`;
+        : tier.code === 'tier_custom'
+          ? 'Kademen: 60+ üye — birlikte özel teklif planlarız.'
+          : `Kademen: ${tier.label} · erken kayıtta bu fiyat sabitlenir.`;
     }
   }
 

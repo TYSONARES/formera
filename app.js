@@ -26,6 +26,7 @@ const MEMBER_TASK_STORAGE_KEY = 'formera_member_tasks';
 const MEASUREMENT_STORAGE_KEY = 'formera_body_measurements';
 const ANNOUNCEMENT_STORAGE_KEY = 'formera_announcements';
 const SESSION_REQUEST_STORAGE_KEY = 'formera_session_requests';
+const ACHIEVEMENT_STORAGE_KEY = 'formera_member_achievements';
 const MAKEUP_REQUEST_STORAGE_KEY = 'formera_makeup_requests';
 const PILOT_LEAD_STORAGE_KEY = 'formera_pilot_leads';
 const SUPABASE_CONFIG_STORAGE_KEY = 'formera_supabase_config';
@@ -124,6 +125,7 @@ const BUSINESS_STORAGE_KEYS = [
   MEASUREMENT_STORAGE_KEY,
   ANNOUNCEMENT_STORAGE_KEY,
   SESSION_REQUEST_STORAGE_KEY,
+  ACHIEVEMENT_STORAGE_KEY,
   MAKEUP_REQUEST_STORAGE_KEY,
   PILOT_LEAD_STORAGE_KEY
 ];
@@ -205,6 +207,7 @@ function emptyBusinessState(){
   state.measurements = [];
   state.announcements = [];
   state.sessionRequests = [];
+  state.memberAchievements = [];
   state.makeupRequests = [];
   state.pilotLeads = [];
   state.landingLeads = [];
@@ -271,6 +274,7 @@ const state = {
   measurements: [],
   announcements: [],
   sessionRequests: [],
+  memberAchievements: [],
   pilotLeads: usesLocalBusinessData() ? starterPilotLeads.map(normalizePilotLead) : [],
   landingLeads: [],
   studios: usesLocalBusinessData() ? starterStudios.map(normalizeStudio) : [],
@@ -299,7 +303,8 @@ const state = {
     landingLeadsReady: false,
     measurementsReady: false,
     announcementsReady: false,
-    sessionRequestsReady: false
+    sessionRequestsReady: false,
+    memberAchievementsReady: false
   }
 };
 
@@ -816,6 +821,22 @@ function normalizeSessionRequest(r){
 function saveSessionRequests(){
   writeBusinessStore(SESSION_REQUEST_STORAGE_KEY, JSON.stringify(state.sessionRequests));
   syncSessionRequestsToSupabase();
+}
+
+function normalizeMemberAchievement(a){
+  return {
+    id: a.id || makeId(),
+    studioId: a.studioId || a.studio_id || null,
+    memberId: a.memberId || a.member_id || null,
+    code: a.code || '',
+    unlockedAt: a.unlockedAt || a.unlocked_at || new Date().toISOString(),
+    createdAt: a.createdAt || a.created_at || new Date().toISOString()
+  };
+}
+
+function saveMemberAchievements(){
+  writeBusinessStore(ACHIEVEMENT_STORAGE_KEY, JSON.stringify(state.memberAchievements));
+  syncMemberAchievementsToSupabase();
 }
 
 function normalizePilotLead(lead){
@@ -1357,6 +1378,13 @@ function mapRemoteSessionRequest(r){
   });
 }
 
+function mapRemoteMemberAchievement(a){
+  return normalizeMemberAchievement({
+    id: a.id, studioId: a.studio_id, memberId: a.member_id,
+    code: a.code, unlockedAt: a.unlocked_at, createdAt: a.created_at
+  });
+}
+
 function mapRemoteMemberTask(task){
   return normalizeMemberTask({
     id: task.id,
@@ -1487,7 +1515,8 @@ async function loadRemoteData(){
     landingLeadsResult,
     measurementsResult,
     announcementsResult,
-    sessionRequestsResult
+    sessionRequestsResult,
+    memberAchievementsResult
   ] = await Promise.all([
     db.from('studios').select('*').eq('id', studioId),
     db.from('profiles').select('*').eq('studio_id', studioId),
@@ -1506,7 +1535,8 @@ async function loadRemoteData(){
     db.from('landing_leads').select('*').order('created_at', {ascending:false}),
     db.from('body_measurements').select('*').eq('studio_id', studioId).order('measured_on', {ascending:false}),
     db.from('announcements').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
-    db.from('session_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
+    db.from('session_requests').select('*').eq('studio_id', studioId).order('created_at', {ascending:false}),
+    db.from('member_achievements').select('*').eq('studio_id', studioId).order('created_at', {ascending:false})
   ]);
 
   const taskTableMissing = Boolean(trainerTasksResult.error && (trainerTasksResult.error.code === '42P01' || String(trainerTasksResult.error.message || '').includes('trainer_tasks')));
@@ -1519,6 +1549,7 @@ async function loadRemoteData(){
   const measurementsTableMissing = Boolean(measurementsResult.error && (measurementsResult.error.code === '42P01' || String(measurementsResult.error.message || '').includes('body_measurements')));
   const announcementsTableMissing = Boolean(announcementsResult.error && (announcementsResult.error.code === '42P01' || String(announcementsResult.error.message || '').includes('announcements')));
   const sessionRequestsTableMissing = Boolean(sessionRequestsResult.error && (sessionRequestsResult.error.code === '42P01' || String(sessionRequestsResult.error.message || '').includes('session_requests')));
+  const memberAchievementsTableMissing = Boolean(memberAchievementsResult.error && (memberAchievementsResult.error.code === '42P01' || String(memberAchievementsResult.error.message || '').includes('member_achievements')));
   state.backend.trainerTasksReady = !taskTableMissing;
   state.backend.memberTasksReady = !memberTaskTableMissing;
   state.backend.pilotLeadsReady = !pilotLeadTableMissing;
@@ -1528,7 +1559,8 @@ async function loadRemoteData(){
   state.backend.measurementsReady = !measurementsTableMissing;
   state.backend.announcementsReady = !announcementsTableMissing;
   state.backend.sessionRequestsReady = !sessionRequestsTableMissing;
-  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult, measurementsTableMissing ? null : measurementsResult, announcementsTableMissing ? null : announcementsResult, sessionRequestsTableMissing ? null : sessionRequestsResult].filter(Boolean).find(result=>result.error);
+  state.backend.memberAchievementsReady = !memberAchievementsTableMissing;
+  const failed = [studiosResult, profilesResult, membersResult, selectionsResult, programsResult, sessionsResult, financeResult, signaturesResult, taskTableMissing ? null : trainerTasksResult, memberTaskTableMissing ? null : memberTasksResult, pilotLeadTableMissing ? null : pilotLeadsResult, makeupTableMissing ? null : makeupRequestsResult, landingLeadsTableMissing ? null : landingLeadsResult, measurementsTableMissing ? null : measurementsResult, announcementsTableMissing ? null : announcementsResult, sessionRequestsTableMissing ? null : sessionRequestsResult, memberAchievementsTableMissing ? null : memberAchievementsResult].filter(Boolean).find(result=>result.error);
   if(failed) return remoteError(failed.error);
   let firstStudio = studiosResult.data?.[0] || {};
   // Eski canlı kurulumlarda stüdyo ve ekip oluşturulmasına rağmen
@@ -1595,6 +1627,7 @@ async function loadRemoteData(){
   state.measurements = measurementsTableMissing ? state.measurements : (measurementsResult.data || []).map(mapRemoteMeasurement);
   state.announcements = announcementsTableMissing ? state.announcements : (announcementsResult.data || []).map(mapRemoteAnnouncement);
   state.sessionRequests = sessionRequestsTableMissing ? state.sessionRequests : (sessionRequestsResult.data || []).map(mapRemoteSessionRequest);
+  state.memberAchievements = memberAchievementsTableMissing ? state.memberAchievements : (memberAchievementsResult.data || []).map(mapRemoteMemberAchievement);
 
   // Sunucuda gerçekten var olan satır anahtarları. primeRemoteSignatures
   // yalnızca bunları "gönderilmiş" sayar; gerisi kirli kalıp normal akışta
@@ -1616,6 +1649,7 @@ async function loadRemoteData(){
   setServerRowKeys('body_measurements', measurementsTableMissing ? [] : (measurementsResult.data || []).map(row=>row.id));
   setServerRowKeys('announcements', announcementsTableMissing ? [] : (announcementsResult.data || []).map(row=>row.id));
   setServerRowKeys('session_requests', sessionRequestsTableMissing ? [] : (sessionRequestsResult.data || []).map(row=>row.id));
+  setServerRowKeys('member_achievements', memberAchievementsTableMissing ? [] : (memberAchievementsResult.data || []).map(row=>row.id));
 
   state.role = profile.role === 'trainer' || profile.role === 'dietitian' ? profile.role : profile.role === 'member' ? 'member' : 'owner';
   if(state.workspace === 'formera'){
@@ -1936,6 +1970,7 @@ async function primeRemoteSignatures(){
     syncMeasurementsToSupabase();
     syncAnnouncementsToSupabase();
     syncSessionRequestsToSupabase();
+    syncMemberAchievementsToSupabase();
     syncMakeupRequestsToSupabase();
     syncPilotLeadsToSupabase();
     syncSignaturesToSupabase();
@@ -2198,6 +2233,19 @@ function syncSessionRequestsToSupabase(){
     status: r.status,
     decided_by: r.decidedBy,
     decided_at: r.decidedAt
+  })));
+}
+
+function syncMemberAchievementsToSupabase(){
+  const studioId = studioIdForRemote();
+  if(!studioId || (state.backend.connected && !state.backend.memberAchievementsReady)) return;
+  // memberId'siz satır sunucuya gönderilmez (FK reddeder; demo modda olabilir).
+  syncRemote('member_achievements', state.memberAchievements.filter(a=>a.memberId).map(a=>({
+    id: a.id,
+    studio_id: studioId,
+    member_id: a.memberId,
+    code: a.code,
+    unlocked_at: a.unlockedAt
   })));
 }
 
@@ -4229,8 +4277,132 @@ function memberProgressCard(member){
   <div class="report-list">${rows.filter(Boolean).join('')}</div></article>`;
 }
 
+// --- Başarı rozetleri (oyunlaştırma — KRR-formera-13) -----------------------
+// Rozetler DAVRANIŞA bağlıdır (gelme, süreklilik, takip); bilinçli olarak
+// kilo/vücut hedefine bağlı rozet YOKTUR — sağlıksız teşvik riski.
+// Rozetler mevcut veriden türetilir; member_achievements yalnızca "ne zaman
+// açıldı" kaydıdır ki kutlama bir kez oynasın ve cihazlar arasında korunsun.
+const ACHIEVEMENT_DEFS = [
+  {code:'ilk_adim',   icon:'✦', title:'İlk adım',          desc:'İlk antrenmanını tamamla',        type:'count', target:1,  stat:'done'},
+  {code:'isinma_5',   icon:'▲', title:'Isınma turu',        desc:'5 antrenman tamamla',             type:'count', target:5,  stat:'done'},
+  {code:'ritim_15',   icon:'♪', title:'Ritmi yakaladın',    desc:'15 antrenman tamamla',            type:'count', target:15, stat:'done'},
+  {code:'demirbas_30',icon:'♛', title:'Salonun demirbaşı',  desc:'30 antrenman tamamla',            type:'count', target:30, stat:'done'},
+  {code:'seri_3',     icon:'⚡', title:'3 haftalık seri',    desc:'3 hafta üst üste antrenman yap',  type:'count', target:3,  stat:'streak'},
+  {code:'seri_8',     icon:'★', title:'8 haftalık seri',    desc:'8 hafta üst üste antrenman yap',  type:'count', target:8,  stat:'streak'},
+  {code:'paket_tamam',icon:'◎', title:'Paket tamam',        desc:'Seans paketini sonuna kadar kullan', type:'flag', stat:'packageDone'},
+  {code:'takip_3',    icon:'✚', title:'Takip ustası',       desc:'3 ölçüm kaydettir',               type:'count', target:3,  stat:'measurements'},
+  {code:'erken_kus',  icon:'☀', title:'Erken kuş',          desc:'Sabah 08:00 öncesi antrenman tamamla', type:'flag', stat:'earlyBird'}
+];
+
+// Haftalık seri: içinde en az bir tamamlanmış seans olan ARDIŞIK hafta sayısı
+// (bugünden geriye). Hafta anahtarı pazartesi başlangıçlı ISO yaklaşımı.
+function weekKeyOf(dateStr){
+  const d = new Date(`${dateStr}T12:00:00`);
+  if(Number.isNaN(d.getTime())) return null;
+  const day = (d.getDay() + 6) % 7; // Pzt=0
+  d.setDate(d.getDate() - day);
+  return d.toISOString().slice(0,10);
+}
+
+function memberAchievementStats(member){
+  const doneSessions = state.sessions.filter(s=>s.member === member.name && s.status === 'done');
+  const parsed = parseSessions(member.sessions);
+  const weeks = new Set(doneSessions.map(s=>weekKeyOf(s.date)).filter(Boolean));
+  let streak = 0;
+  const cursor = new Date();
+  for(;;){
+    const key = weekKeyOf(cursor.toISOString().slice(0,10));
+    if(!weeks.has(key)) break;
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return {
+    // Seans satırları geçmişin tamamını tutmayabilir; paketten kullanılan
+    // seans sayısı da tamamlanmış antrenmandır. Büyük olan geçerli.
+    done: Math.max(doneSessions.length, parsed.used || 0),
+    streak,
+    measurements: measurementsForMember(member.id).length,
+    packageDone: parsed.total > 0 && parsed.used >= parsed.total,
+    earlyBird: doneSessions.some(s=>String(s.time || '') < '08:00')
+  };
+}
+
+function achievementProgress(def, stats){
+  if(def.type === 'flag') return {current: stats[def.stat] ? 1 : 0, target: 1, done: Boolean(stats[def.stat])};
+  const current = Number(stats[def.stat]) || 0;
+  return {current: Math.min(current, def.target), target: def.target, done: current >= def.target};
+}
+
+function unlockedCodesFor(memberId){
+  return new Set(state.memberAchievements.filter(a=>a.memberId === memberId).map(a=>a.code));
+}
+
+// Aynı tarayıcı oturumunda üye başına ilk hesaplama "taban çizgisi"dir:
+// geçmişten gelen rozetler sessizce kaydedilir, kutlama yalnızca oturum
+// İÇİNDE kazanılan yeni rozet için oynar (ilk açılışta kutlama fırtınası olmasın).
+const achievementBaseline = new Set();
+
+function ensureMemberAchievements(member){
+  if(!member?.id) return;
+  const stats = memberAchievementStats(member);
+  const unlocked = unlockedCodesFor(member.id);
+  const fresh = ACHIEVEMENT_DEFS.filter(def=>!unlocked.has(def.code) && achievementProgress(def, stats).done);
+  const isBaseline = !achievementBaseline.has(member.id);
+  achievementBaseline.add(member.id);
+  if(!fresh.length) return;
+  const studioId = state.backend.studioId || state.activeStudioId || null;
+  fresh.forEach(def=>{
+    state.memberAchievements.unshift(normalizeMemberAchievement({memberId: member.id, studioId, code: def.code}));
+  });
+  saveMemberAchievements();
+  if(!isBaseline) celebrateAchievement(fresh[0]);
+}
+
+// Kutlama: hareket azaltma tercihinde animasyon YOK, yalnızca toast
+// (Yayın Sağlamlık Kapısı §4). Animasyon kendini temizler.
+function celebrateAchievement(def){
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+    showToast(`Yeni başarı: ${def.title}!`);
+    return;
+  }
+  document.querySelector('.achievement-burst')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'achievement-burst';
+  wrap.setAttribute('role', 'status');
+  const pieces = Array.from({length: 18}, (_, i)=>`<i style="--i:${i}"></i>`).join('');
+  wrap.innerHTML = `<div class="achievement-confetti" aria-hidden="true">${pieces}</div>
+    <div class="achievement-toast"><span class="achievement-medal">${def.icon}</span><strong>Yeni başarı: ${def.title}!</strong><small>${def.desc}</small></div>`;
+  document.body.appendChild(wrap);
+  setTimeout(()=>wrap.classList.add('leaving'), 2600);
+  setTimeout(()=>wrap.remove(), 3100);
+}
+
+function memberAchievementsCard(member){
+  const stats = memberAchievementStats(member);
+  const unlocked = unlockedCodesFor(member.id);
+  const badges = ACHIEVEMENT_DEFS.map(def=>{
+    const p = achievementProgress(def, stats);
+    const isOpen = unlocked.has(def.code) || p.done;
+    const progressText = def.type === 'flag' ? '' : `${p.current}/${p.target}`;
+    return `<div class="ach-badge ${isOpen ? 'is-open' : ''}" title="${escapeAttr(def.desc)}">
+      <span class="ach-icon">${def.icon}</span><strong>${def.title}</strong>
+      <small>${isOpen ? 'Kazanıldı' : (progressText || def.desc)}</small></div>`;
+  }).join('');
+  const next = ACHIEVEMENT_DEFS
+    .map(def=>({def, p: achievementProgress(def, stats)}))
+    .filter(item=>!unlocked.has(item.def.code) && !item.p.done && item.def.type === 'count')
+    .sort((a,b)=>(a.p.target - a.p.current) - (b.p.target - b.p.current))[0];
+  const openCount = ACHIEVEMENT_DEFS.filter(def=>unlocked.has(def.code) || achievementProgress(def, stats).done).length;
+  const nextLine = next
+    ? `<div class="ach-next">Sıradaki bölüm: <strong>${next.def.title}</strong> · ${next.p.target - next.p.current} adım kaldı</div>`
+    : `<div class="ach-next">Tüm bölümler tamamlandı — muhteşemsin! 🏆</div>`;
+  return `<article class="card"><div class="card-title"><div><h2>Başarılarım</h2><p>Her antrenman seni bir sonraki bölüme taşır</p></div><span class="badge">${openCount}/${ACHIEVEMENT_DEFS.length}</span></div>
+  <div class="ach-grid">${badges}</div>${nextLine}</article>`;
+}
+
 function memberDashboard(){
   const member = currentMember();
+  ensureMemberAchievements(member);
   const memberName = member.name;
   const program = selectedProgramForMember(memberName);
   const signature = memberSignature(memberName);
@@ -4243,7 +4415,7 @@ function memberDashboard(){
   const memberPrograms = state.programs.filter(item=>item.assigned === memberName || item.id === program.id);
   return `<div class="welcome"><div><span class="eyebrow">ÜYE ALANI</span><h1>Merhaba ${esc(member.name.split(' ')[0] || member.name)}, hazırsan başlayalım.</h1><p>${esc(activeStudio().name)} programın ve seans durumun burada.</p></div><button class="primary" data-action="start-workout">Antrenmanı başlat</button></div>
   <section class="metrics">${metric('Bu haftaki antrenman',`${weeklyDone} tamamlandı`,'canlı seans','✓')}${metric('Toplam seans',member.sessions,`${remaining} seans kaldı`,'◷')}${metric('Açık görev',String(openActions),'ekip notu','!',openActions > 0)}${metric('Antrenör',member.trainer || 'Atanmadı',member.dietitian !== 'Atanmadı' ? `Diyetisyen: ${esc(member.dietitian)}` : 'sorumlu PT','♧')}</section>
-  <section class="dashboard-grid">${memberPackageCard(member)}${memberAnnouncementCard()}${studioPublicCard('ÜYE ALANI · İŞLETME')}
+  <section class="dashboard-grid">${memberPackageCard(member)}${memberAchievementsCard(member)}${memberAnnouncementCard()}${studioPublicCard('ÜYE ALANI · İŞLETME')}
   <article class="card"><div class="card-title"><div><h2>Bugünkü program</h2><p>${esc(program.title)} · ${esc(program.duration)} dakika</p></div><span class="badge">${esc(program.level)}</span></div>
   <p class="exercise-hint">Her hareketteki küçük animasyon, doğru pozisyonu hatırlatmak içindir; ilk kullanımda antrenörünün form yönlendirmesini esas al.</p>${program.exercises.map((x,i)=>exerciseRow(x,i,{member:true})).join('')}</article>
   <article class="card ai-card"><span class="ai-label">✦ FORMA AI</span><h2>İstikrarlı gidiyorsun.</h2><p>${esc(program.goal)} hedefi için son üç haftadır programına %89 uyum gösterdin. Bugün ağırlık artırmadan formu koruman daha iyi olabilir.</p><button class="primary ai-action" data-action="coach-tip">Koç notunu gör →</button></article>
