@@ -121,6 +121,35 @@ Sırayla yapılacak (her biri: tablo + RLS + üye ekranı + işletmeci girişi +
    üyelik (kalan GÜN) istenirse members'a package_end tarihi eklenmeli — Başkan'a
    sorulacak.
 
+## 🟡 Rakip analizi: MAC+ & Gymwork (2026-09-19) — aday özellikler
+
+Başkan'ın isteğiyle incelendi. MAC+ (MACFit/Mars Athletic'in ücretsiz kulüp
+uygulaması; 4,8★ / 45B+ oy, kategori #2) ve Gymwork (bağımsız solo antrenman
+defteri; 4,9★ / 139 oy, PRO ₺250–2.000/ay).
+
+**Pivotu doğrulayan bulgular:** MAC+ rozet sistemi + zincirin uygulamayı
+tamamen ücretsiz dağıtması → bizim KRR-11 (bireysele ücretsiz) ve KRR-13
+(davranış rozetleri) kararlarıyla aynı strateji. Gymwork'ün solo kullanıcıya
+₺250–2.000/ay istemesi → bizim "0–10 üye ücretsiz" katmanı güçlü koz.
+
+**Aday özellikler (öneri sırası):**
+1. **Antrenman defteri: set/ağırlık/tekrar kaydı** (Gymwork'ün çekirdeği).
+   Üye "Antrenmanı başlat" akışında her hareket için set×tekrar×kg girer;
+   geçmişi ve kişisel rekoru görünür. Solo sporcu pivotunun 1 numaralı
+   eksiği. Rozetlere de beslenir (PR rozeti — davranış: "rekorunu yenile").
+2. **Set + dinlenme sayacı** — defterin doğal parçası; telefonda titreşim.
+3. **Rozet paylaşımı** — kazanılan rozeti tek dokunuşla WhatsApp/Instagram'a
+   paylaşılabilir görsel yapmak (viral döngü; feed altyapısı gerektirmez).
+4. Haftalık AI kişisel motivasyon özeti (MAC+ FitBot'un bizdeki karşılığı;
+   Forma AI altyapısı hazır).
+5. Kas grubu dağılım grafiği (mevcut program/hareket verisinden).
+6. Dostça meydan okuma: iki üye arası haftalık seri yarışı (opt-in).
+
+**Bilinçli almadıklarımız:** 1500'lük video kütüphanesi (prodüksiyon maliyeti;
+çizim animasyon + antrenör bizde kalır), GPS/açık hava takibi, Tanita cihaz
+entegrasyonu, herkese açık sosyal feed (butik ruhu + KVKK yükü), genel
+liderlik tablosu (küçük stüdyoda alt sıralar moral bozar; ikili yarış yeter).
+
 ## 🟡 Üye deneyimi — TIER 2 (SONRAKİ TUR — hatırlatılacak)
 
 Tier 1 bitince Başkan'a hatırlat:
