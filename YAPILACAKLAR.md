@@ -133,17 +133,42 @@ tamamen ücretsiz dağıtması → bizim KRR-11 (bireysele ücretsiz) ve KRR-13
 ₺250–2.000/ay istemesi → bizim "0–10 üye ücretsiz" katmanı güçlü koz.
 
 **Aday özellikler (öneri sırası):**
-1. **Antrenman defteri: set/ağırlık/tekrar kaydı** (Gymwork'ün çekirdeği).
-   Üye "Antrenmanı başlat" akışında her hareket için set×tekrar×kg girer;
-   geçmişi ve kişisel rekoru görünür. Solo sporcu pivotunun 1 numaralı
-   eksiği. Rozetlere de beslenir (PR rozeti — davranış: "rekorunu yenile").
-2. **Set + dinlenme sayacı** — defterin doğal parçası; telefonda titreşim.
-3. **Rozet paylaşımı** — kazanılan rozeti tek dokunuşla WhatsApp/Instagram'a
-   paylaşılabilir görsel yapmak (viral döngü; feed altyapısı gerektirmez).
+1. ✅ **Antrenman defteri** — YAPILDI (2026-09-19, KRR-formera-14). Set×tekrar
+   ×kg kaydı + hareket başına kişisel rekor + rekor bildirimi. Migration
+   **0023** (Supabase'de çalıştırılmalı!). Test: tests/workout_logs_test.py.
+2. ✅ **Set + dinlenme sayacı** — YAPILDI (60/90 sn, titreşim, yeniden
+   çizimde sürer).
+3. ✅ **Rozet paylaşımı** — YAPILDI. Kazanılan rozete dokun → 1080×1080
+   görsel + Web Share (yoksa PNG iner). Görselde kişisel veri yok.
 4. Haftalık AI kişisel motivasyon özeti (MAC+ FitBot'un bizdeki karşılığı;
    Forma AI altyapısı hazır).
 5. Kas grubu dağılım grafiği (mevcut program/hareket verisinden).
 6. Dostça meydan okuma: iki üye arası haftalık seri yarışı (opt-in).
+
+## 🔴 Solo sporcu + koç vitrini stratejisi (KRR-formera-14) — FAZ PLANI
+
+Başkan kararı: asıl hedef solo sporcular; koçlar profil+içerikle kendilerini
+pazarlar, sporcular başarı/hikâye paylaşır. Önerilen fazlar (her faz Başkan
+onayıyla başlar):
+
+- **Faz 1 — Bireysel kayıt akışı.** Solo sporcu / freelance koç stüdyo
+  kurulum adımlarını görmeden kayıt olur ("Bireysel" yolu). Ücretsiz katmanın
+  kapısı; her şeyin ön koşulu.
+- **Faz 2 — Koç vitrini (marketplace-lite).** Koçun HERKESE AÇIK profil
+  sayfası: formera.me/koc/<slug> — uzmanlık, tanıtım, içerikleri, Formera
+  rozetleri ("X danışan, Y seans"), "Bu koçla çalış" düğmesi → lead. Yayın
+  Başkan onayından geçer (sahte/istismar profil koruması). SEO = ücretsiz
+  edinim kanalı. Yayın Sağlamlık Kapısı 8 maddesi uygulanır.
+- **Faz 3 — İçerik + hafif etkileşim.** İçerik üretimi önce KOÇLARLA sınırlı
+  (kalite + moderasyon); sporcu tarafı "alkış" (tek tepki) + kendi başarı
+  kartını paylaşma. Yorum ve DM YOK (moderasyon + KVKK yükü bilinçli ertelendi).
+  Her içerikte "bildir" düğmesi; sağlık iddiası kuralları yazılır.
+- **Faz 4 — Ekipman AI (Gymwork esinli).** Fotoğraf çek → "bu alet ne, nasıl
+  kullanılır, 2 örnek hareket". Claude vision + Edge Function proxy (anahtar
+  sunucuda), auth şartı + kullanıcı/gün limiti + görüntü küçültme + çıktı
+  cap'i (maliyet devre kesici, KRR-portfoy-11). Maliyet ölçümü için önce
+  20 kullanıcılık deneme.
+- **Faz 5 — Meydan okuma + AI haftalık özet** (yukarıdaki 4 ve 6).
 
 **Bilinçli almadıklarımız:** 1500'lük video kütüphanesi (prodüksiyon maliyeti;
 çizim animasyon + antrenör bizde kalır), GPS/açık hava takibi, Tanita cihaz

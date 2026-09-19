@@ -550,3 +550,19 @@ body{overflow-x:clip}
   8%{opacity:1}
   100%{opacity:0;transform:translate(calc((var(--i) - 9)*46px),52vh) rotate(calc(var(--i)*137deg))}
 }
+
+/* Antrenman defteri (KRR-formera-14) */
+.wl-form{display:grid;grid-template-columns:1.6fr .7fr .9fr auto;gap:8px;margin-bottom:12px}
+.wl-form input{border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:#f8f6f3;font:13px "DM Sans";min-width:0}
+.wl-form .primary{white-space:nowrap}
+.wl-timer{display:flex;align-items:center;gap:10px;background:#f6f4f1;border:1px solid var(--line);border-radius:12px;padding:9px 13px;margin-bottom:12px}
+.wl-timer span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.wl-timer strong{font:800 17px Manrope;min-width:52px}
+.wl-timer .secondary{margin-left:auto;padding:7px 11px;font-size:12px}
+.wl-timer .secondary + .secondary{margin-left:0}
+.wl-record{display:block;color:#9c641d;font-weight:700;font-size:10px}
+@media (max-width:640px){.wl-form{grid-template-columns:1fr 1fr}.wl-form input:first-child{grid-column:1/-1}}
+
+/* Kazanılan rozet düğmesi (paylaşım) düz kart gibi görünür */
+button.ach-badge{font-family:inherit;cursor:pointer}
+button.ach-badge:hover{border-color:var(--acid)}

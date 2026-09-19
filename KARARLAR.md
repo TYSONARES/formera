@@ -284,3 +284,40 @@ reduced-motion'da yalnızca toast. Test: `tests/achievements_test.py`
 **Kilit varsayım.** Migration 0022 canlıda çalıştırılana kadar tablo yoktur;
 `tableMissing` deseni sayesinde panel bundan etkilenmez, rozetler yalnızca
 sunucuya yazılmaz.
+
+---
+
+## 2026-09-19 · KRR-formera-14 · Hedef kitle: solo sporcu; koç vitrini stratejisi
+
+**Karar.** (Başkan, 2026-09-19) Asıl hedef kitle solo sporculardır. Freelance
+antrenör/koçları çekmek için strateji: koçlar profil sayfası açıp içerik
+üreterek kendilerini solo sporculara pazarlar; solo sporcular başarı ve
+hikâyelerini paylaşıp diğer sporcular ve antrenörlerle etkileşime girer.
+Gymwork'teki "kameradan ekipman taratıp kullanım öğreten AI" beğenildi,
+değerlendirilecek.
+
+**Bu turda uygulanan (rakip analizinden alınanlar):**
+1. **Antrenman defteri** — üye panelinde set × tekrar × kg kaydı, hareket
+   önerili giriş, günün setleri ve hareket başına kişisel rekor.
+   `workout_logs` tablosu + RLS (migration 0023). Yeni sette önceki rekor
+   aşılırsa anında "Yeni kişisel rekor!" bildirimi.
+2. **Dinlenme sayacı** — 60/90 sn, bitişte titreşim + bildirim; yeniden
+   çizimde kaybolmaz.
+3. **Rozet paylaşımı** — kazanılan rozete dokununca 1080×1080 paylaşım
+   görseli üretilir (canvas), Web Share ile paylaşılır; desteklenmeyen
+   tarayıcıda PNG iner. Görselde kişisel veri YOK, yalnızca rozet +
+   formera.me (KVKK). Viral döngünün tohumu.
+4. İki yeni rozet: "Defter açıldı" (ilk set) ve "Rekor kırdın" (davranış
+   bazlı ilke korunuyor — rekor kilo hedefi değil, kendi geçmişini aşmaktır).
+
+**Sosyal katman için kabul edilen tasarım çerçevesi (faz planı
+YAPILACAKLAR'da; geliştirmeler Başkan onayıyla):** İçerik üretimi başlangıçta
+KOÇLARLA sınırlı (kalite + moderasyon yükü düşük); sporcu etkileşimi önce tek
+tepkiyle ("alkış"), yorum/DM yok; koç profilleri Başkan onayından geçerek
+yayınlanır; her içerikte "bildir" düğmesi; sağlık iddiası içeren içerik
+kuralları yazılacak. Koç profil sayfaları herkese açık olacağı için aynı
+zamanda SEO/organik edinim kanalıdır.
+
+**Kilit varsayım.** Defter tamamen istemci + RLS'li tablo; migration 0023
+çalıştırılana kadar rozetlerdeki gibi sessizce yerel kalır. Ekipman-AI özelliği
+Edge Function proxy'si ister (anahtar sunucuda, oran limiti) — ayrı karar.

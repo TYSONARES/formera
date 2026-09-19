@@ -246,3 +246,13 @@ rozet olmadığı denetlenir (davranış-bazlı ilke, KRR-formera-13).
 ```bash
 python3 tests/achievements_test.py
 ```
+
+## workout_logs_test.py — antrenman defteri
+Üye set kaydı girer → `workout_logs`'a doğru alanlarla (exercise, reps,
+weight_kg, member_id) POST edilir; daha ağır sette kişisel rekor toastı ve
+"Rekor X kg" satırı görünür; dinlenme sayacı geriye sayar ve yeniden çizimde
+sürer; hareket adına yazılan XSS payload'ı element olmaz.
+
+```bash
+python3 tests/workout_logs_test.py
+```
